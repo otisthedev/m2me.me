@@ -118,13 +118,16 @@ final class QuizCalculator
 
                 foreach ($contributions as $trait => $value) {
                     $weighted = $weight * (float) $value;
-                    $qMin[$trait] = array_key_exists($trait, $qMin) ? min($qMin[$trait], $weighted) : $weighted;
+                    // Always consider 0 as minimum since you can get 0 by not selecting this option
+                    $qMin[$trait] = array_key_exists($trait, $qMin) ? min($qMin[$trait], $weighted, 0.0) : min($weighted, 0.0);
                     $qMax[$trait] = array_key_exists($trait, $qMax) ? max($qMax[$trait], $weighted) : $weighted;
                 }
             }
 
             $traits = array_unique(array_merge(array_keys($qMin), array_keys($qMax)));
             foreach ($traits as $trait) {
+                // qMin already includes 0.0 in its calculation, so it accounts for not selecting options with this trait
+                // It can be negative if the trait has negative values in some options
                 $min = $qMin[$trait] ?? 0.0;
                 $max = $qMax[$trait] ?? 0.0;
                 if (!isset($ranges[$trait])) {
