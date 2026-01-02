@@ -357,7 +357,24 @@ p {
         height: auto;
     }
 
+    /* Force a clean 2-row header:
+       Row 1: logo (left) + auth (right)
+       Row 2: nav pills (full width)
+    */
+    .site-logo {
+        order: 1;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .header-auth-actions {
+        order: 2;
+        flex: 0 0 auto;
+        margin-left: auto;
+    }
+
     .site-nav {
+        order: 3;
         flex: 1 0 100%;
         justify-content: flex-start;
     }
@@ -372,6 +389,7 @@ p {
         background: transparent;
         border-top: none;
         box-shadow: none;
+        width: 100%;
     }
 
     #primary-menu a {

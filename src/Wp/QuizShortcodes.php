@@ -186,7 +186,7 @@ final class QuizShortcodes
 
         ob_start();
         ?>
-        <div data-match-me-quiz class="mmq" data-quiz-id="<?= esc_attr($quizId) ?>">
+        <div data-match-me-quiz class="mmq mmq-fullheight" data-quiz-id="<?= esc_attr($quizId) ?>">
             <div class="mmq-error" style="display:none;"></div>
 
             <?php

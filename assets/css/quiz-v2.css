@@ -13,9 +13,20 @@
   background: var(--color-bg);
 }
 
+.mmq-fullheight {
+  /* Fill the viewport under the sticky header */
+  min-height: calc(100svh - var(--header-height) - 16px);
+  display: flex;
+  flex-direction: column;
+}
+
 .mmq-screen {
   display: flex;
   flex-direction: column;
+}
+
+.mmq-fullheight .mmq-screen {
+  flex: 1;
 }
 
 .mmq-loading {
@@ -97,6 +108,13 @@
   margin-bottom: var(--spacing-lg);
 }
 
+.mmq-fullheight .mmq-question {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
 .mmq-question-text {
   font-size: 1.25rem;
   font-weight: 400;
@@ -112,6 +130,14 @@
   flex-direction: column;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-lg);
+}
+
+.mmq-fullheight .mmq-options {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .mmq-option {
@@ -179,6 +205,10 @@
   margin-top: var(--spacing-lg);
   padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-border);
+}
+
+.mmq-fullheight .mmq-actions {
+  margin-top: auto;
 }
 
 .mmq-back,
@@ -289,11 +319,11 @@
   }
 
   /* Keep actions always in the same place on mobile */
-  .mmq-screen {
-    min-height: calc(100svh - 140px);
+  .mmq-fullheight .mmq-screen {
+    min-height: calc(100svh - var(--header-height) - 24px);
   }
 
-  .mmq-actions {
+  .mmq-fullheight .mmq-actions {
     position: sticky;
     bottom: 0;
     margin-top: auto;
