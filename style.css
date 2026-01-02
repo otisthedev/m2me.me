@@ -484,6 +484,7 @@ article.post:hover {
 
 .mm-post-grid .entry-header {
     padding: var(--space-md) var(--space-lg) 0;
+    margin-bottom: 0;
 }
 
 .mm-post-grid .entry-content {
