@@ -27,7 +27,8 @@ Text Domain: match-me
     --color-border-light: #EFEFEF;
     
     /* Compact Typography - Mobile First */
-    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    /* Slightly more geometric / "logo-like" system stack */
+    --font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-size-xs: 0.75rem;    /* 12px */
     --font-size-sm: 0.8125rem;  /* 13px */
     --font-size-base: 0.9375rem; /* 15px */
@@ -135,6 +136,7 @@ h1, h2, h3, h4, h5, h6 {
     line-height: var(--line-height-tight);
     color: var(--color-text);
     margin-bottom: var(--space-md);
+    letter-spacing: -0.02em;
 }
 
 h1 { font-size: var(--font-size-3xl); }
@@ -486,6 +488,33 @@ article.post:hover {
     padding: var(--space-sm) var(--space-lg) var(--space-lg);
 }
 
+/* Grid description (excerpt) */
+.mm-post-grid .entry-content p {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+    margin-bottom: var(--space-md);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Make "View" CTA full-width and minimal in grid cards */
+.mm-post-grid .start-quiz {
+    width: 100%;
+    justify-content: center;
+    background: transparent;
+    color: var(--color-primary);
+    border: 1px solid rgba(30, 42, 68, 0.18);
+    border-radius: 999px;
+}
+
+.mm-post-grid .start-quiz:hover {
+    background: rgba(30, 42, 68, 0.06);
+    color: var(--color-primary);
+}
+
 /* ============================================
    Minimal Buttons
    ============================================ */
@@ -678,9 +707,9 @@ label {
     align-items: center;
     justify-content: center;
     padding: var(--space-md, 0.75rem) var(--space-lg, 1rem);
-    background: var(--color-primary, #fd9800);
-    color: white;
-    border-radius: var(--radius, 8px);
+    background: var(--color-primary, #1E2A44);
+    color: #F6F5F2;
+    border-radius: 999px;
     font-size: var(--font-size-base, 0.9375rem);
     font-weight: 600;
     text-decoration: none;
@@ -690,8 +719,8 @@ label {
 }
 
 .start-quiz:hover {
-    background: var(--color-primary-hover, #ff8c00);
-    color: white;
+    background: #243454;
+    color: #F6F5F2;
     text-decoration: none;
 }
 
