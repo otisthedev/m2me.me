@@ -9,6 +9,7 @@ use MatchMe\Infrastructure\Quiz\QuizJsonRepository;
 use MatchMe\Wp\Auth\GoogleAuth;
 use MatchMe\Wp\Auth\FacebookAuth;
 use MatchMe\Wp\Auth\InstagramAuth;
+use MatchMe\Wp\Auth\AuthMenu;
 use MatchMe\Wp\Rewrite\RsIdRewrite;
 use MatchMe\Wp\Session\TempResultsAssigner;
 
@@ -28,11 +29,12 @@ final class QuizFeatureSet
         (new QuizTitle($this->results))->register();
         (new ThemeTweaks())->register();
         (new QuizAdmin($this->config))->register();
+        (new AuthMenu($this->config))->register();
 
         $assigner = new TempResultsAssigner($this->results);
         (new GoogleAuth($this->config, $assigner))->register();
         (new FacebookAuth($this->config, $assigner))->register();
-        (new InstagramAuth($this->config))->register();
+        (new InstagramAuth($this->config, $assigner))->register();
     }
 }
 

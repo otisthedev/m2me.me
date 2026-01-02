@@ -25,7 +25,6 @@ final class QuizShortcodes
 
         add_filter('the_excerpt', [$this, 'appendStartQuizLink']);
         add_action('init', [$this, 'logoutOnUrlParameter']);
-        add_action('wp_head', [$this, 'manipulateDom']);
         add_action('wp_enqueue_scripts', [$this, 'enqueueAssets']);
     }
 
@@ -228,16 +227,6 @@ final class QuizShortcodes
         exit;
     }
 
-    public function manipulateDom(): void
-    {
-        if (is_user_logged_in()) {
-            echo '<style type="text/css">li#menu-item-468{display:none!important;}</style>';
-            echo '<script>document.addEventListener("DOMContentLoaded",function(){var u=sessionStorage.getItem("quizRedirectURL");if(u){sessionStorage.removeItem("quizRedirectURL");window.location.href=u;}});</script>';
-        } else {
-            echo '<style type="text/css">li#menu-item-497{display:none!important;}</style>';
-        }
-    }
-
     public function enqueueAssets(): void
     {
         wp_enqueue_style('match-me-font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css', [], null);
@@ -249,17 +238,15 @@ final class QuizShortcodes
         $publicCss = $baseDir . '/assets/css/quiz-public.css';
         $popupCss = $baseDir . '/assets/css/quiz-popup.css';
         $publicJs = $baseDir . '/assets/js/quiz-public.js';
-        $popupJs = $baseDir . '/assets/js/quiz-popup.js';
+        // quiz-popup.js used to contain a hard-coded register/login popup; auth is now handled globally via AuthModal.
 
         $publicCssVer = is_file($publicCss) ? (string) filemtime($publicCss) : $fallback;
         $popupCssVer = is_file($popupCss) ? (string) filemtime($popupCss) : $fallback;
         $publicJsVer = is_file($publicJs) ? (string) filemtime($publicJs) : $fallback;
-        $popupJsVer = is_file($popupJs) ? (string) filemtime($popupJs) : $fallback;
 
         wp_enqueue_style('match-me-quiz-public', get_template_directory_uri() . '/assets/css/quiz-public.css', [], $publicCssVer);
         wp_enqueue_style('match-me-quiz-popup', get_template_directory_uri() . '/assets/css/quiz-popup.css', [], $popupCssVer);
         wp_enqueue_script('match-me-quiz-public', get_template_directory_uri() . '/assets/js/quiz-public.js', [], $publicJsVer, true);
-        wp_enqueue_script('match-me-quiz-popup', get_template_directory_uri() . '/assets/js/quiz-popup.js', [], $popupJsVer, true);
     }
 
     /**

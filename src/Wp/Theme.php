@@ -79,6 +79,9 @@ final class Theme
     {
         add_theme_support('title-tag');
         add_theme_support('post-thumbnails');
+        register_nav_menus([
+            'primary' => __('Primary Menu', 'match-me'),
+        ]);
         add_theme_support('html5', [
             'search-form',
             'comment-form',

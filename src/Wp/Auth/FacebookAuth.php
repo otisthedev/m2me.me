@@ -27,7 +27,9 @@ final class FacebookAuth
             return '';
         }
 
-        $authUrl = esc_url(home_url('/?facebook_auth=1'));
+        $current = (string) wp_unslash($_SERVER['REQUEST_URI'] ?? '/');
+        $redirectTo = wp_validate_redirect(home_url($current), home_url('/'));
+        $authUrl = esc_url(add_query_arg(['facebook_auth' => '1', 'redirect_to' => $redirectTo], home_url('/')));
 
         $html = '<div class="facebook-login-container" style="background-color:#f7f7f7;padding:20px;border-radius:8px;text-align:center;max-width:300px;margin:20px auto;">';
         $html .= '<a href="' . $authUrl . '" style="background-color:#1877f2;color:#fff;padding:10px 20px;text-decoration:none;border-radius:5px;font-weight:bold;display:inline-block;font-family:sans-serif;font-size:16px;">';
@@ -50,6 +52,9 @@ final class FacebookAuth
         }
 
         $redirectUri = home_url('/?facebook_auth=1');
+        $redirectTo = isset($_GET['redirect_to']) ? (string) $_GET['redirect_to'] : '';
+        $redirectTo = wp_validate_redirect($redirectTo, home_url('/'));
+        $state = isset($_GET['state']) ? sanitize_text_field((string) $_GET['state']) : '';
 
         if (isset($_GET['error'])) {
             $msg = isset($_GET['error_description']) ? sanitize_text_field((string) $_GET['error_description']) : sanitize_text_field((string) $_GET['error']);
@@ -57,15 +62,29 @@ final class FacebookAuth
         }
 
         if (!isset($_GET['code'])) {
+            // First hop: generate state and store redirect_to transient.
+            $state = wp_generate_uuid4();
+            set_transient('match_me_oauth_state_' . $state, ['redirect_to' => $redirectTo], 10 * MINUTE_IN_SECONDS);
+
             $scope = 'email,public_profile';
             $url = 'https://www.facebook.com/v19.0/dialog/oauth?' . http_build_query([
                 'client_id' => $appId,
                 'redirect_uri' => $redirectUri,
                 'scope' => $scope,
                 'response_type' => 'code',
+                'state' => $state,
             ]);
             wp_redirect($url);
             exit;
+        }
+
+        // Callback: resolve redirect_to from state (preferred).
+        if ($state !== '') {
+            $stored = get_transient('match_me_oauth_state_' . $state);
+            if (is_array($stored) && isset($stored['redirect_to'])) {
+                $redirectTo = wp_validate_redirect((string) $stored['redirect_to'], home_url('/'));
+            }
+            delete_transient('match_me_oauth_state_' . $state);
         }
 
         $code = sanitize_text_field((string) $_GET['code']);
@@ -146,7 +165,7 @@ final class FacebookAuth
         $this->assigner->assignFromSessionToUser($userId);
         wp_set_current_user($userId);
         wp_set_auth_cookie($userId, true);
-        wp_redirect(home_url('/'));
+        wp_redirect($redirectTo);
         exit;
     }
 

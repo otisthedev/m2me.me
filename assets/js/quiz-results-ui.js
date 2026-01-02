@@ -82,8 +82,9 @@
         section.className = 'match-me-share-section';
         
         const isMobile = isMobileSharingContext();
+        const viewUrl = shareUrls?.view || '';
         const instagramButton = isMobile ? `
-            <button class="btn-share-instagram" data-quiz-title="${escapeHtml(result.quiz_title || 'Quiz Results')}" data-summary="${escapeHtml(result.textual_summary || 'My quiz results')}">
+            <button class="btn-share-instagram" data-quiz-title="${escapeHtml(result.quiz_title || 'Quiz Results')}" data-summary="${escapeHtml(result.textual_summary || 'My quiz results')}" data-url="${escapeHtml(viewUrl)}">
                 Share to Instagram Story
             </button>
         ` : '';
@@ -134,7 +135,8 @@
             instagramBtn.addEventListener('click', async function() {
                 const title = this.getAttribute('data-quiz-title') || 'Quiz Results';
                 const summary = this.getAttribute('data-summary') || 'My quiz results';
-                await handleInstagramStoryShare(title, summary);
+                const shareUrl = this.getAttribute('data-url') || '';
+                await handleInstagramStoryShare(title, summary, shareUrl);
             });
         }
 
@@ -191,7 +193,7 @@
     /**
      * Generate Instagram Story image as PNG blob
      */
-    async function renderInstagramStoryPngBlob(title, summary) {
+    async function renderInstagramStoryPngBlob(title, summary, shareUrl = '') {
         const width = 1080;
         const height = 1920;
 
@@ -239,7 +241,52 @@
         for (const line of summaryLines) {
             ctx.fillText(line, padX, y);
             y += 58;
-            if (y > height - 260) break;
+            if (y > height - 400) break; // Leave more space for URL
+        }
+
+        // URL section
+        if (shareUrl) {
+            y += 40;
+            
+            // Divider before URL
+            ctx.fillStyle = 'rgba(0,0,0,0.08)';
+            ctx.fillRect(padX, y, width - padX * 2, 2);
+            y += 50;
+
+            // URL label
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.font = '500 32px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            ctx.fillText('Take the quiz:', padX, y);
+            y += 50;
+
+            // URL text (shortened if needed)
+            let urlText = shareUrl;
+            if (urlText.length > 40) {
+                // Try to extract domain and path
+                try {
+                    const urlObj = new URL(urlText);
+                    urlText = urlObj.hostname.replace('www.', '') + urlObj.pathname;
+                    if (urlText.length > 40) {
+                        urlText = urlText.substring(0, 37) + '...';
+                    }
+                } catch (e) {
+                    urlText = urlText.substring(0, 37) + '...';
+                }
+            }
+
+            ctx.fillStyle = '#000000';
+            ctx.font = '600 36px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            const urlLines = wrapTextLines(ctx, urlText, width - padX * 2, 2);
+            for (const line of urlLines) {
+                ctx.fillText(line, padX, y);
+                y += 45;
+            }
+
+            // Call to action
+            y += 20;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.font = '500 28px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            ctx.fillText('Compare your results!', padX, y);
         }
 
         // Footer
@@ -258,7 +305,7 @@
     /**
      * Handle Instagram Stories sharing
      */
-    async function handleInstagramStoryShare(title, summary) {
+    async function handleInstagramStoryShare(title, summary, shareUrl = '') {
         if (!isMobileSharingContext()) {
             showMessage('Instagram Story sharing is available only on mobile devices.', 'warning');
             return;
@@ -266,7 +313,7 @@
 
         let blob;
         try {
-            blob = await renderInstagramStoryPngBlob(title, summary);
+            blob = await renderInstagramStoryPngBlob(title, summary, shareUrl);
         } catch (e) {
             console.error('Failed to render story image:', e);
             showMessage('Could not generate the story image. Please try again.', 'error');
@@ -283,11 +330,18 @@
 
         if (hasShareAPI) {
             try {
-                await navigator.share({
+                const shareData = {
                     title: title,
                     files: [file],
-                });
-                showMessage('Select Instagram in the share sheet, then choose Story.', 'success');
+                };
+                
+                // Add URL if available (some browsers/platforms support this)
+                if (shareUrl) {
+                    shareData.url = shareUrl;
+                }
+                
+                await navigator.share(shareData);
+                showMessage('Select Instagram in the share sheet, then choose Story. Add a link sticker with the URL shown on the image.', 'success');
                 return;
             } catch (error) {
                 // User cancelled - don't show error
@@ -331,7 +385,7 @@
             }
         }
 
-        showMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos.', 'success');
+        showMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos. Then add a link sticker with the URL shown on the image.', 'success');
     }
 
     /**

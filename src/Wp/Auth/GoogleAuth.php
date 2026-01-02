@@ -22,7 +22,9 @@ final class GoogleAuth
 
     public function buttonShortcode(): string
     {
-        $authUrl = esc_url(home_url('?google_auth=1'));
+        $current = (string) wp_unslash($_SERVER['REQUEST_URI'] ?? '/');
+        $redirectTo = wp_validate_redirect(home_url($current), home_url('/'));
+        $authUrl = esc_url(add_query_arg(['google_auth' => '1', 'redirect_to' => $redirectTo], home_url('/')));
         return '<p style="text-align:center;"><a href="' . $authUrl . '">Login with Google</a></p>';
     }
 
@@ -39,16 +41,33 @@ final class GoogleAuth
         }
 
         $redirectUri = home_url('?google_auth=1');
+        $redirectTo = isset($_GET['redirect_to']) ? (string) $_GET['redirect_to'] : '';
+        $redirectTo = wp_validate_redirect($redirectTo, home_url('/'));
+        $state = isset($_GET['state']) ? sanitize_text_field((string) $_GET['state']) : '';
 
         if (!isset($_GET['code'])) {
+            // First hop: generate state and store redirect_to transient.
+            $state = wp_generate_uuid4();
+            set_transient('match_me_oauth_state_' . $state, ['redirect_to' => $redirectTo], 10 * MINUTE_IN_SECONDS);
+
             $scope = urlencode('https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile');
             $authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?response_type=code'
                 . '&client_id=' . rawurlencode($clientId)
                 . '&redirect_uri=' . rawurlencode($redirectUri)
                 . '&scope=' . $scope
-                . '&access_type=online';
+                . '&access_type=online'
+                . '&state=' . rawurlencode($state);
             wp_redirect($authUrl);
             exit;
+        }
+
+        // Callback: resolve redirect_to from state (preferred).
+        if ($state !== '') {
+            $stored = get_transient('match_me_oauth_state_' . $state);
+            if (is_array($stored) && isset($stored['redirect_to'])) {
+                $redirectTo = wp_validate_redirect((string) $stored['redirect_to'], home_url('/'));
+            }
+            delete_transient('match_me_oauth_state_' . $state);
         }
 
         $code = sanitize_text_field((string) $_GET['code']);
@@ -117,7 +136,7 @@ final class GoogleAuth
         $this->assigner->assignFromSessionToUser((int) $user->ID);
         wp_set_current_user((int) $user->ID);
         wp_set_auth_cookie((int) $user->ID);
-        wp_redirect(home_url('/'));
+        wp_redirect($redirectTo);
         exit;
     }
 }

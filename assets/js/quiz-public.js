@@ -202,24 +202,29 @@ document.addEventListener('DOMContentLoaded', () => {
     
         const message = document.createElement('p');
         message.textContent = 'To view results, please Log in or Register.';
-    
-        const loginBtn = document.createElement('div');
-        loginBtn.id = SELECTORS.googleLoginBtn.substring(1); // Remove #
-        loginBtn.innerHTML = '<i class="fab fa-google"></i> Log in with Google'; // Assuming Font Awesome
-        loginBtn.style.cursor = 'pointer'; // Make it look clickable
-    
-        const facebookBtn = document.createElement('div');
-        facebookBtn.id = SELECTORS.facebookLoginBtn.substring(1); // Remove #
-        facebookBtn.innerHTML = '<i class="fab fa-facebook-f"></i> Log in with Facebook'; // Assuming Font Awesome
-        facebookBtn.style.cursor = 'pointer';
-    
+
+        const actions = document.createElement('div');
+        actions.className = 'cq-share-actions';
+
+        const redirectTo = state.resultURL || window.location.href;
+
+        const loginLink = document.createElement('a');
+        loginLink.className = 'share-btn cq-share-link mm-auth-link';
+        loginLink.setAttribute('data-auth', 'login');
+        loginLink.href = `${window.location.origin}/?login=1&redirect_to=${encodeURIComponent(redirectTo)}`;
+        loginLink.textContent = 'Login to view results';
+
+        const registerLink = document.createElement('a');
+        registerLink.className = 'share-btn cq-share-instagram mm-auth-link';
+        registerLink.setAttribute('data-auth', 'register');
+        registerLink.href = `${window.location.origin}/?register=1&redirect_to=${encodeURIComponent(redirectTo)}`;
+        registerLink.textContent = 'Create an account';
+
+        actions.appendChild(loginLink);
+        actions.appendChild(registerLink);
+
         analyzingTextElement.parentNode.insertBefore(message, analyzingTextElement.nextSibling);
-        analyzingTextElement.parentNode.insertBefore(loginBtn, message.nextSibling);
-        analyzingTextElement.parentNode.insertBefore(facebookBtn, loginBtn.nextSibling);
-    
-        // Add listeners immediately
-        loginBtn.addEventListener('click', handleGoogleLoginRedirect);
-        facebookBtn.addEventListener('click', handleFacebookLoginRedirect);
+        analyzingTextElement.parentNode.insertBefore(actions, message.nextSibling);
     }    
 
     function displayResults(profileHTML, suggestionsHTML) {
@@ -583,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return lines;
     }
 
-    async function renderInstagramStoryPngBlob(title, summary) {
+    async function renderInstagramStoryPngBlob(title, summary, shareUrl = '') {
         const width = 1080;
         const height = 1920;
 
@@ -631,7 +636,52 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const line of summaryLines) {
             ctx.fillText(line, padX, y);
             y += 58;
-            if (y > height - 260) break;
+            if (y > height - 400) break; // Leave more space for URL
+        }
+
+        // URL section
+        if (shareUrl) {
+            y += 40;
+            
+            // Divider before URL
+            ctx.fillStyle = 'rgba(0,0,0,0.08)';
+            ctx.fillRect(padX, y, width - padX * 2, 2);
+            y += 50;
+
+            // URL label
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.font = '500 32px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            ctx.fillText('Take the quiz:', padX, y);
+            y += 50;
+
+            // URL text (shortened if needed)
+            let urlText = shareUrl;
+            if (urlText.length > 40) {
+                // Try to extract domain and path
+                try {
+                    const urlObj = new URL(urlText);
+                    urlText = urlObj.hostname.replace('www.', '') + urlObj.pathname;
+                    if (urlText.length > 40) {
+                        urlText = urlText.substring(0, 37) + '...';
+                    }
+                } catch (e) {
+                    urlText = urlText.substring(0, 37) + '...';
+                }
+            }
+
+            ctx.fillStyle = '#000000';
+            ctx.font = '600 36px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            const urlLines = wrapTextLines(ctx, urlText, width - padX * 2, 2);
+            for (const line of urlLines) {
+                ctx.fillText(line, padX, y);
+                y += 45;
+            }
+
+            // Call to action
+            y += 20;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.font = '500 28px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            ctx.fillText('Compare your results!', padX, y);
         }
 
         // Footer
@@ -658,9 +708,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = (cqData && cqData.meta && cqData.meta.title) ? String(cqData.meta.title) : String(document.title || 'Quiz Results');
         const summary = extractResultSummaryText() || 'My quiz results';
 
+        // Get share URL from state or construct it
+        let shareUrl = '';
+        if (state.resultURL) {
+            shareUrl = state.resultURL;
+        } else if (window.location.hash.includes('rsID=')) {
+            shareUrl = window.location.href;
+        } else {
+            const storedID = localStorage.getItem('cqResultID');
+            if (storedID) {
+                shareUrl = `${window.location.origin}${window.location.pathname}#rsID=${storedID}`;
+            } else {
+                shareUrl = window.location.href.split('#')[0];
+            }
+        }
+
         let blob;
         try {
-            blob = await renderInstagramStoryPngBlob(title, summary);
+            blob = await renderInstagramStoryPngBlob(title, summary, shareUrl);
         } catch (e) {
             console.error('Failed to render story image:', e);
             showErrorMessage('Could not generate the story image. Please try again.');
@@ -684,11 +749,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Try to share even if canShare() returns false
             try {
-                await navigator.share({
+                const shareData = {
                     title,
                     files: [file],
-                });
-                showSuccessMessage('Select Instagram in the share sheet, then choose Story.');
+                };
+                
+                // Add URL if available (some browsers/platforms support this)
+                if (shareUrl) {
+                    shareData.url = shareUrl;
+                }
+                
+                await navigator.share(shareData);
+                showSuccessMessage('Select Instagram in the share sheet, then choose Story. Add a link sticker with the URL shown on the image.');
                 return;
             } catch (error) {
                 // User cancelled - don't show error or fallback
@@ -731,8 +803,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => URL.revokeObjectURL(url), 2000);
 
         // Best-effort: open Instagram Story camera (cannot prefill image from web; user selects from Photos).
-        const isAndroid = /Android/i.test(navigator.userAgent);
-        
         if (isIOS) {
             try {
                 // Must be in a user gesture context; this handler is click-driven.
@@ -749,13 +819,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        showSuccessMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos.');
+        showSuccessMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos. Then add a link sticker with the URL shown on the image.');
     }
 
     function handleGoogleLoginRedirect() {
         if (state.resultURL) {
-            sessionStorage.setItem('quizRedirectURL', state.resultURL);
-            window.location.href = 'https://quizalyze.com/?google_auth=1'; // Hardcoded URL - maybe move to cqVars?
+            const redirectTo = state.resultURL || window.location.href;
+            window.location.href = `${window.location.origin}/?google_auth=1&redirect_to=${encodeURIComponent(redirectTo)}`;
         } else {
             console.warn('Cannot redirect to Google Login: Result URL not available.');
             showErrorMessage('Could not prepare login redirect. Please try finishing the quiz again.');
@@ -764,8 +834,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleFacebookLoginRedirect() {
         if (state.resultURL) {
-            sessionStorage.setItem('quizRedirectURL', state.resultURL);
-            window.location.href = 'https://quizalyze.com/?facebook_auth=1'; // Hardcoded URL - maybe move to cqVars?
+            const redirectTo = state.resultURL || window.location.href;
+            window.location.href = `${window.location.origin}/?facebook_auth=1&redirect_to=${encodeURIComponent(redirectTo)}`;
         } else {
             console.warn('Cannot redirect to Facebook Login: Result URL not available.');
             showErrorMessage('Could not prepare login redirect. Please try finishing the quiz again.');

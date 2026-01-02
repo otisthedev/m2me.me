@@ -22,6 +22,8 @@ final class Activation
             wp_mkdir_p($quizDir);
         }
 
+        $this->ensureAccountPage();
+
         // Create/upgrade new modular quiz tables.
         global $wpdb;
         if ($wpdb instanceof \wpdb) {
@@ -30,6 +32,33 @@ final class Activation
 
         $this->resultsTable->createOrUpdate();
         flush_rewrite_rules();
+    }
+
+    private function ensureAccountPage(): void
+    {
+        $slug = 'account';
+        $existing = get_page_by_path($slug);
+        if ($existing instanceof \WP_Post) {
+            return;
+        }
+
+        $pageId = wp_insert_post([
+            'post_title' => 'Account',
+            'post_name' => $slug,
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_content' => '',
+        ], true);
+
+        if (is_wp_error($pageId)) {
+            return;
+        }
+
+        // Assign the theme template if present.
+        $templateFile = (string) get_template_directory() . '/page-account.php';
+        if (is_file($templateFile)) {
+            update_post_meta((int) $pageId, '_wp_page_template', 'page-account.php');
+        }
     }
 }
 

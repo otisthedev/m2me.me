@@ -75,8 +75,25 @@
       const prev = answers[index];
       if (prev && prev.option_id) {
         const sel = els.options.querySelector(`input[value="${CSS.escape(prev.option_id)}"]`);
-        if (sel) sel.checked = true;
+        if (sel) {
+          sel.checked = true;
+          sel.closest('.mmq-option')?.classList.add('selected');
+        }
       }
+
+      // Add click handlers for visual feedback
+      els.options.querySelectorAll('.mmq-option input[type="radio"]').forEach(input => {
+        input.addEventListener('change', function() {
+          // Remove selected from all options
+          els.options.querySelectorAll('.mmq-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+          // Add selected to current option
+          if (this.checked) {
+            this.closest('.mmq-option')?.classList.add('selected');
+          }
+        });
+      });
     }
 
     if (els.backBtn) {
