@@ -171,6 +171,75 @@ p {
     overflow-x: hidden;
 }
 
+.mm-hero {
+    margin: 0 0 var(--space-xl);
+    padding: var(--space-xl) 0;
+    border-bottom: 1px solid var(--color-border-light);
+    background:
+        radial-gradient(900px 300px at 10% 0%, rgba(30, 42, 68, 0.10), transparent 60%),
+        radial-gradient(700px 240px at 90% 20%, rgba(30, 42, 68, 0.08), transparent 60%);
+}
+
+.mm-hero-inner {
+    display: grid;
+    grid-template-columns: 1.25fr 0.75fr;
+    gap: var(--space-xl);
+    align-items: center;
+}
+
+.mm-hero-title {
+    margin: 0 0 var(--space-sm);
+    font-size: clamp(1.6rem, 3.6vw, 2.4rem);
+    letter-spacing: -0.03em;
+    color: var(--color-primary);
+}
+
+.mm-hero-subtitle {
+    margin: 0 0 var(--space-lg);
+    color: var(--color-text-secondary);
+    max-width: 48ch;
+}
+
+.mm-hero-cta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.mm-hero-media {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mm-hero-image {
+    width: min(320px, 100%);
+    height: auto;
+    opacity: 0.95;
+    filter: drop-shadow(0 16px 40px rgba(30, 42, 68, 0.14));
+}
+
+@media (max-width: 767px) {
+    .mm-hero {
+        padding: var(--space-lg) 0;
+        margin-bottom: var(--space-lg);
+    }
+    .mm-hero-inner {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+        text-align: left;
+    }
+    .mm-hero-subtitle {
+        max-width: 60ch;
+    }
+    .mm-hero-media {
+        justify-content: flex-start;
+    }
+    .mm-hero-image {
+        width: min(240px, 70%);
+    }
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -755,6 +824,36 @@ label {
 
 .start-quiz:active {
     transform: scale(0.98);
+}
+
+/* Destructive actions */
+.mm-danger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(220, 38, 38, 0.35);
+    background: rgba(220, 38, 38, 0.08);
+    color: #991b1b;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), transform var(--transition);
+}
+
+.mm-danger-btn:hover {
+    background: rgba(220, 38, 38, 0.12);
+    border-color: rgba(220, 38, 38, 0.45);
+}
+
+.mm-danger-btn:active {
+    transform: scale(0.99);
+}
+
+.mm-danger-btn:focus-visible {
+    outline: 2px solid rgba(220, 38, 38, 0.6);
+    outline-offset: 2px;
 }
 
 /* Archive Header */

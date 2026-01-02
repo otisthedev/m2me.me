@@ -19,15 +19,16 @@ final class ShareMeta
 
     public function filterDocumentTitle(string $title): string
     {
+        $mode = (string) get_query_var('mm_share_mode');
+        $mode = ($mode === 'compare') ? 'compare' : (($mode === 'match') ? 'match' : 'view');
+
         $token = (string) get_query_var('mm_share_token');
-        if ($token === '') {
+        $cmp = (string) get_query_var('mm_comparison_token');
+        if ($token === '' && $cmp === '') {
             return $title;
         }
 
-        $mode = (string) get_query_var('mm_share_mode');
-        $mode = ($mode === 'compare') ? 'compare' : 'view';
-
-        $data = $this->buildMetaData($token, $mode);
+        $data = $this->buildMetaData($token, $cmp, $mode);
         if ($data === null) {
             return $title;
         }
@@ -37,15 +38,16 @@ final class ShareMeta
 
     public function renderMetaTags(): void
     {
+        $mode = (string) get_query_var('mm_share_mode');
+        $mode = ($mode === 'compare') ? 'compare' : (($mode === 'match') ? 'match' : 'view');
+
         $token = (string) get_query_var('mm_share_token');
-        if ($token === '') {
+        $cmp = (string) get_query_var('mm_comparison_token');
+        if ($token === '' && $cmp === '') {
             return;
         }
 
-        $mode = (string) get_query_var('mm_share_mode');
-        $mode = ($mode === 'compare') ? 'compare' : 'view';
-
-        $data = $this->buildMetaData($token, $mode);
+        $data = $this->buildMetaData($token, $cmp, $mode);
         if ($data === null) {
             return;
         }
@@ -85,13 +87,35 @@ final class ShareMeta
     /**
      * @return array{title:string,description:string,url:string,image:string}|null
      */
-    private function buildMetaData(string $token, string $mode): ?array
+    private function buildMetaData(string $token, string $comparisonToken, string $mode): ?array
     {
         $wpdb = Container::wpdb();
         $config = Container::config();
 
         $resultRepo = new ResultRepository($wpdb);
-        $row = $resultRepo->findByShareToken($token);
+
+        $row = null;
+        $quizTitle = 'Quiz Results';
+        $ownerName = 'Someone';
+        $image = $this->fallbackShareImage();
+
+        if ($mode === 'match') {
+            // For match shares, we don't need perfect identity—use the "other" person's image if available.
+            $cmpRepo = new \MatchMe\Infrastructure\Db\ComparisonRepository($wpdb);
+            $cmp = $cmpRepo->findByShareToken($comparisonToken);
+            if ($cmp === null) {
+                return null;
+            }
+
+            $rowA = $resultRepo->findById((int) ($cmp['result_a'] ?? 0));
+            if ($rowA === null) {
+                return null;
+            }
+            $row = $rowA;
+        } else {
+            $row = $resultRepo->findByShareToken($token);
+        }
+
         if ($row === null) {
             return null;
         }
@@ -107,7 +131,6 @@ final class ShareMeta
         }
 
         $quizSlug = (string) ($row['quiz_slug'] ?? '');
-        $quizTitle = 'Quiz Results';
         if ($quizSlug !== '') {
             try {
                 $quizConfig = (new QuizJsonRepository($config))->load($quizSlug);
@@ -117,8 +140,6 @@ final class ShareMeta
             }
         }
 
-        $ownerName = 'Someone';
-        $image = $this->fallbackShareImage();
         $ownerId = (int) ($row['user_id'] ?? 0);
         if ($ownerId > 0) {
             $u = get_user_by('id', $ownerId);
@@ -134,11 +155,16 @@ final class ShareMeta
 
         $url = $mode === 'compare'
             ? home_url('/compare/' . rawurlencode($token) . '/')
-            : home_url('/result/' . rawurlencode($token) . '/');
+            : ($mode === 'match'
+                ? home_url('/match/' . rawurlencode($comparisonToken) . '/')
+                : home_url('/result/' . rawurlencode($token) . '/'));
 
         if ($mode === 'compare') {
             $title = 'Compare with ' . $ownerName . ' — ' . $quizTitle;
             $description = 'Take the quiz to compare your results with ' . $ownerName . '.';
+        } elseif ($mode === 'match') {
+            $title = 'Comparison Result — ' . $quizTitle;
+            $description = 'See the comparison results and trait-by-trait match breakdown.';
         } else {
             $title = $ownerName . '’s ' . $quizTitle;
             $description = 'View quiz results and trait breakdown.';

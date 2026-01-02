@@ -8,8 +8,9 @@
   async function main() {
     const token = window.matchMeShareToken;
     const mode = window.matchMeShareMode || 'view';
+    const comparisonToken = window.matchMeComparisonToken;
     const root = document.getElementById('mm-share-result-root');
-    if (!token || !root) return;
+    if ((!token && !comparisonToken) || !root) return;
 
     root.innerHTML =
       '<div class="mm-result-loading">' +
@@ -19,7 +20,16 @@
       '</div>';
 
     try {
+      if (String(mode) === 'match') {
+        const cmp = await window.MatchMeQuiz.getComparison(String(comparisonToken || ''));
+        root.innerHTML = '';
+        window.MatchMeQuizUI.renderMatchResult(cmp, root);
+        return;
+      }
+
       const result = await window.MatchMeQuiz.getResult(String(token));
+      // Ensure share UI shows on past results too (API now returns share_token, but keep this as a safe fallback).
+      result.share_token = result.share_token || String(token);
       root.innerHTML = '';
 
       if (String(mode) === 'compare') {

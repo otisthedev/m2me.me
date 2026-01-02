@@ -24,6 +24,8 @@ final class AuthMenu
         add_action('admin_post_match_me_register', [$this, 'handleRegister']);
 
         add_action('admin_post_match_me_profile_update', [$this, 'handleProfileUpdate']);
+
+        add_action('admin_post_match_me_delete_account', [$this, 'handleDeleteAccount']);
     }
 
     /**
@@ -394,6 +396,54 @@ final class AuthMenu
         }
 
         wp_redirect(add_query_arg(['updated' => '1'], home_url('/profile/')));
+        exit;
+    }
+
+    public function handleDeleteAccount(): void
+    {
+        if (!is_user_logged_in()) {
+            wp_redirect(add_query_arg(['login' => '1', 'redirect_to' => home_url('/profile/')], home_url('/')));
+            exit;
+        }
+
+        $nonce = isset($_POST['match_me_delete_account_nonce']) ? (string) $_POST['match_me_delete_account_nonce'] : '';
+        if (!wp_verify_nonce($nonce, 'match_me_delete_account')) {
+            wp_die('Invalid request.');
+        }
+
+        $confirm = isset($_POST['confirm_delete']) ? (string) $_POST['confirm_delete'] : '';
+        if ($confirm !== 'DELETE') {
+            wp_die('Deletion not confirmed.');
+        }
+
+        $userId = (int) get_current_user_id();
+
+        // Delete legacy quiz history (cq_quiz_results)
+        global $wpdb;
+        if ($wpdb instanceof \wpdb) {
+            $legacyTable = $wpdb->prefix . 'cq_quiz_results';
+            $wpdb->query($wpdb->prepare("DELETE FROM {$legacyTable} WHERE user_id = %d", $userId));
+
+            // Delete v2 results (match_me_results). Comparisons referencing these results will cascade.
+            $resultsTable = $wpdb->prefix . 'match_me_results';
+            $wpdb->query($wpdb->prepare("DELETE FROM {$resultsTable} WHERE user_id = %d", $userId));
+        }
+
+        // Delete uploaded profile picture attachment if we created one.
+        $attachmentId = (int) get_user_meta($userId, 'profile_picture_attachment_id', true);
+        if ($attachmentId > 0) {
+            wp_delete_attachment($attachmentId, true);
+        }
+
+        // Delete the WP user (also removes user meta; deletes authored content when reassign is null).
+        require_once ABSPATH . 'wp-admin/includes/user.php';
+
+        // Log out first to avoid weird session issues during deletion.
+        wp_logout();
+
+        wp_delete_user($userId);
+
+        wp_redirect(add_query_arg(['account_deleted' => '1'], home_url('/')));
         exit;
     }
 }

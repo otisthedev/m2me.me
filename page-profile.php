@@ -170,6 +170,52 @@ get_header();
                 </ul>
             <?php endif; ?>
         </section>
+
+        <section style="margin-top: 2.5rem; border-top: 1px solid var(--color-border, #e5e5e5); padding-top: 1.5rem;">
+            <h2>Delete account</h2>
+            <p style="color:var(--color-text-secondary,#666); max-width: 70ch;">
+                This will permanently delete your account and <strong>everything related to you</strong>, including your profile information,
+                quiz history, results, and comparisons. This action cannot be undone.
+            </p>
+
+            <form id="mm-delete-account-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="match_me_delete_account">
+                <?php wp_nonce_field('match_me_delete_account', 'match_me_delete_account_nonce'); ?>
+                <input type="hidden" name="confirm_delete" value="">
+
+                <button type="button" class="mm-danger-btn" id="mm-delete-account-btn">
+                    Delete my account
+                </button>
+            </form>
+
+            <script>
+                (function () {
+                    const btn = document.getElementById('mm-delete-account-btn');
+                    const form = document.getElementById('mm-delete-account-form');
+                    if (!btn || !form) return;
+
+                    btn.addEventListener('click', function () {
+                        const first = window.confirm(
+                            'Delete your account?\n\nThis will permanently delete your profile, quiz history, results, and comparisons. This cannot be undone.'
+                        );
+                        if (!first) return;
+
+                        const typed = window.prompt('Type DELETE to confirm account deletion:');
+                        if (typed !== 'DELETE') {
+                            window.alert('Account deletion cancelled.');
+                            return;
+                        }
+
+                        const second = window.confirm('Final confirmation: permanently delete your account now?');
+                        if (!second) return;
+
+                        const input = form.querySelector('input[name="confirm_delete"]');
+                        if (input) input.value = typed;
+                        form.submit();
+                    });
+                })();
+            </script>
+        </section>
     <?php endif; ?>
 </main>
 

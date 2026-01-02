@@ -237,13 +237,98 @@
   margin-bottom: var(--spacing-xl);
 }
 
-.match-me-match-result h2 {
-  font-size: 2rem;
-  font-weight: 400;
+.mm-match-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
   margin: 0 0 var(--spacing-xl) 0;
-  text-align: center;
+  padding: var(--spacing-lg);
+  background: radial-gradient(circle at 50% 0%, rgba(30, 42, 68, 0.08), transparent 55%);
+  border-radius: var(--radius);
+}
+
+.mm-match-people {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mm-match-people .mm-person:first-child .mm-avatar {
+  transform: rotate(-2deg);
+}
+
+.mm-match-people .mm-person:last-child .mm-avatar {
+  transform: rotate(2deg);
+}
+
+.mm-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 110px;
+}
+
+.mm-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: rgba(30, 42, 68, 0.06);
+  border: 2px solid rgba(30, 42, 68, 0.20);
+  box-shadow: 0 10px 30px rgba(30, 42, 68, 0.10);
+}
+
+.mm-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mm-avatar span {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.mm-person-name {
+  font-size: 0.9rem;
   color: var(--color-text);
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.mm-match-heart {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(30, 42, 68, 0.06);
+  border: 1px solid rgba(30, 42, 68, 0.12);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.mm-match-score {
+  text-align: center;
+}
+
+.mm-match-score-value {
+  font-size: 2.5rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--color-primary);
+  line-height: 1.05;
+}
+
+.mm-match-score-label {
+  font-size: 0.875rem;
+  color: var(--color-text-light);
 }
 
 .match-breakdown {

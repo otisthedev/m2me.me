@@ -30,12 +30,6 @@
             const shareSection = renderShareSection(result.share_token, result.share_urls, result);
             container.appendChild(shareSection);
         }
-
-        // Compare CTA
-        if (result.can_compare) {
-            const compareSection = renderCompareSection(result.share_token);
-            container.appendChild(compareSection);
-        }
     }
 
     /**
@@ -82,9 +76,11 @@
         section.className = 'match-me-share-section';
         
         const isMobile = isMobileSharingContext();
-        const viewUrl = shareUrls?.view || '';
+        // For Instagram Story we want the compare link (so viewers can take the quiz + see comparison),
+        // not the view-only result link.
+        const compareUrl = shareUrls?.compare || '';
         const instagramButton = isMobile ? `
-            <button class="btn-share-instagram" data-quiz-title="${escapeHtml(result.quiz_title || 'Quiz Results')}" data-summary="${escapeHtml(result.textual_summary || 'My quiz results')}" data-url="${escapeHtml(viewUrl)}">
+            <button class="btn-share-instagram" data-quiz-title="${escapeHtml(result.quiz_title || 'Quiz Results')}" data-summary="${escapeHtml(result.textual_summary || 'My quiz results')}" data-url="${escapeHtml(compareUrl)}">
                 Share to Instagram Story
             </button>
         ` : '';
@@ -341,7 +337,7 @@
                 }
                 
                 await navigator.share(shareData);
-                showMessage('Select Instagram in the share sheet, then choose Story. Add a link sticker with the URL shown on the image.', 'success');
+                showMessage('Select Instagram in the share sheet, then choose Story. Add a link sticker with the comparison URL shown on the image.', 'success');
                 return;
             } catch (error) {
                 // User cancelled - don't show error
@@ -385,7 +381,7 @@
             }
         }
 
-        showMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos. Then add a link sticker with the URL shown on the image.', 'success');
+        showMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos. Then add a link sticker with the comparison URL shown on the image.', 'success');
     }
 
     /**
@@ -471,24 +467,131 @@
         container.innerHTML = '';
 
         const matchScore = Math.round(matchResult.match_score || 0);
+        const a = (matchResult.participants && matchResult.participants.a) ? matchResult.participants.a : null;
+        const b = (matchResult.participants && matchResult.participants.b) ? matchResult.participants.b : null;
+        const nameA = (a && a.name) ? String(a.name) : 'Them';
+        const nameB = (b && b.name) ? String(b.name) : 'You';
+        const avatarA = (a && a.avatar_url) ? String(a.avatar_url) : '';
+        const avatarB = (b && b.avatar_url) ? String(b.avatar_url) : '';
+        const shareUrl = matchResult.share_urls && matchResult.share_urls.match ? String(matchResult.share_urls.match) : '';
+
         const matchEl = document.createElement('div');
         matchEl.className = 'match-me-match-result';
         matchEl.innerHTML = `
-            <h2>Match Score: ${matchScore}%</h2>
+            <div class="mm-match-hero">
+                <div class="mm-match-people">
+                    <div class="mm-person">
+                        <div class="mm-avatar">
+                            ${avatarB ? `<img src="${escapeHtml(avatarB)}" alt="${escapeHtml(nameB)}">` : `<span>${escapeHtml((nameB || 'Y')[0] || 'Y')}</span>`}
+                        </div>
+                        <div class="mm-person-name">${escapeHtml(nameB)}</div>
+                    </div>
+                    <div class="mm-match-heart">+</div>
+                    <div class="mm-person">
+                        <div class="mm-avatar">
+                            ${avatarA ? `<img src="${escapeHtml(avatarA)}" alt="${escapeHtml(nameA)}">` : `<span>${escapeHtml((nameA || 'T')[0] || 'T')}</span>`}
+                        </div>
+                        <div class="mm-person-name">${escapeHtml(nameA)}</div>
+                    </div>
+                </div>
+                <div class="mm-match-score">
+                    <div class="mm-match-score-value">${matchScore}%</div>
+                    <div class="mm-match-score-label">Match</div>
+                </div>
+            </div>
+            ${shareUrl ? `
+              <div class="match-me-share-section">
+                <h3>Share comparison</h3>
+                <div class="share-buttons">
+                  ${isMobileSharingContext() ? `<button class="btn-share-instagram" data-quiz-title="Comparison Result" data-summary="${escapeHtml(`${nameB} + ${nameA}: ${matchScore}% match`)}" data-url="${escapeHtml(shareUrl)}">Share to Instagram Story</button>` : ''}
+                  <button class="btn-share-view" data-mm-share="match">Share</button>
+                  <button class="btn-share-compare" data-mm-copy="${escapeHtml(shareUrl)}">Copy link</button>
+                </div>
+              </div>
+            ` : ''}
+            ${matchResult.you_result && matchResult.you_result.trait_summary ? `
+              <div class="match-me-result-summary">
+                <h2>Your Results</h2>
+                <div class="trait-breakdown">
+                  ${renderTraitBreakdown(matchResult.you_result.trait_summary || {}, matchResult.you_result.trait_labels || {})}
+                </div>
+              </div>
+            ` : ''}
             <div class="match-breakdown">
-                ${renderMatchBreakdown(matchResult.breakdown || {})}
+                ${renderMatchBreakdown(matchResult.breakdown || {}, { aName: nameA, bName: nameB })}
             </div>
         `;
         container.appendChild(matchEl);
+
+        const shareBtn = container.querySelector('[data-mm-share="match"]');
+        if (shareBtn && shareUrl) {
+            shareBtn.addEventListener('click', async () => {
+                try {
+                    if (navigator.share) {
+                        await navigator.share({
+                            title: `Match result: ${matchScore}%`,
+                            text: `${nameB} and ${nameA} match ${matchScore}%`,
+                            url: shareUrl
+                        });
+                    } else {
+                        await copyToClipboard(shareUrl);
+                        showMessage('Link copied. Paste it anywhere to share.', 'success');
+                    }
+                } catch (e) {
+                    showMessage('Could not share. Try copying the link instead.', 'warning');
+                }
+            });
+        }
+
+        const copyBtn = container.querySelector('[data-mm-copy]');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async () => {
+                const u = copyBtn.getAttribute('data-mm-copy') || '';
+                if (!u) return;
+                try {
+                    await copyToClipboard(u);
+                    showMessage('Link copied!', 'success');
+                } catch (e) {
+                    showMessage('Could not copy link.', 'warning');
+                }
+            });
+        }
+
+        const instagramBtn = container.querySelector('.btn-share-instagram');
+        if (instagramBtn) {
+            instagramBtn.addEventListener('click', async function() {
+                const title = this.getAttribute('data-quiz-title') || 'Comparison Result';
+                const summary = this.getAttribute('data-summary') || `${nameB} + ${nameA}: ${matchScore}% match`;
+                const url = this.getAttribute('data-url') || '';
+                await handleInstagramStoryShare(title, summary, url);
+            });
+        }
+    }
+
+    async function copyToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        }
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
     }
 
     /**
      * Render match breakdown.
      */
-    function renderMatchBreakdown(breakdown) {
+    function renderMatchBreakdown(breakdown, opts = {}) {
         if (!breakdown.traits) {
             return '<p>No breakdown available.</p>';
         }
+
+        const aName = opts.aName ? String(opts.aName) : 'Them';
+        const bName = opts.bName ? String(opts.bName) : 'You';
 
         const traits = Object.entries(breakdown.traits);
         return traits.map(([trait, data]) => {
@@ -499,8 +602,8 @@
                     <div class="match-trait-label">${label}</div>
                     <div class="match-trait-similarity">${similarity}% similar</div>
                     <div class="match-trait-values">
-                        <span>You: ${Math.round((data.a || 0) * 100)}%</span>
-                        <span>Other: ${Math.round((data.b || 0) * 100)}%</span>
+                        <span>${escapeHtml(bName)}: ${Math.round((data.b || 0) * 100)}%</span>
+                        <span>${escapeHtml(aName)}: ${Math.round((data.a || 0) * 100)}%</span>
                     </div>
                 </div>
             `;

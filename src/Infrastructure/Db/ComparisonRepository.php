@@ -22,6 +22,7 @@ final class ComparisonRepository
      *
      * @param int $resultA
      * @param int $resultB
+     * @param string $shareToken
      * @param float $matchScore
      * @param array<string, mixed> $breakdown
      * @param string $algorithm
@@ -30,6 +31,7 @@ final class ComparisonRepository
     public function insert(
         int $resultA,
         int $resultB,
+        string $shareToken,
         float $matchScore,
         array $breakdown,
         string $algorithm
@@ -40,12 +42,13 @@ final class ComparisonRepository
         $data = [
             'result_a' => $resultA,
             'result_b' => $resultB,
+            'share_token' => $shareToken,
             'match_score' => $matchScore,
             'breakdown' => $breakdownJson,
             'algorithm_used' => $algorithm,
         ];
 
-        $format = ['%d', '%d', '%f', '%s', '%s'];
+        $format = ['%d', '%d', '%s', '%f', '%s', '%s'];
 
         $result = $this->wpdb->insert($table, $data, $format);
 
@@ -66,11 +69,33 @@ final class ComparisonRepository
         $table = $this->tableName();
         $row = $this->wpdb->get_row(
             $this->wpdb->prepare(
-                "SELECT id, result_a, result_b, match_score, breakdown, algorithm_used, created_at 
+                "SELECT id, result_a, result_b, share_token, match_score, breakdown, algorithm_used, created_at 
                  FROM $table 
                  WHERE id = %d 
                  LIMIT 1",
                 $comparisonId
+            ),
+            ARRAY_A
+        );
+
+        return is_array($row) ? $row : null;
+    }
+
+    /**
+     * Find comparison by share token.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findByShareToken(string $shareToken): ?array
+    {
+        $table = $this->tableName();
+        $row = $this->wpdb->get_row(
+            $this->wpdb->prepare(
+                "SELECT id, result_a, result_b, share_token, match_score, breakdown, algorithm_used, created_at
+                 FROM $table
+                 WHERE share_token = %s
+                 LIMIT 1",
+                $shareToken
             ),
             ARRAY_A
         );

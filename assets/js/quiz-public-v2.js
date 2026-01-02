@@ -42,6 +42,42 @@
   const startBtn = root.querySelector('.mmq-start');
   const isGated = Boolean(intro && startBtn && els.screen);
   let hasStarted = !isGated;
+  const requireLogin = Boolean(quizVars && quizVars.requireLogin);
+  const isLoggedIn = Boolean(quizVars && quizVars.isLoggedIn);
+
+  function updateUrlFlag(key, valueOrNull) {
+    try {
+      const u = new URL(window.location.href);
+      if (valueOrNull === null) {
+        u.searchParams.delete(key);
+      } else {
+        u.searchParams.set(key, String(valueOrNull));
+      }
+      window.history.replaceState({}, '', u.toString());
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function openAuth(mode) {
+    // Use the existing global [data-auth] click handler to open the auth modal
+    // without navigation.
+    const a = document.createElement('a');
+    a.setAttribute('href', '#');
+    a.setAttribute('data-auth', mode || 'register');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function startQuiz() {
+    hasStarted = true;
+    if (intro) intro.style.display = 'none';
+    if (els.screen) els.screen.style.display = 'block';
+    // Clean up the auto-start flag so refreshing doesn't keep forcing behavior.
+    updateUrlFlag('mm_start_quiz', null);
+    render();
+  }
 
   let index = 0;
   const answers = []; // index-aligned {question_id, option_id}
@@ -161,6 +197,14 @@
     setError('');
     root.classList.add('mmq-loading');
     try {
+      // If results require login, don't even attempt submit while logged out.
+      if (requireLogin && !isLoggedIn) {
+        root.classList.remove('mmq-loading');
+        setError('Please log in to see your results.');
+        updateUrlFlag('mm_start_quiz', '1');
+        openAuth('register');
+        return;
+      }
       // Show generating/loading state immediately to avoid blank screen.
       if (els.results) {
         els.results.style.display = 'block';
@@ -262,11 +306,26 @@
     // Hide quiz UI until user explicitly starts.
     if (els.screen) els.screen.style.display = 'none';
     if (els.results) els.results.style.display = 'none';
+
+    const shouldAutoStart = urlParams ? (urlParams.get('mm_start_quiz') === '1') : false;
+
+    if (shouldAutoStart) {
+      if (requireLogin && !isLoggedIn) {
+        // User intended to start, but must authenticate first.
+        openAuth('register');
+      } else {
+        startQuiz();
+      }
+    }
+
     startBtn.addEventListener('click', () => {
-      hasStarted = true;
-      if (intro) intro.style.display = 'none';
-      if (els.screen) els.screen.style.display = 'block';
-      render();
+      if (requireLogin && !isLoggedIn) {
+        // Persist intent so after login/registration redirect, the quiz starts immediately.
+        updateUrlFlag('mm_start_quiz', '1');
+        openAuth('register');
+        return;
+      }
+      startQuiz();
     });
   } else {
     render();

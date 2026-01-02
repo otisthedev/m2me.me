@@ -15,7 +15,8 @@
 
 .mmq-fullheight {
   /* Fill the viewport under the sticky header */
-  min-height: calc(100svh - var(--header-height) - 16px);
+  height: calc(100svh - var(--header-height) - 16px);
+  max-height: calc(100svh - var(--header-height) - 16px);
   display: flex;
   flex-direction: column;
 }
@@ -320,7 +321,7 @@
 
   /* Keep actions always in the same place on mobile */
   .mmq-fullheight .mmq-screen {
-    min-height: calc(100svh - var(--header-height) - 24px);
+    max-height: calc(100svh - var(--header-height) - 24px);
   }
 
   .mmq-fullheight .mmq-actions {

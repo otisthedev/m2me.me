@@ -27,8 +27,15 @@ final class ShareTokenRewrite
             'top'
         );
 
+        add_rewrite_rule(
+            '^match/([A-Za-z0-9]+)/?$',
+            'index.php?mm_comparison_token=$matches[1]&mm_share_mode=match',
+            'top'
+        );
+
         add_rewrite_tag('%mm_share_token%', '([A-Za-z0-9]+)');
-        add_rewrite_tag('%mm_share_mode%', '(view|compare)');
+        add_rewrite_tag('%mm_comparison_token%', '([A-Za-z0-9]+)');
+        add_rewrite_tag('%mm_share_mode%', '(view|compare|match)');
     }
 
     /**
@@ -38,19 +45,21 @@ final class ShareTokenRewrite
     public function addQueryVars(array $vars): array
     {
         $vars[] = 'mm_share_token';
+        $vars[] = 'mm_comparison_token';
         $vars[] = 'mm_share_mode';
         return $vars;
     }
 
     public function templateInclude(string $template): string
     {
-        $token = (string) get_query_var('mm_share_token');
-        if ($token === '') {
+        $mode = (string) get_query_var('mm_share_mode');
+        if ($mode !== 'view' && $mode !== 'compare' && $mode !== 'match') {
             return $template;
         }
 
-        $mode = (string) get_query_var('mm_share_mode');
-        if ($mode !== 'view' && $mode !== 'compare') {
+        $token = (string) get_query_var('mm_share_token');
+        $cmp = (string) get_query_var('mm_comparison_token');
+        if ($token === '' && $cmp === '') {
             return $template;
         }
 
@@ -61,7 +70,8 @@ final class ShareTokenRewrite
     public function enqueueAssets(): void
     {
         $token = (string) get_query_var('mm_share_token');
-        if ($token === '') {
+        $cmp = (string) get_query_var('mm_comparison_token');
+        if ($token === '' && $cmp === '') {
             return;
         }
 
@@ -84,6 +94,7 @@ final class ShareTokenRewrite
         wp_enqueue_script('match-me-share-result-page', get_template_directory_uri() . '/assets/js/share-result-page.js', [], $pageJsVer, true);
 
         $inline = 'window.matchMeShareToken=' . wp_json_encode($token) . ';'
+            . 'window.matchMeComparisonToken=' . wp_json_encode($cmp) . ';'
             . 'window.matchMeShareMode=' . wp_json_encode((string) get_query_var('mm_share_mode')) . ';';
         wp_add_inline_script('match-me-share-result-page', $inline, 'before');
     }

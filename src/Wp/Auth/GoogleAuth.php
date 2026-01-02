@@ -105,6 +105,14 @@ final class GoogleAuth
         $email = sanitize_email((string) $userInfo['email']);
         $name = sanitize_text_field((string) ($userInfo['name'] ?? ''));
         $picture = esc_url_raw((string) ($userInfo['picture'] ?? ''));
+        // Prefer higher-res Google profile photos when possible.
+        if ($picture !== '' && str_contains($picture, 'googleusercontent.com')) {
+            // Google often returns "...=s96-c". Replace/append a larger size.
+            $picture = preg_replace('/=s\\d+-c$/', '=s1024-c', $picture) ?: $picture;
+            if (!str_contains($picture, '=s')) {
+                $picture .= (str_contains($picture, '?') ? '&' : '?') . 'sz=1024';
+            }
+        }
 
         $parts = $name !== '' ? explode(' ', $name, 2) : ['', ''];
         $firstName = $parts[0] ?? '';

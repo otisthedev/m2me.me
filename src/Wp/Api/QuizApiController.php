@@ -76,6 +76,18 @@ final class QuizApiController
             ],
         ]);
 
+        register_rest_route(self::NAMESPACE, '/comparison/(?P<share_token>[a-zA-Z0-9]+)', [
+            'methods' => 'GET',
+            'callback' => [$this, 'getComparison'],
+            'permission_callback' => '__return_true',
+            'args' => [
+                'share_token' => [
+                    'required' => true,
+                    'type' => 'string',
+                ],
+            ],
+        ]);
+
         register_rest_route(self::NAMESPACE, '/result/(?P<result_id>\d+)/revoke', [
             'methods' => 'POST',
             'callback' => [$this, 'revokeToken'],
@@ -253,6 +265,21 @@ final class QuizApiController
             // Generate textual summary (simplified - in production, use a more sophisticated generator)
             $textualSummary = $this->generateTextualSummary($traitVector);
 
+            $owner = null;
+            $ownerId = (int) ($result['user_id'] ?? 0);
+            if ($ownerId > 0) {
+                $u = get_user_by('id', $ownerId);
+                if ($u instanceof \WP_User) {
+                    $first = (string) get_user_meta($ownerId, 'first_name', true);
+                    $name = $first !== '' ? $first : (string) ($u->display_name ?: 'Someone');
+                    $owner = [
+                        'id' => $ownerId,
+                        'name' => $name,
+                        'avatar_url' => (string) get_avatar_url($ownerId, ['size' => 256]),
+                    ];
+                }
+            }
+
             $shareUrls = [
                 // Frontend URLs (human-friendly).
                 'view' => home_url('/result/' . $shareToken . '/'),
@@ -269,7 +296,9 @@ final class QuizApiController
                 'trait_summary' => $traitVector,
                 'trait_labels' => $traitLabels,
                 'textual_summary' => $textualSummary,
+                'share_token' => (string) $shareToken,
                 'share_urls' => $shareUrls,
+                'owner' => $owner,
                 'share_mode' => $shareMode,
                 'can_compare' => $shareMode === 'share_match',
                 'created_at' => $result['created_at'] ?? '',
@@ -319,6 +348,10 @@ final class QuizApiController
                 if ($resultB === null) {
                     return new \WP_Error('not_found', 'Second result not found', ['status' => 404]);
                 }
+                $traitVectorB = json_decode($resultB['trait_vector'] ?? '{}', true);
+                if (!is_array($traitVectorB)) {
+                    $traitVectorB = [];
+                }
             } elseif (isset($body['answers']) && isset($body['quiz_id'])) {
                 // Calculate new result from answers
                 $quizId = $body['quiz_id'];
@@ -326,6 +359,7 @@ final class QuizApiController
                 $answers = $body['answers'];
 
                 $traitVector = $this->calculator->calculateTraitVector($answers, $quizConfig);
+                $traitVectorB = $traitVector;
                 $shareTokenB = $this->tokenGenerator->generate();
                 $quizVersion = $quizConfig['meta']['version'] ?? '1.0';
                 $userId = is_user_logged_in() ? (int) get_current_user_id() : null;
@@ -353,10 +387,53 @@ final class QuizApiController
             // Compute match
             $matchResult = $this->matchingService->matchResults($resultIdA, $resultIdB, $algorithm);
 
+            // Determine participant display info
+            $ownerA = null;
+            $ownerIdA = (int) ($resultA['user_id'] ?? 0);
+            if ($ownerIdA > 0) {
+                $uA = get_user_by('id', $ownerIdA);
+                if ($uA instanceof \WP_User) {
+                    $first = (string) get_user_meta($ownerIdA, 'first_name', true);
+                    $name = $first !== '' ? $first : (string) ($uA->display_name ?: 'Someone');
+                    $ownerA = [
+                        'id' => $ownerIdA,
+                        'name' => $name,
+                        'avatar_url' => (string) get_avatar_url($ownerIdA, ['size' => 256]),
+                    ];
+                }
+            }
+
+            $viewer = [
+                'id' => (int) get_current_user_id(),
+                'name' => is_user_logged_in() ? (string) wp_get_current_user()->display_name : 'You',
+                'avatar_url' => is_user_logged_in() ? (string) get_avatar_url((int) get_current_user_id(), ['size' => 256]) : '',
+            ];
+
+            // Trait labels for this quiz (for rendering "your result" nicely without needing to view a private token).
+            $traitLabels = [];
+            try {
+                $quizSlug = (string) ($resultA['quiz_slug'] ?? '');
+                if ($quizSlug !== '') {
+                    $quizConfigA = $this->quizRepository->load($quizSlug);
+                    $traits = $quizConfigA['traits'] ?? [];
+                    foreach ($traits as $traitId => $traitData) {
+                        if (is_array($traitData) && isset($traitData['label'])) {
+                            $traitLabels[$traitId] = (string) $traitData['label'];
+                        }
+                    }
+                }
+            } catch (\Throwable) {
+                // ignore
+            }
+
+            // Store shareable comparison token
+            $comparisonShareToken = $this->tokenGenerator->generate();
+
             // Store comparison
             $comparisonId = $this->comparisonRepository->insert(
                 $resultIdA,
                 $resultIdB,
+                $comparisonShareToken,
                 $matchResult['match_score'],
                 $matchResult['breakdown'],
                 $matchResult['algorithm_used']
@@ -364,9 +441,22 @@ final class QuizApiController
 
             return new \WP_REST_Response([
                 'comparison_id' => $comparisonId,
+                'comparison_share_token' => $comparisonShareToken,
+                'share_urls' => [
+                    'match' => home_url('/match/' . $comparisonShareToken . '/'),
+                    'api_match' => rest_url(self::NAMESPACE . '/comparison/' . $comparisonShareToken),
+                ],
                 'match_score' => $matchResult['match_score'],
                 'breakdown' => $matchResult['breakdown'],
                 'algorithm_used' => $matchResult['algorithm_used'],
+                'participants' => [
+                    'a' => $ownerA,
+                    'b' => $viewer,
+                ],
+                'you_result' => [
+                    'trait_summary' => $traitVectorB ?? [],
+                    'trait_labels' => $traitLabels,
+                ],
             ], 200);
 
         } catch (\InvalidArgumentException $e) {
@@ -474,6 +564,86 @@ final class QuizApiController
         // TODO: Implement proper quiz lookup/creation
         // For now, return a hash-based ID
         return abs(crc32($quizSlug));
+    }
+
+    /**
+     * GET /wp-json/match-me/v1/comparison/{share_token}
+     */
+    public function getComparison(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
+    {
+        $shareToken = (string) $request->get_param('share_token');
+
+        try {
+            $comparison = $this->comparisonRepository->findByShareToken($shareToken);
+            if ($comparison === null) {
+                return new \WP_Error('not_found', 'Comparison not found', ['status' => 404]);
+            }
+
+            $resultA = $this->resultRepository->findById((int) ($comparison['result_a'] ?? 0));
+            $resultB = $this->resultRepository->findById((int) ($comparison['result_b'] ?? 0));
+            if ($resultA === null || $resultB === null) {
+                return new \WP_Error('not_found', 'Comparison results not found', ['status' => 404]);
+            }
+
+            // Result A must still allow comparison
+            $shareModeA = (string) ($resultA['share_mode'] ?? 'private');
+            if ($shareModeA !== 'share_match' || !empty($resultA['revoked_at'])) {
+                return new \WP_Error('forbidden', 'This comparison is not available', ['status' => 403]);
+            }
+
+            $ownerA = null;
+            $ownerIdA = (int) ($resultA['user_id'] ?? 0);
+            if ($ownerIdA > 0) {
+                $uA = get_user_by('id', $ownerIdA);
+                if ($uA instanceof \WP_User) {
+                    $first = (string) get_user_meta($ownerIdA, 'first_name', true);
+                    $name = $first !== '' ? $first : (string) ($uA->display_name ?: 'Someone');
+                    $ownerA = [
+                        'id' => $ownerIdA,
+                        'name' => $name,
+                        'avatar_url' => (string) get_avatar_url($ownerIdA, ['size' => 256]),
+                    ];
+                }
+            }
+
+            $ownerB = null;
+            $ownerIdB = (int) ($resultB['user_id'] ?? 0);
+            if ($ownerIdB > 0) {
+                $uB = get_user_by('id', $ownerIdB);
+                if ($uB instanceof \WP_User) {
+                    $first = (string) get_user_meta($ownerIdB, 'first_name', true);
+                    $name = $first !== '' ? $first : (string) ($uB->display_name ?: 'Someone');
+                    $ownerB = [
+                        'id' => $ownerIdB,
+                        'name' => $name,
+                        'avatar_url' => (string) get_avatar_url($ownerIdB, ['size' => 256]),
+                    ];
+                }
+            }
+
+            $breakdown = json_decode((string) ($comparison['breakdown'] ?? '{}'), true);
+            if (!is_array($breakdown)) {
+                $breakdown = [];
+            }
+
+            return new \WP_REST_Response([
+                'comparison_id' => (int) ($comparison['id'] ?? 0),
+                'share_token' => (string) ($comparison['share_token'] ?? ''),
+                'match_score' => (float) ($comparison['match_score'] ?? 0.0),
+                'breakdown' => $breakdown,
+                'algorithm_used' => (string) ($comparison['algorithm_used'] ?? 'cosine'),
+                'share_urls' => [
+                    'match' => home_url('/match/' . rawurlencode($shareToken) . '/'),
+                    'api_match' => rest_url(self::NAMESPACE . '/comparison/' . rawurlencode($shareToken)),
+                ],
+                'participants' => [
+                    'a' => $ownerA,
+                    'b' => $ownerB,
+                ],
+            ], 200);
+        } catch (\Throwable) {
+            return new \WP_Error('server_error', 'An unexpected error occurred', ['status' => 500]);
+        }
     }
 }
 

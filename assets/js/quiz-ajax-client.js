@@ -105,11 +105,35 @@
         });
     }
 
+    /**
+     * Get comparison by share token.
+     *
+     * @param {string} shareToken
+     * @returns {Promise<Object>}
+     */
+    function getComparison(shareToken) {
+        const url = `${API_BASE}/comparison/${encodeURIComponent(shareToken)}`;
+
+        return fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => Promise.reject(err));
+            }
+            return response.json();
+        });
+    }
+
     // Export to global scope
     window.MatchMeQuiz = {
         submitQuiz: submitQuiz,
         getResult: getResult,
-        compareResults: compareResults
+        compareResults: compareResults,
+        getComparison: getComparison
     };
 })();
 
