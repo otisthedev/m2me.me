@@ -180,10 +180,11 @@ p {
     background: rgba(255, 255, 255, 0.98);
 }
 
-.site-header .container {
+.site-header .header-inner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: var(--space-lg);
     height: 100%;
 }
 
@@ -193,7 +194,6 @@ p {
     align-items: center;
     gap: var(--space-sm);
     margin-left: auto;
-    margin-right: var(--space-sm);
 }
 
 .header-auth-btn {
@@ -247,6 +247,14 @@ p {
     color: var(--color-primary);
 }
 
+/* Nav wrapper */
+.site-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
 /* ============================================
    Thumb-Friendly Navigation
    ============================================ */
@@ -260,7 +268,6 @@ p {
     font-size: var(--font-size-xl);
     width: 44px;
     height: 44px;
-    display: flex;
     align-items: center;
     justify-content: center;
     -webkit-tap-highlight-color: transparent;
@@ -308,6 +315,11 @@ p {
         display: flex;
     }
     
+    .site-nav {
+        justify-content: flex-end;
+        flex: 0 0 auto;
+    }
+
     #primary-menu {
         display: none;
         position: absolute;

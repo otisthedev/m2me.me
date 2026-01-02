@@ -22,6 +22,8 @@ final class AuthMenu
 
         add_action('admin_post_nopriv_match_me_register', [$this, 'handleRegister']);
         add_action('admin_post_match_me_register', [$this, 'handleRegister']);
+
+        add_action('admin_post_match_me_profile_update', [$this, 'handleProfileUpdate']);
     }
 
     /**
@@ -323,6 +325,75 @@ final class AuthMenu
         wp_set_auth_cookie((int) $userId, true);
 
         wp_redirect($redirectTo);
+        exit;
+    }
+
+    public function handleProfileUpdate(): void
+    {
+        if (!is_user_logged_in()) {
+            wp_redirect(add_query_arg(['login' => '1', 'redirect_to' => home_url('/profile/')], home_url('/')));
+            exit;
+        }
+
+        $nonce = isset($_POST['match_me_profile_nonce']) ? (string) $_POST['match_me_profile_nonce'] : '';
+        if (!wp_verify_nonce($nonce, 'match_me_profile_update')) {
+            wp_die('Invalid request.');
+        }
+
+        $userId = (int) get_current_user_id();
+
+        $firstName = isset($_POST['first_name']) ? sanitize_text_field((string) $_POST['first_name']) : '';
+        $lastName = isset($_POST['last_name']) ? sanitize_text_field((string) $_POST['last_name']) : '';
+        $imageUrl = isset($_POST['profile_picture_url']) ? esc_url_raw((string) $_POST['profile_picture_url']) : '';
+
+        // Optional file upload
+        $uploadedUrl = '';
+        if (!empty($_FILES['profile_picture_file']) && is_array($_FILES['profile_picture_file']) && !empty($_FILES['profile_picture_file']['name'])) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $file = $_FILES['profile_picture_file'];
+            $overrides = ['test_form' => false];
+            $movefile = wp_handle_upload($file, $overrides);
+
+            if (is_array($movefile) && !isset($movefile['error']) && isset($movefile['file'], $movefile['url'])) {
+                $uploadedUrl = (string) $movefile['url'];
+
+                // Insert as attachment (optional but useful)
+                $attachmentId = wp_insert_attachment([
+                    'post_mime_type' => (string) ($movefile['type'] ?? 'image/jpeg'),
+                    'post_title' => 'Profile picture',
+                    'post_status' => 'inherit',
+                ], (string) $movefile['file']);
+
+                if (!is_wp_error($attachmentId) && $attachmentId) {
+                    $meta = wp_generate_attachment_metadata((int) $attachmentId, (string) $movefile['file']);
+                    if (is_array($meta)) {
+                        wp_update_attachment_metadata((int) $attachmentId, $meta);
+                    }
+                    update_user_meta($userId, 'profile_picture_attachment_id', (int) $attachmentId);
+                }
+            }
+        }
+
+        // Persist user fields
+        update_user_meta($userId, 'first_name', $firstName);
+        update_user_meta($userId, 'last_name', $lastName);
+
+        $displayName = trim($firstName . ' ' . $lastName);
+        if ($displayName !== '') {
+            wp_update_user(['ID' => $userId, 'display_name' => $displayName]);
+        }
+
+        // Picture precedence: upload > URL > keep existing
+        if ($uploadedUrl !== '') {
+            update_user_meta($userId, 'profile_picture', $uploadedUrl);
+        } elseif ($imageUrl !== '') {
+            update_user_meta($userId, 'profile_picture', $imageUrl);
+        }
+
+        wp_redirect(add_query_arg(['updated' => '1'], home_url('/profile/')));
         exit;
     }
 }

@@ -12,7 +12,7 @@
 
 <div id="page" class="site">
     <header id="masthead" class="site-header">
-        <div class="container">
+        <div class="container header-inner">
             <?php
             $site_name = get_bloginfo('name');
             $home_url = home_url('/');
@@ -25,6 +25,23 @@
             $currentPath = (string) ($_SERVER['REQUEST_URI'] ?? '/');
             $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
             ?>
+
+            <?php
+            // Primary nav (desktop) lives between logo and auth actions.
+            ?>
+
+            <nav class="site-nav" aria-label="Primary">
+                <?php
+                if (has_nav_menu('primary')) {
+                    wp_nav_menu(array(
+                        'theme_location' => 'primary',
+                        'menu_id'        => 'primary-menu',
+                        'container'      => false,
+                        'menu_class'     => '',
+                    ));
+                }
+                ?>
+            </nav>
 
             <div class="header-auth-actions">
                 <?php if (!is_user_logged_in()) : ?>
@@ -44,17 +61,6 @@
                 <span class="screen-reader-text"><?php esc_html_e('Primary Menu', 'match-me'); ?></span>
                 <span aria-hidden="true">☰</span>
             </button>
-            
-            <?php
-            if (has_nav_menu('primary')) {
-                wp_nav_menu(array(
-                    'theme_location' => 'primary',
-                    'menu_id'        => 'primary-menu',
-                    'container'      => false,
-                    'menu_class'     => '',
-                ));
-            }
-            ?>
         </div>
     </header>
 

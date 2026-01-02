@@ -29,6 +29,10 @@ get_header();
     <?php else : ?>
         <?php
         $userId = (int) get_current_user_id();
+        $user = wp_get_current_user();
+        $currentFirst = (string) get_user_meta($userId, 'first_name', true);
+        $currentLast = (string) get_user_meta($userId, 'last_name', true);
+        $currentPic = (string) get_user_meta($userId, 'profile_picture', true);
 
         $config = Container::config();
         $wpdb = Container::wpdb();
@@ -53,6 +57,54 @@ get_header();
             }
         }
         ?>
+
+        <?php if (isset($_GET['updated']) && (string) $_GET['updated'] === '1') : ?>
+            <div class="mm-profile-notice" style="margin: 12px 0; padding: 12px; border: 1px solid var(--color-border,#e5e5e5); border-radius: 10px;">
+                Profile updated.
+            </div>
+        <?php endif; ?>
+
+        <section style="margin-top: 1.25rem; margin-bottom: 2rem;">
+            <h2>Profile details</h2>
+
+            <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom: 12px;">
+                <div>
+                    <?php echo get_avatar($userId, 64); ?>
+                </div>
+                <div style="color:var(--color-text-secondary,#666); font-size:0.95rem;">
+                    <div><strong><?php echo esc_html($user->display_name ?: $user->user_login); ?></strong></div>
+                    <div><?php echo esc_html($user->user_email); ?></div>
+                </div>
+            </div>
+
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" style="display:grid; gap:12px;">
+                <input type="hidden" name="action" value="match_me_profile_update">
+                <?php wp_nonce_field('match_me_profile_update', 'match_me_profile_nonce'); ?>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                    <label style="display:block;">
+                        <span style="display:block; font-size:0.85rem; color:var(--color-text-secondary,#666); margin-bottom:6px;">First name</span>
+                        <input type="text" name="first_name" value="<?php echo esc_attr($currentFirst); ?>" style="width:100%; min-height:48px; border-radius:10px; border:1px solid var(--color-border,#e5e5e5); padding:0 14px;">
+                    </label>
+                    <label style="display:block;">
+                        <span style="display:block; font-size:0.85rem; color:var(--color-text-secondary,#666); margin-bottom:6px;">Last name</span>
+                        <input type="text" name="last_name" value="<?php echo esc_attr($currentLast); ?>" style="width:100%; min-height:48px; border-radius:10px; border:1px solid var(--color-border,#e5e5e5); padding:0 14px;">
+                    </label>
+                </div>
+
+                <label style="display:block;">
+                    <span style="display:block; font-size:0.85rem; color:var(--color-text-secondary,#666); margin-bottom:6px;">Profile image (upload)</span>
+                    <input type="file" name="profile_picture_file" accept="image/*">
+                </label>
+
+                <label style="display:block;">
+                    <span style="display:block; font-size:0.85rem; color:var(--color-text-secondary,#666); margin-bottom:6px;">Or profile image URL</span>
+                    <input type="url" name="profile_picture_url" value="<?php echo esc_attr($currentPic); ?>" placeholder="https://..." style="width:100%; min-height:48px; border-radius:10px; border:1px solid var(--color-border,#e5e5e5); padding:0 14px;">
+                </label>
+
+                <button type="submit" class="mm-auth-submit" style="max-width:220px;">Save changes</button>
+            </form>
+        </section>
 
         <section style="margin-top: 1.5rem;">
             <h2>Latest Results (new quizzes)</h2>
