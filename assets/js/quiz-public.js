@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Element References ---
     const quizContainer = document.querySelector(SELECTORS.quizContainer);
     if (!quizContainer) {
-        console.warn('Quiz container element not found.');
+        // Silently exit if container not found (v2 quiz system may be in use)
         return; // Exit if the main container isn't present
     }
 
@@ -707,8 +707,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })();
 
-        if (isIOS && !window.isSecureContext) {
-            showWarningMessage('Direct Instagram sharing from the browser requires HTTPS on iPhone/iPad. Downloading the story image instead.');
+        const isAndroid = (() => {
+            try {
+                const ua = String(navigator.userAgent || '');
+                return /Android/i.test(ua);
+            } catch (e) {
+                return false;
+            }
+        })();
+
+        if ((isIOS || isAndroid) && !window.isSecureContext) {
+            showWarningMessage('Direct Instagram sharing from the browser requires HTTPS on mobile devices. Downloading the story image instead.');
         }
 
         // Fallback: download the image (especially needed on LAN http where Web Share may be unavailable).
@@ -722,6 +731,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => URL.revokeObjectURL(url), 2000);
 
         // Best-effort: open Instagram Story camera (cannot prefill image from web; user selects from Photos).
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        
         if (isIOS) {
             try {
                 // Must be in a user gesture context; this handler is click-driven.
@@ -729,9 +740,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 // ignore
             }
+        } else if (isAndroid) {
+            try {
+                // Android intent URL for Instagram Stories
+                window.location.href = 'intent://story-camera/#Intent;scheme=instagram;package=com.instagram.android;end';
+            } catch (e) {
+                // ignore
+            }
         }
 
-        showSuccessMessage('Story image downloaded. Instagram should open. If it didn’t, open Instagram → Story → select it from your Photos.');
+        showSuccessMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos.');
     }
 
     function handleGoogleLoginRedirect() {

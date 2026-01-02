@@ -85,7 +85,8 @@
 }
 
 .btn-share-view,
-.btn-share-compare {
+.btn-share-compare,
+.btn-share-instagram {
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: 500;
@@ -94,8 +95,15 @@
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.2s, opacity 0.2s;
     min-height: 44px; /* Touch target size */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.btn-share-instagram {
+    background: linear-gradient(135deg, #833AB4 0%, #FD1D1D 45%, #FCAF45 100%);
+    margin-bottom: 0.5rem;
 }
 
 .btn-share-view:hover,
@@ -103,9 +111,21 @@
     background: #005a87;
 }
 
+.btn-share-instagram:hover {
+    opacity: 0.9;
+}
+
 .btn-share-view:active,
-.btn-share-compare:active {
-    background: #004a6f;
+.btn-share-compare:active,
+.btn-share-instagram:active {
+    transform: scale(0.98);
+}
+
+/* Hide Instagram button on desktop */
+@media (min-width: 901px) {
+    .btn-share-instagram {
+        display: none !important;
+    }
 }
 
 .share-url-display {

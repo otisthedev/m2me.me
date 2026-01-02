@@ -18,16 +18,16 @@
         summaryEl.className = 'match-me-result-summary';
         summaryEl.innerHTML = `
             <h2>Your Results</h2>
-            <p class="result-summary-text">${result.textual_summary || 'Quiz completed successfully.'}</p>
+            <p class="result-summary-text">${escapeHtml(result.textual_summary || 'Quiz completed successfully.')}</p>
             <div class="trait-breakdown">
-                ${renderTraitBreakdown(result.trait_summary || {})}
+                ${renderTraitBreakdown(result.trait_summary || {}, result.trait_labels || {})}
             </div>
         `;
         container.appendChild(summaryEl);
 
         // Share section
         if (result.share_token) {
-            const shareSection = renderShareSection(result.share_token, result.share_urls);
+            const shareSection = renderShareSection(result.share_token, result.share_urls, result);
             container.appendChild(shareSection);
         }
 
@@ -41,7 +41,7 @@
     /**
      * Render trait breakdown visualization.
      */
-    function renderTraitBreakdown(traitSummary) {
+    function renderTraitBreakdown(traitSummary, traitLabels = {}) {
         const traits = Object.entries(traitSummary);
         if (traits.length === 0) {
             return '<p>No trait data available.</p>';
@@ -49,11 +49,12 @@
 
         return traits.map(([trait, value]) => {
             const percentage = Math.round(value * 100);
-            const label = trait.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            // Use trait label from API if available, otherwise format the trait ID
+            const label = traitLabels[trait] || trait.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             return `
                 <div class="trait-item">
                     <div class="trait-label">
-                        <span>${label}</span>
+                        <span>${escapeHtml(label)}</span>
                         <span class="trait-value">${percentage}%</span>
                     </div>
                     <div class="trait-bar">
@@ -65,14 +66,32 @@
     }
 
     /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
      * Render share section.
      */
-    function renderShareSection(shareToken, shareUrls) {
+    function renderShareSection(shareToken, shareUrls, result) {
         const section = document.createElement('div');
         section.className = 'match-me-share-section';
+        
+        const isMobile = isMobileSharingContext();
+        const instagramButton = isMobile ? `
+            <button class="btn-share-instagram" data-quiz-title="${escapeHtml(result.quiz_title || 'Quiz Results')}" data-summary="${escapeHtml(result.textual_summary || 'My quiz results')}">
+                Share to Instagram Story
+            </button>
+        ` : '';
+        
         section.innerHTML = `
             <h3>Share Your Results</h3>
             <div class="share-buttons">
+                ${instagramButton}
                 <button class="btn-share-view" data-url="${shareUrls?.view || ''}">
                     Share View Link
                 </button>
@@ -109,7 +128,238 @@
             });
         }
 
+        // Add Instagram Stories sharing handler
+        const instagramBtn = section.querySelector('.btn-share-instagram');
+        if (instagramBtn) {
+            instagramBtn.addEventListener('click', async function() {
+                const title = this.getAttribute('data-quiz-title') || 'Quiz Results';
+                const summary = this.getAttribute('data-summary') || 'My quiz results';
+                await handleInstagramStoryShare(title, summary);
+            });
+        }
+
         return section;
+    }
+
+    /**
+     * Check if current context supports mobile sharing
+     */
+    function isMobileSharingContext() {
+        try {
+            const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+            const smallish = window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
+            return !!(coarse && smallish);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * Wrap text into lines for canvas rendering
+     */
+    function wrapTextLines(ctx, text, maxWidth, maxLines) {
+        const words = (text || '').split(/\s+/).filter(Boolean);
+        const lines = [];
+        let current = '';
+
+        for (const w of words) {
+            const next = current ? `${current} ${w}` : w;
+            if (ctx.measureText(next).width <= maxWidth) {
+                current = next;
+                continue;
+            }
+
+            if (current) lines.push(current);
+            current = w;
+
+            if (lines.length >= maxLines) break;
+        }
+
+        if (lines.length < maxLines && current) lines.push(current);
+
+        if (lines.length === maxLines && words.length) {
+            let last = lines[lines.length - 1] || '';
+            while (last && ctx.measureText(`${last}…`).width > maxWidth) {
+                last = last.slice(0, -1);
+            }
+            lines[lines.length - 1] = `${last}…`;
+        }
+
+        return lines;
+    }
+
+    /**
+     * Generate Instagram Story image as PNG blob
+     */
+    async function renderInstagramStoryPngBlob(title, summary) {
+        const width = 1080;
+        const height = 1920;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas not supported');
+
+        // Background gradient
+        const bg = ctx.createLinearGradient(0, 0, 0, height);
+        bg.addColorStop(0, '#fff4e6');
+        bg.addColorStop(1, '#ffffff');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, width, height);
+
+        // Top accent
+        ctx.fillStyle = '#fd9800';
+        ctx.fillRect(0, 0, width, 18);
+
+        const padX = 90;
+        let y = 160;
+
+        // Title
+        ctx.fillStyle = '#111111';
+        ctx.font = '700 64px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        const titleLines = wrapTextLines(ctx, String(title || ''), width - padX * 2, 3);
+        for (const line of titleLines) {
+            ctx.fillText(line, padX, y);
+            y += 78;
+        }
+
+        y += 20;
+
+        // Divider
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.fillRect(padX, y, width - padX * 2, 2);
+        y += 60;
+
+        // Summary
+        ctx.fillStyle = '#222222';
+        ctx.font = '500 42px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        const summaryLines = wrapTextLines(ctx, String(summary || ''), width - padX * 2, 18);
+        for (const line of summaryLines) {
+            ctx.fillText(line, padX, y);
+            y += 58;
+            if (y > height - 260) break;
+        }
+
+        // Footer
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.font = '600 34px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.fillText('m2me.me', padX, height - 120);
+
+        return await new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => {
+                if (!blob) return reject(new Error('Failed to generate image'));
+                resolve(blob);
+            }, 'image/png', 1);
+        });
+    }
+
+    /**
+     * Handle Instagram Stories sharing
+     */
+    async function handleInstagramStoryShare(title, summary) {
+        if (!isMobileSharingContext()) {
+            showMessage('Instagram Story sharing is available only on mobile devices.', 'warning');
+            return;
+        }
+
+        let blob;
+        try {
+            blob = await renderInstagramStoryPngBlob(title, summary);
+        } catch (e) {
+            console.error('Failed to render story image:', e);
+            showMessage('Could not generate the story image. Please try again.', 'error');
+            return;
+        }
+
+        const file = new File([blob], 'quiz-story.png', { type: 'image/png' });
+
+        // Attempt Web Share API if available
+        const hasShareAPI =
+            typeof navigator !== 'undefined' &&
+            typeof navigator.share === 'function' &&
+            window.isSecureContext;
+
+        if (hasShareAPI) {
+            try {
+                await navigator.share({
+                    title: title,
+                    files: [file],
+                });
+                showMessage('Select Instagram in the share sheet, then choose Story.', 'success');
+                return;
+            } catch (error) {
+                // User cancelled - don't show error
+                if (error && error.name === 'AbortError') return;
+                console.error('Share failed:', error);
+                // Continue to fallback
+            }
+        }
+
+        // Detect platform
+        const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent);
+        const isAndroid = /Android/i.test(navigator.userAgent);
+
+        if ((isIOS || isAndroid) && !window.isSecureContext) {
+            showMessage('Direct Instagram sharing from the browser requires HTTPS. Downloading the story image instead.', 'warning');
+        }
+
+        // Fallback: download the image
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'quiz-story.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+        // Best-effort: open Instagram Story camera
+        if (isIOS) {
+            try {
+                window.location.href = 'instagram://story-camera';
+            } catch (e) {
+                // ignore
+            }
+        } else if (isAndroid) {
+            try {
+                // Try Android intent URL
+                window.location.href = 'intent://story-camera/#Intent;scheme=instagram;package=com.instagram.android;end';
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        showMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos.', 'success');
+    }
+
+    /**
+     * Show message to user
+     */
+    function showMessage(message, type = 'info') {
+        // Simple implementation - could be enhanced with better UI
+        const msgEl = document.createElement('div');
+        msgEl.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            background: ${type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#4caf50'};
+            color: white;
+            z-index: 10000;
+            font-size: 14px;
+            max-width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        `;
+        msgEl.textContent = message;
+        document.body.appendChild(msgEl);
+        setTimeout(() => {
+            msgEl.remove();
+        }, 5000);
     }
 
     /**

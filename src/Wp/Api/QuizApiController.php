@@ -229,11 +229,19 @@ final class QuizApiController
             }
 
             $quizTitle = 'Quiz Result';
+            $traitLabels = [];
             $quizSlug = (string) ($result['quiz_slug'] ?? '');
             if ($quizSlug !== '') {
                 try {
                     $quizConfig = $this->quizRepository->load($quizSlug);
                     $quizTitle = (string) (($quizConfig['meta']['title'] ?? '') ?: $quizTitle);
+                    // Extract trait labels from quiz config
+                    $traits = $quizConfig['traits'] ?? [];
+                    foreach ($traits as $traitId => $traitData) {
+                        if (is_array($traitData) && isset($traitData['label'])) {
+                            $traitLabels[$traitId] = (string) $traitData['label'];
+                        }
+                    }
                 } catch (\Throwable) {
                     // Ignore and fallback.
                 }
@@ -246,6 +254,7 @@ final class QuizApiController
                 'result_id' => (int) $result['result_id'],
                 'quiz_title' => $quizTitle,
                 'trait_summary' => $traitVector,
+                'trait_labels' => $traitLabels,
                 'textual_summary' => $textualSummary,
                 'share_mode' => $shareMode,
                 'can_compare' => $shareMode === 'share_match',
