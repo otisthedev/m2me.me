@@ -1,0 +1,129 @@
+{
+  "meta": {
+    "title": "Communication Style Assessment",
+    "description": "Discover your communication style through 6 questions that assess how you express yourself, listen to others, and handle conversations.",
+    "version": "1.0",
+    "aspect": "communication-style"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "text": "When giving feedback to someone, you prefer to:",
+      "weight": 1.0,
+      "options_json": [
+        {"id": "opt_1", "text": "Be direct and straightforward"},
+        {"id": "opt_2", "text": "Consider their feelings first"},
+        {"id": "opt_3", "text": "Be clear and structured"},
+        {"id": "opt_4", "text": "Balance all approaches"}
+      ],
+      "trait_map": {
+        "opt_1": {"directness": 2, "empathy": 0, "clarity": 1},
+        "opt_2": {"directness": 0, "empathy": 2, "clarity": 0},
+        "opt_3": {"directness": 1, "empathy": 0, "clarity": 2},
+        "opt_4": {"directness": 1, "empathy": 1, "clarity": 1}
+      }
+    },
+    {
+      "id": "q2",
+      "text": "In a group discussion, you typically:",
+      "weight": 1.0,
+      "options_json": [
+        {"id": "opt_1", "text": "Speak up immediately with your thoughts"},
+        {"id": "opt_2", "text": "Listen first, then share your perspective"},
+        {"id": "opt_3", "text": "Organize your thoughts before speaking"},
+        {"id": "opt_4", "text": "Adapt your approach based on the group"}
+      ],
+      "trait_map": {
+        "opt_1": {"directness": 2, "empathy": 0, "clarity": 1},
+        "opt_2": {"directness": 0, "empathy": 2, "clarity": 1},
+        "opt_3": {"directness": 1, "empathy": 0, "clarity": 2},
+        "opt_4": {"directness": 1, "empathy": 1, "clarity": 1}
+      }
+    },
+    {
+      "id": "q3",
+      "text": "When someone is upset, you usually:",
+      "weight": 1.0,
+      "options_json": [
+        {"id": "opt_1", "text": "Address the issue directly"},
+        {"id": "opt_2", "text": "Offer emotional support and understanding"},
+        {"id": "opt_3", "text": "Help them understand the situation clearly"},
+        {"id": "opt_4", "text": "Combine support with practical solutions"}
+      ],
+      "trait_map": {
+        "opt_1": {"directness": 2, "empathy": 0, "clarity": 1},
+        "opt_2": {"directness": 0, "empathy": 2, "clarity": 0},
+        "opt_3": {"directness": 1, "empathy": 0, "clarity": 2},
+        "opt_4": {"directness": 1, "empathy": 1, "clarity": 1}
+      }
+    },
+    {
+      "id": "q4",
+      "text": "Your preferred way to explain something complex is:",
+      "weight": 1.0,
+      "options_json": [
+        {"id": "opt_1", "text": "Get straight to the point"},
+        {"id": "opt_2", "text": "Relate it to their experiences"},
+        {"id": "opt_3", "text": "Break it down into clear steps"},
+        {"id": "opt_4", "text": "Use a mix of approaches"}
+      ],
+      "trait_map": {
+        "opt_1": {"directness": 2, "empathy": 0, "clarity": 1},
+        "opt_2": {"directness": 0, "empathy": 2, "clarity": 1},
+        "opt_3": {"directness": 1, "empathy": 0, "clarity": 2},
+        "opt_4": {"directness": 1, "empathy": 1, "clarity": 1}
+      }
+    },
+    {
+      "id": "q5",
+      "text": "When you disagree with someone, you tend to:",
+      "weight": 1.0,
+      "options_json": [
+        {"id": "opt_1", "text": "State your position clearly"},
+        {"id": "opt_2", "text": "Acknowledge their perspective first"},
+        {"id": "opt_3", "text": "Present your reasoning logically"},
+        {"id": "opt_4", "text": "Find common ground"}
+      ],
+      "trait_map": {
+        "opt_1": {"directness": 2, "empathy": 0, "clarity": 1},
+        "opt_2": {"directness": 0, "empathy": 2, "clarity": 0},
+        "opt_3": {"directness": 1, "empathy": 0, "clarity": 2},
+        "opt_4": {"directness": 1, "empathy": 1, "clarity": 1}
+      }
+    },
+    {
+      "id": "q6",
+      "text": "In written communication, you prioritize:",
+      "weight": 1.0,
+      "options_json": [
+        {"id": "opt_1", "text": "Being concise and direct"},
+        {"id": "opt_2", "text": "Showing warmth and consideration"},
+        {"id": "opt_3", "text": "Being precise and well-organized"},
+        {"id": "opt_4", "text": "Balancing clarity with tone"}
+      ],
+      "trait_map": {
+        "opt_1": {"directness": 2, "empathy": 0, "clarity": 1},
+        "opt_2": {"directness": 0, "empathy": 2, "clarity": 0},
+        "opt_3": {"directness": 1, "empathy": 0, "clarity": 2},
+        "opt_4": {"directness": 1, "empathy": 1, "clarity": 1}
+      }
+    }
+  ],
+  "traits": {
+    "directness": {
+      "label": "Directness",
+      "description": "How directly you communicate your thoughts and opinions"
+    },
+    "empathy": {
+      "label": "Empathy",
+      "description": "How much you consider others' feelings in communication"
+    },
+    "clarity": {
+      "label": "Clarity",
+      "description": "How clearly and structured you present information"
+    }
+  },
+  "results": []
+}
+
+
