@@ -46,6 +46,21 @@ final class QuizShortcodes
             return '<p>Quiz not found</p>';
         }
 
+        // Detect format: if any question has options_json, use new format (v2)
+        $questions = $quizData['questions'] ?? [];
+        $usesNewFormat = false;
+        foreach ($questions as $question) {
+            if (isset($question['options_json']) && is_array($question['options_json'])) {
+                $usesNewFormat = true;
+                break;
+            }
+        }
+
+        // If new format detected, delegate to v2 renderer
+        if ($usesNewFormat) {
+            return $this->renderQuizV2($atts);
+        }
+
         $resultId = get_query_var('rsID') ? absint($_GET['rsID'] ?? 0) : 0;
 
         $previous = null;
