@@ -84,6 +84,7 @@ final class Theme
         add_theme_support('post-thumbnails');
         register_nav_menus([
             'primary' => __('Primary Menu', 'match-me'),
+            'footer' => __('Footer Menu', 'match-me'),
         ]);
         add_theme_support('html5', [
             'search-form',
