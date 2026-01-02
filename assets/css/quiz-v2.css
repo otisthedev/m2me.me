@@ -3,24 +3,7 @@
  * Clean, spacious, elegant
  */
 
-:root {
-  --color-primary: #000;
-  --color-primary-hover: #333;
-  --color-text: #1a1a1a;
-  --color-text-light: #666;
-  --color-text-lighter: #999;
-  --color-border: #e8e8e8;
-  --color-bg: #ffffff;
-  --color-bg-subtle: #fafafa;
-  --spacing-xs: 0.5rem;
-  --spacing-sm: 0.75rem;
-  --spacing-md: 1.5rem;
-  --spacing-lg: 2rem;
-  --spacing-xl: 3rem;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* Uses global theme palette vars from style.css */
 
 .mmq {
   position: relative;
@@ -44,7 +27,7 @@
 .mmq-title {
   font-size: 1.75rem;
   font-weight: 400;
-  color: var(--color-text);
+  color: var(--color-primary);
   margin: 0 0 var(--spacing-xs) 0;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -105,7 +88,7 @@
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: var(--color-primary);
+  accent-color: var(--color-accent);
   flex-shrink: 0;
 }
 
@@ -185,8 +168,8 @@
 }
 
 .mmq-next:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background: #243454;
+  border-color: #243454;
 }
 
 .mmq-next:disabled {

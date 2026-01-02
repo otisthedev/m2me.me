@@ -4,14 +4,7 @@
  */
 
 :root {
-  --color-primary: #000;
-  --color-primary-hover: #333;
-  --color-text: #1a1a1a;
-  --color-text-light: #666;
-  --color-text-lighter: #999;
-  --color-border: #e8e8e8;
-  --color-bg: #ffffff;
-  --color-bg-subtle: #fafafa;
+  /* Uses global theme palette vars from style.css */
   --spacing-xs: 0.5rem;
   --spacing-sm: 0.75rem;
   --spacing-md: 1.5rem;
@@ -107,7 +100,7 @@
   margin-bottom: var(--spacing-sm);
   margin-top: 0;
   padding-right: var(--spacing-lg);
-  color: var(--color-text);
+  color: var(--color-primary);
   line-height: 1.3;
   word-wrap: break-word;
   letter-spacing: -0.02em;
@@ -116,7 +109,7 @@
 .popup-content p {
   font-size: 1rem;
   line-height: 1.7;
-  color: var(--color-text-light);
+  color: var(--color-text-secondary);
   margin-bottom: var(--spacing-md);
   word-wrap: break-word;
 }

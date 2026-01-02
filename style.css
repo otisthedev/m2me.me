@@ -10,16 +10,20 @@ Text Domain: match-me
    Mobile-First Design Tokens
    ============================================ */
 :root {
-    /* Minimal Color Palette */
-    --color-primary: #fd9800;
-    --color-primary-hover: #ff8c00;
-    --color-text: #1a1a1a;
-    --color-text-secondary: #666666;
-    --color-text-muted: #999999;
-    --color-bg: #ffffff;
-    --color-bg-subtle: #fafafa;
-    --color-border: #e5e5e5;
-    --color-border-light: #f0f0f0;
+    /* m2me Color Palette */
+    --color-primary: #1E2A44;        /* Deep Indigo / Midnight Blue */
+    --color-secondary: #8FAEA3;      /* Muted Sage Green */
+    --color-accent: #6FAFB3;         /* Soft Teal */
+
+    --color-bg: #F6F5F2;             /* Off-white */
+    --color-bg-subtle: #EFEFEF;      /* Light gray */
+
+    --color-text: #2B2E34;           /* Charcoal */
+    --color-text-secondary: #6B7280; /* Muted gray */
+    --color-text-muted: #6B7280;
+
+    --color-border: #E5E7EB;
+    --color-border-light: #EFEFEF;
     
     /* Compact Typography - Mobile First */
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -108,13 +112,13 @@ img {
 }
 
 a {
-    color: var(--color-primary);
+    color: var(--color-accent);
     text-decoration: none;
     transition: color var(--transition);
 }
 
 a:focus {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--color-accent);
     outline-offset: 2px;
 }
 
@@ -177,7 +181,7 @@ p {
     z-index: 1000;
     height: var(--header-height);
     backdrop-filter: blur(8px);
-    background: rgba(255, 255, 255, 0.98);
+    background: rgba(246, 245, 242, 0.98);
 }
 
 .site-header .header-inner {
@@ -217,14 +221,14 @@ p {
 }
 
 .header-auth-btn-primary {
-    background: var(--color-text);
-    border-color: var(--color-text);
-    color: #fff;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-bg);
 }
 
 .header-auth-btn-primary:hover {
-    background: #333;
-    border-color: #333;
+    background: #243454;
+    border-color: #243454;
 }
 
 /* On mobile, hide auth items inside the hamburger menu to avoid duplicates */
@@ -236,8 +240,9 @@ p {
 }
 
 .site-logo {
-    font-size: var(--font-size-lg);
-    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
     color: var(--color-text);
     text-decoration: none;
     -webkit-tap-highlight-color: transparent;
@@ -245,6 +250,18 @@ p {
 
 .site-logo:hover {
     color: var(--color-primary);
+}
+
+.site-logo-img {
+    height: 26px;
+    width: auto;
+    display: block;
+}
+
+@media (min-width: 768px) {
+    .site-logo-img {
+        height: 30px;
+    }
 }
 
 /* Nav wrapper */

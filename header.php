@@ -16,9 +16,19 @@
             <?php
             $site_name = get_bloginfo('name');
             $home_url = home_url('/');
+            $theme_uri = get_template_directory_uri();
             ?>
             <a href="<?php echo esc_url($home_url); ?>" class="site-logo" rel="home">
-                <?php echo esc_html($site_name); ?>
+                <picture>
+                    <source srcset="<?php echo esc_url($theme_uri . '/assets/img/M2me.me-white.svg'); ?>" media="(prefers-color-scheme: dark)">
+                    <img
+                        class="site-logo-img"
+                        src="<?php echo esc_url($theme_uri . '/assets/img/M2me.me.svg'); ?>"
+                        alt="<?php echo esc_attr($site_name); ?>"
+                        decoding="async"
+                        loading="eager"
+                    >
+                </picture>
             </a>
 
             <?php

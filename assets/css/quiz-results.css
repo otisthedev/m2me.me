@@ -3,24 +3,7 @@
  * Clean, elegant, spacious
  */
 
-:root {
-  --color-primary: #000;
-  --color-primary-hover: #333;
-  --color-text: #1a1a1a;
-  --color-text-light: #666;
-  --color-text-lighter: #999;
-  --color-border: #e8e8e8;
-  --color-bg: #ffffff;
-  --color-bg-subtle: #fafafa;
-  --spacing-xs: 0.5rem;
-  --spacing-sm: 0.75rem;
-  --spacing-md: 1.5rem;
-  --spacing-lg: 2rem;
-  --spacing-xl: 3rem;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* Uses global theme palette vars from style.css */
 
 /* Result Summary */
 .match-me-result-summary {
@@ -33,7 +16,7 @@
   font-size: 1.75rem;
   font-weight: 400;
   margin: 0 0 var(--spacing-md) 0;
-  color: var(--color-text);
+  color: var(--color-primary);
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
@@ -84,7 +67,7 @@
 
 .trait-bar-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: linear-gradient(90deg, var(--color-secondary) 0%, var(--color-accent) 100%);
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 2px;
 }
@@ -136,8 +119,8 @@
 
 .btn-share-view:hover,
 .btn-share-compare:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background: #243454;
+  border-color: #243454;
 }
 
 .btn-share-instagram:hover {
@@ -196,7 +179,7 @@
 
 .btn-copy-url:hover {
   background: var(--color-bg-subtle);
-  border-color: var(--color-text-light);
+  border-color: var(--color-primary);
 }
 
 /* Compare Section */
@@ -239,8 +222,8 @@
 }
 
 .btn-compare-cta:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background: #243454;
+  border-color: #243454;
 }
 
 .btn-compare-cta:active {
