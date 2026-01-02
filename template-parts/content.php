@@ -8,6 +8,12 @@
 ?>
 
 <article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
+    <?php if (!is_singular() && has_post_thumbnail()) : ?>
+        <a class="mm-post-card-thumb" href="<?php echo esc_url(get_permalink()); ?>" aria-label="<?php echo esc_attr(get_the_title()); ?>">
+            <?php the_post_thumbnail('large', ['class' => 'mm-post-card-img', 'loading' => 'lazy', 'decoding' => 'async']); ?>
+        </a>
+    <?php endif; ?>
+
     <header class="entry-header">
         <?php
         if (is_singular()) {

@@ -433,6 +433,60 @@ article.post:hover {
 }
 
 /* ============================================
+   Archive/Home Grid (3 columns)
+   ============================================ */
+.mm-post-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-lg);
+    align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+    .mm-post-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .mm-post-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Turn list cards into image-first grid cards */
+.mm-post-grid article.post,
+.mm-post-grid article.page {
+    margin-bottom: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.mm-post-card-thumb {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: var(--color-bg-subtle);
+}
+
+.mm-post-card-thumb img,
+.mm-post-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.mm-post-grid .entry-header {
+    padding: var(--space-md) var(--space-lg) 0;
+}
+
+.mm-post-grid .entry-content {
+    padding: var(--space-sm) var(--space-lg) var(--space-lg);
+}
+
+/* ============================================
    Minimal Buttons
    ============================================ */
 button,

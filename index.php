@@ -11,10 +11,12 @@ get_header();
 <main id="main" class="site-main">
     <?php
     if (have_posts()) {
+        echo '<div class="mm-post-grid">';
         while (have_posts()) {
             the_post();
             get_template_part('template-parts/content', get_post_type());
         }
+        echo '</div>';
         
         // Pagination
         the_posts_pagination(array(

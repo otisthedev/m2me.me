@@ -18,10 +18,12 @@ get_header();
 
     <?php
     if (have_posts()) {
+        echo '<div class="mm-post-grid">';
         while (have_posts()) {
             the_post();
             get_template_part('template-parts/content', get_post_format());
         }
+        echo '</div>';
         
         the_posts_navigation();
     } else {
