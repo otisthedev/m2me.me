@@ -1,80 +1,39 @@
-# GitHub Actions Workflow: Automatic FTP Deployment to Hostinger
-#
-# This workflow automatically deploys the me2me.me theme to Hostinger shared hosting
-# via FTP whenever code is pushed to the main branch.
-#
-# REQUIRED GITHUB SECRETS:
-# Before this workflow can run, you must configure the following secrets in your
-# GitHub repository settings (Settings > Secrets and variables > Actions):
-#
-# 1. FTP_SERVER
-#    - Your Hostinger FTP host address
-#    - Example: ftp.yourdomain.com or an IP address like 123.456.789.0
-#
-# 2. FTP_USERNAME
-#    - Your Hostinger FTP username
-#    - Usually provided in your Hostinger hosting panel
-#
-# 3. FTP_PASSWORD
-#    - Your Hostinger FTP password
-#    - Usually provided in your Hostinger hosting panel
-#
-# 4. FTP_REMOTE_PATH
-#    - The remote directory path on Hostinger where the theme should be deployed
-#    - Examples:
-#      * /wp-content/themes/
-#      * /public_html/wp-content/themes/
-#      * /domains/yourdomain.com/public_html/wp-content/themes/
-#    - Note: The me2me.me folder will be created/updated in this directory
-#
-# SETUP INSTRUCTIONS:
-# 1. Go to your GitHub repository
-# 2. Navigate to Settings > Secrets and variables > Actions
-# 3. Click "New repository secret" for each of the four secrets above
-# 4. Add the secret name and value, then click "Add secret"
-# 5. Once all secrets are configured, push to the main branch to trigger deployment
-#
-# DEPLOYMENT:
-# - Triggers automatically on push to main branch
-# - Deploys only the wp-content/themes/me2me.me/ directory
-# - Excludes development files (tests, docs, node_modules, etc.)
-# - Only uploads changed files for efficiency
-
-name: Deploy to Hostinger via FTP
+name: Deploy to Hostinger
 
 on:
   push:
     branches:
       - main
+      - master
+  workflow_dispatch:
 
 jobs:
   deploy:
-    name: Deploy me2me.me theme to Hostinger
+    name: Deploy Theme to Hostinger
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
-      
+        
       - name: Deploy to Hostinger via FTP
-        uses: SamKirkland/FTP-Deploy-Action@4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./wp-content/themes/me2me.me/
-          server-dir: ${{ secrets.FTP_REMOTE_PATH }}
+          server-dir: /public_html/wp-content/themes/me2me.me/
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
-            **/.env
-            **/.env.*
+            **/.github/**
             **/tests/**
-            **/*.md
             **/README.md
+            **/API.md
             **/DESIGN_DOC.md
             **/TECHNICAL_SUMMARY.md
-            **/API.md
             **/postman_collection.json
-
+            **/.DS_Store
+            **/.env
+            **/.env.*
