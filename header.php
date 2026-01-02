@@ -17,18 +17,30 @@
             $site_name = get_bloginfo('name');
             $home_url = home_url('/');
             $theme_uri = get_template_directory_uri();
+            $headerLogoId = (int) get_theme_mod('match_me_header_logo', 0);
+            $headerLogoUrl = $headerLogoId ? wp_get_attachment_image_url($headerLogoId, 'full') : '';
             ?>
             <a href="<?php echo esc_url($home_url); ?>" class="site-logo" rel="home">
-                <picture>
-                    <source srcset="<?php echo esc_url($theme_uri . '/assets/img/M2me.me-white.svg'); ?>" media="(prefers-color-scheme: dark)">
+                <?php if (is_string($headerLogoUrl) && $headerLogoUrl !== '') : ?>
                     <img
                         class="site-logo-img"
-                        src="<?php echo esc_url($theme_uri . '/assets/img/M2me.me.svg'); ?>"
+                        src="<?php echo esc_url($headerLogoUrl); ?>"
                         alt="<?php echo esc_attr($site_name); ?>"
                         decoding="async"
                         loading="eager"
                     >
-                </picture>
+                <?php else : ?>
+                    <picture>
+                        <source srcset="<?php echo esc_url($theme_uri . '/assets/img/M2me.me-white.svg'); ?>" media="(prefers-color-scheme: dark)">
+                        <img
+                            class="site-logo-img"
+                            src="<?php echo esc_url($theme_uri . '/assets/img/M2me.me.svg'); ?>"
+                            alt="<?php echo esc_attr($site_name); ?>"
+                            decoding="async"
+                            loading="eager"
+                        >
+                    </picture>
+                <?php endif; ?>
             </a>
 
             <?php

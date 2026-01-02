@@ -32,6 +32,8 @@
 
   let index = 0;
   const answers = []; // index-aligned {question_id, option_id}
+  let pendingAdvanceTimer = null;
+  let isAdvancing = false;
 
   function setError(msg) {
     if (!els.error) return;
@@ -42,6 +44,13 @@
   function render() {
     setError('');
     if (!questions[index]) return;
+
+    // Reset any pending auto-advance when re-rendering.
+    if (pendingAdvanceTimer) {
+      clearTimeout(pendingAdvanceTimer);
+      pendingAdvanceTimer = null;
+    }
+    isAdvancing = false;
 
     const q = questions[index];
     const opts = Array.isArray(q.options_json) ? q.options_json : [];
@@ -84,6 +93,8 @@
       // Add click handlers for visual feedback
       els.options.querySelectorAll('.mmq-option input[type="radio"]').forEach(input => {
         input.addEventListener('change', function() {
+          if (isAdvancing) return;
+
           // Remove selected from all options
           els.options.querySelectorAll('.mmq-option').forEach(opt => {
             opt.classList.remove('selected');
@@ -97,10 +108,22 @@
           const qNow = questions[index];
           answers[index] = { question_id: String(qNow.id || ''), option_id: String(this.value) };
 
-          // Auto-advance on selection (except last question -> user hits Finish)
+          // Auto-advance on selection (except last question -> user hits Finish),
+          // but wait 0.5s so the user sees it was selected.
           if (index < questions.length - 1) {
-            index++;
-            render();
+            isAdvancing = true;
+
+            // Temporarily disable inputs to prevent double taps during the delay.
+            els.options.querySelectorAll('input[type="radio"]').forEach((el) => {
+              el.disabled = true;
+            });
+
+            pendingAdvanceTimer = setTimeout(() => {
+              pendingAdvanceTimer = null;
+              isAdvancing = false;
+              index++;
+              render();
+            }, 500);
           }
         });
       });
@@ -167,6 +190,12 @@
 
   if (els.nextBtn) {
     els.nextBtn.addEventListener('click', async () => {
+      if (pendingAdvanceTimer) {
+        clearTimeout(pendingAdvanceTimer);
+        pendingAdvanceTimer = null;
+      }
+      isAdvancing = false;
+
       const selected = readSelection();
       // Last step: must select to finish.
       if (index === questions.length - 1) {
@@ -196,6 +225,11 @@
   if (els.backBtn) {
     els.backBtn.addEventListener('click', () => {
       if (index === 0) return;
+      if (pendingAdvanceTimer) {
+        clearTimeout(pendingAdvanceTimer);
+        pendingAdvanceTimer = null;
+      }
+      isAdvancing = false;
       index--;
       render();
     });

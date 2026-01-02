@@ -75,6 +75,7 @@ final class Theme
         add_action('after_setup_theme', [$this, 'afterSetupTheme']);
         add_action('after_switch_theme', [$this->activation, 'onThemeSwitch']);
         add_action('wp_enqueue_scripts', [$this, 'enqueueCoreStyles']);
+        add_action('customize_register', [$this, 'registerCustomizer']);
     }
 
     public function afterSetupTheme(): void
@@ -97,6 +98,33 @@ final class Theme
     {
         wp_enqueue_style('match-me-theme', get_stylesheet_uri(), [], $this->config->themeVersion());
         wp_enqueue_script('match-me-theme', get_template_directory_uri() . '/assets/js/theme.js', [], $this->config->themeVersion(), true);
+    }
+
+    public function registerCustomizer(\WP_Customize_Manager $wpCustomize): void
+    {
+        // Section
+        $wpCustomize->add_section('match_me_header', [
+            'title' => __('Header', 'match-me'),
+            'priority' => 30,
+        ]);
+
+        // Setting: header logo (attachment ID)
+        $wpCustomize->add_setting('match_me_header_logo', [
+            'default' => 0,
+            'sanitize_callback' => 'absint',
+        ]);
+
+        // Control
+        $wpCustomize->add_control(new \WP_Customize_Media_Control(
+            $wpCustomize,
+            'match_me_header_logo_control',
+            [
+                'label' => __('Header Logo', 'match-me'),
+                'section' => 'match_me_header',
+                'settings' => 'match_me_header_logo',
+                'mime_type' => 'image',
+            ]
+        ));
     }
 }
 

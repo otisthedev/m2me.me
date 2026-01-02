@@ -196,7 +196,7 @@ p {
 .header-auth-actions {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: 10px;
     margin-left: auto;
 }
 
@@ -205,30 +205,58 @@ p {
     align-items: center;
     justify-content: center;
     min-height: 40px;
-    padding: 0 var(--space-md);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--color-border);
-    background: transparent;
-    color: var(--color-text);
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(30, 42, 68, 0.16);
+    background: rgba(255, 255, 255, 0.35);
+    color: var(--color-primary);
     font-weight: 600;
-    font-size: var(--font-size-sm);
+    font-size: 0.9rem;
+    letter-spacing: -0.01em;
+    line-height: 1;
     -webkit-tap-highlight-color: transparent;
+    transition: transform var(--transition), background var(--transition), border-color var(--transition), color var(--transition);
+    backdrop-filter: blur(6px);
 }
 
 .header-auth-btn:hover {
-    background: var(--color-bg-subtle);
-    border-color: var(--color-text-secondary);
+    background: rgba(143, 174, 163, 0.14);
+    border-color: rgba(30, 42, 68, 0.30);
+    transform: translateY(-1px);
+}
+
+.header-auth-btn:active {
+    transform: translateY(0);
+}
+
+.header-auth-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
 }
 
 .header-auth-btn-primary {
     background: var(--color-primary);
     border-color: var(--color-primary);
-    color: var(--color-bg);
+    color: #F6F5F2;
+    box-shadow: 0 6px 18px rgba(30, 42, 68, 0.18);
 }
 
 .header-auth-btn-primary:hover {
     background: #243454;
     border-color: #243454;
+    box-shadow: 0 8px 22px rgba(30, 42, 68, 0.22);
+}
+
+/* Make auth buttons compact on very small screens */
+@media (max-width: 420px) {
+    .header-auth-actions {
+        gap: 8px;
+    }
+    .header-auth-btn {
+        padding: 0 12px;
+        min-height: 38px;
+        font-size: 0.875rem;
+    }
 }
 
 /* On mobile, hide auth items inside the hamburger menu to avoid duplicates */
@@ -288,6 +316,13 @@ p {
     align-items: center;
     justify-content: center;
     -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure hamburger never shows on desktop */
+@media (min-width: 768px) {
+    header#masthead .menu-toggle {
+        display: none !important;
+    }
 }
 
 #primary-menu {
