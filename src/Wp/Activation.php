@@ -23,6 +23,7 @@ final class Activation
         }
 
         $this->ensureAccountPage();
+        $this->ensureProfilePage();
 
         // Create/upgrade new modular quiz tables.
         global $wpdb;
@@ -58,6 +59,32 @@ final class Activation
         $templateFile = (string) get_template_directory() . '/page-account.php';
         if (is_file($templateFile)) {
             update_post_meta((int) $pageId, '_wp_page_template', 'page-account.php');
+        }
+    }
+
+    private function ensureProfilePage(): void
+    {
+        $slug = 'profile';
+        $existing = get_page_by_path($slug);
+        if ($existing instanceof \WP_Post) {
+            return;
+        }
+
+        $pageId = wp_insert_post([
+            'post_title' => 'My Profile',
+            'post_name' => $slug,
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_content' => '',
+        ], true);
+
+        if (is_wp_error($pageId)) {
+            return;
+        }
+
+        $templateFile = (string) get_template_directory() . '/page-profile.php';
+        if (is_file($templateFile)) {
+            update_post_meta((int) $pageId, '_wp_page_template', 'page-profile.php');
         }
     }
 }

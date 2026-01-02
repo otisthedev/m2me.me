@@ -92,6 +92,16 @@
           if (this.checked) {
             this.closest('.mmq-option')?.classList.add('selected');
           }
+
+          // Persist answer for this question
+          const qNow = questions[index];
+          answers[index] = { question_id: String(qNow.id || ''), option_id: String(this.value) };
+
+          // Auto-advance on selection (except last question -> user hits Finish)
+          if (index < questions.length - 1) {
+            index++;
+            render();
+          }
         });
       });
     }
@@ -100,7 +110,8 @@
       els.backBtn.disabled = index === 0;
     }
     if (els.nextBtn) {
-      els.nextBtn.textContent = index === questions.length - 1 ? 'Finish' : 'Next';
+      // UX: Skip on all but last question; Finish only on last.
+      els.nextBtn.textContent = index === questions.length - 1 ? 'Finish' : 'Skip';
     }
   }
 
@@ -114,7 +125,20 @@
     setError('');
     root.classList.add('mmq-loading');
     try {
-      const submitRes = await window.MatchMeQuiz.submitQuiz(quizId, answers, {
+      // Show generating/loading state immediately to avoid blank screen.
+      if (els.results) {
+        els.results.style.display = 'block';
+        els.results.innerHTML =
+          '<div class="mm-result-loading">' +
+          '<div class="mm-result-loading-title">Generating your results…</div>' +
+          '<div class="mm-spinner" aria-hidden="true"></div>' +
+          '<div class="mm-result-loading-subtitle">This usually takes a moment.</div>' +
+          '</div>';
+      }
+      if (els.screen) els.screen.style.display = 'none';
+
+      const payloadAnswers = answers.filter(Boolean);
+      const submitRes = await window.MatchMeQuiz.submitQuiz(quizId, payloadAnswers, {
         share_mode: 'share_match',
         anonymous_meta: {},
       });
@@ -125,8 +149,6 @@
       result.share_urls = submitRes.share_urls;
 
       if (els.results) {
-        els.results.style.display = 'block';
-        if (els.screen) els.screen.style.display = 'none';
         window.MatchMeQuizUI.renderResult(result, els.results);
       }
     } catch (e) {
@@ -135,6 +157,9 @@
         (e && e.data && e.data.message) ||
         'Failed to submit quiz. Please try again.';
       setError(msg);
+      // Restore quiz screen if we couldn't fetch results.
+      if (els.screen) els.screen.style.display = 'block';
+      if (els.results) els.results.style.display = 'none';
     } finally {
       root.classList.remove('mmq-loading');
     }
@@ -143,20 +168,28 @@
   if (els.nextBtn) {
     els.nextBtn.addEventListener('click', async () => {
       const selected = readSelection();
-      if (!selected) {
-        setError('Please select an answer.');
+      // Last step: must select to finish.
+      if (index === questions.length - 1) {
+        if (!selected) {
+          setError('Please select an answer.');
+          return;
+        }
+        const q = questions[index];
+        answers[index] = { question_id: String(q.id || ''), option_id: String(selected) };
+        await submit();
         return;
       }
 
-      const q = questions[index];
-      answers[index] = { question_id: String(q.id || ''), option_id: String(selected) };
-
-      if (index < questions.length - 1) {
-        index++;
-        render();
+      // Intermediate steps: button acts as Skip (no selection required).
+      if (selected) {
+        const q = questions[index];
+        answers[index] = { question_id: String(q.id || ''), option_id: String(selected) };
       } else {
-        await submit();
+        answers[index] = null;
       }
+
+      index++;
+      render();
     });
   }
 

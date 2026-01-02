@@ -18,6 +18,7 @@ final class AuthMenu
         add_action('wp_footer', [$this, 'renderModal']);
 
         add_action('init', [$this, 'ensureAccountPageOnce']);
+        add_action('init', [$this, 'ensureProfilePageOnce']);
 
         add_action('admin_post_nopriv_match_me_register', [$this, 'handleRegister']);
         add_action('admin_post_match_me_register', [$this, 'handleRegister']);
@@ -39,10 +40,10 @@ final class AuthMenu
         $redirectTo = wp_validate_redirect($currentUrl, home_url('/'));
 
         if (is_user_logged_in()) {
-            $accountUrl = home_url('/account/');
+            $accountUrl = home_url('/profile/');
             $logoutUrl = wp_logout_url($redirectTo);
 
-            $items .= $this->menuItem($accountUrl, 'Account', 'mm-menu-account', '');
+            $items .= $this->menuItem($accountUrl, 'My Profile', 'mm-menu-account', '');
             $items .= $this->menuItem($logoutUrl, 'Logout', 'mm-menu-logout', '');
             return $items;
         }
@@ -136,6 +137,43 @@ final class AuthMenu
         update_option('match_me_account_page_id', (int) $pageId, true);
     }
 
+    public function ensureProfilePageOnce(): void
+    {
+        $opt = get_option('match_me_profile_page_id');
+        if (is_numeric($opt) && (int) $opt > 0) {
+            $p = get_post((int) $opt);
+            if ($p instanceof \WP_Post && $p->post_status !== 'trash') {
+                return;
+            }
+        }
+
+        $slug = 'profile';
+        $existing = get_page_by_path($slug);
+        if ($existing instanceof \WP_Post) {
+            update_option('match_me_profile_page_id', (int) $existing->ID, true);
+            return;
+        }
+
+        $pageId = wp_insert_post([
+            'post_title' => 'My Profile',
+            'post_name' => $slug,
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_content' => '',
+        ], true);
+
+        if (is_wp_error($pageId)) {
+            return;
+        }
+
+        $templateFile = (string) get_template_directory() . '/page-profile.php';
+        if (is_file($templateFile)) {
+            update_post_meta((int) $pageId, '_wp_page_template', 'page-profile.php');
+        }
+
+        update_option('match_me_profile_page_id', (int) $pageId, true);
+    }
+
     public function renderModal(): void
     {
         $home = home_url('/');
@@ -199,6 +237,16 @@ final class AuthMenu
                             <input type="hidden" name="action" value="match_me_register">
                             <?php wp_nonce_field('match_me_register', 'match_me_register_nonce'); ?>
                             <input type="hidden" name="redirect_to" value="" data-mm-auth-redirect>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <label class="mm-auth-field">
+                                    <span>First name</span>
+                                    <input type="text" name="first_name" autocomplete="given-name">
+                                </label>
+                                <label class="mm-auth-field">
+                                    <span>Last name</span>
+                                    <input type="text" name="last_name" autocomplete="family-name">
+                                </label>
+                            </div>
                             <label class="mm-auth-field">
                                 <span>Email</span>
                                 <input type="email" name="email" autocomplete="email" required>
@@ -230,6 +278,8 @@ final class AuthMenu
 
         $email = isset($_POST['email']) ? sanitize_email((string) $_POST['email']) : '';
         $password = isset($_POST['password']) ? (string) $_POST['password'] : '';
+        $firstName = isset($_POST['first_name']) ? sanitize_text_field((string) $_POST['first_name']) : '';
+        $lastName = isset($_POST['last_name']) ? sanitize_text_field((string) $_POST['last_name']) : '';
         $redirectTo = isset($_POST['redirect_to']) ? (string) $_POST['redirect_to'] : '';
         $redirectTo = wp_validate_redirect($redirectTo, home_url('/'));
 
@@ -258,6 +308,9 @@ final class AuthMenu
             'user_login' => $username,
             'user_email' => $email,
             'user_pass' => $password,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'display_name' => trim(($firstName . ' ' . $lastName)) !== '' ? trim(($firstName . ' ' . $lastName)) : $username,
             'role' => get_option('default_role'),
         ]);
 

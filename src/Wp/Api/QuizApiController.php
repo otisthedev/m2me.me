@@ -171,9 +171,12 @@ final class QuizApiController
 
             // Generate share URLs
             $shareUrls = [
-                // API URLs are guaranteed to exist (front-end pages are optional).
-                'view' => rest_url(self::NAMESPACE . '/result/' . $shareToken),
-                'compare' => rest_url(self::NAMESPACE . '/result/' . $shareToken . '/compare'),
+                // Frontend URLs (human-friendly).
+                'view' => home_url('/result/' . $shareToken . '/'),
+                'compare' => home_url('/compare/' . $shareToken . '/'),
+                // API URLs (machine-friendly, still useful for debugging).
+                'api_view' => rest_url(self::NAMESPACE . '/result/' . $shareToken),
+                'api_compare' => rest_url(self::NAMESPACE . '/result/' . $shareToken . '/compare'),
             ];
 
             return new \WP_REST_Response([

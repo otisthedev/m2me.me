@@ -339,7 +339,7 @@ final class QuizShortcodes
                 }
 
                 $out .= '<h2 class="entry-title ast-blog-single-element" itemprop="headline"><a href="' . esc_url($url) . '" rel="bookmark">' . esc_html(get_the_title()) . '</a></h2>';
-                $out .= '<header class="entry-header ast-blog-single-element ast-blog-meta-container"><div class="entry-meta"><span class="posted-on"><span class="published" itemprop="datePublished">' . esc_html(get_the_date('F j, Y')) . '</span></span></div></header>';
+                // Intentionally omit entry meta for minimalist design.
                 $out .= '<div class="ast-excerpt-container ast-blog-single-element"><a class="start-quiz" href="' . esc_url($url) . '">View Last Attempt</a></div>';
                 $out .= '</div></div></article>';
             }
@@ -397,11 +397,11 @@ final class QuizShortcodes
             }
 
             $out .= '<h2 class="entry-title ast-blog-single-element" itemprop="headline"><a href="' . esc_url($link) . '" rel="bookmark">' . esc_html((string) $title) . '</a></h2>';
-            $out .= '<header class="entry-header ast-blog-single-element ast-blog-meta-container"><div class="entry-meta"><span class="posted-on"><span class="published" itemprop="datePublished"> ' . esc_html((string) $date) . ' </span></span></div></header>';
+            // Intentionally omit entry meta for minimalist design.
             $out .= '<div class="ast-excerpt-container ast-blog-single-element">';
             $out .= $attemptId ? '<a class="start-quiz" href="' . esc_url($link) . '">View Result</a>' : '<a class="start-quiz" href="' . esc_url($link) . '">Start Quiz</a>';
             $out .= '</div>';
-            $out .= '<p class="ast-blog-single-element ast-read-more-container read-more"><a class="" href="' . esc_url($link) . '"> <span class="screen-reader-text">' . esc_html((string) $title) . '</span> Read More »</a></p>';
+            // Intentionally omit "Read More" for minimalist design.
             $out .= '<div class="entry-content clear" itemprop="text"></div>';
             $out .= '</div></div></article>';
         }

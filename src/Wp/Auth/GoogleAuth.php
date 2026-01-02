@@ -125,8 +125,28 @@ final class GoogleAuth
             update_user_meta((int) $userId, 'first_name', $firstName);
             update_user_meta((int) $userId, 'last_name', $lastName);
             update_user_meta((int) $userId, 'profile_picture', $picture);
+            if ($name !== '') {
+                wp_update_user(['ID' => (int) $userId, 'display_name' => $name]);
+            }
 
             $user = get_user_by('id', (int) $userId);
+        } else {
+            // Backfill profile fields on existing users if missing.
+            $uid = (int) $user->ID;
+            if ($firstName !== '' && get_user_meta($uid, 'first_name', true) === '') {
+                update_user_meta($uid, 'first_name', $firstName);
+            }
+            if ($lastName !== '' && get_user_meta($uid, 'last_name', true) === '') {
+                update_user_meta($uid, 'last_name', $lastName);
+            }
+            if ($picture !== '' && get_user_meta($uid, 'profile_picture', true) === '') {
+                update_user_meta($uid, 'profile_picture', $picture);
+            }
+            // If display_name looks like a username/email, improve it.
+            $currentDisplay = (string) $user->display_name;
+            if ($name !== '' && ($currentDisplay === '' || str_contains($currentDisplay, '@') || $currentDisplay === $user->user_login)) {
+                wp_update_user(['ID' => $uid, 'display_name' => $name]);
+            }
         }
 
         if (!$user) {

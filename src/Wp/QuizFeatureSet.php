@@ -11,7 +11,9 @@ use MatchMe\Wp\Auth\FacebookAuth;
 use MatchMe\Wp\Auth\InstagramAuth;
 use MatchMe\Wp\Auth\AuthMenu;
 use MatchMe\Wp\Rewrite\RsIdRewrite;
+use MatchMe\Wp\Rewrite\ShareTokenRewrite;
 use MatchMe\Wp\Session\TempResultsAssigner;
+use MatchMe\Wp\UserProfilePicture;
 
 final class QuizFeatureSet
 {
@@ -25,11 +27,13 @@ final class QuizFeatureSet
     public function register(): void
     {
         (new RsIdRewrite())->register();
+        (new ShareTokenRewrite())->register();
         (new QuizShortcodes($this->config, $this->results, $this->quizzes))->register();
         (new QuizTitle($this->results))->register();
         (new ThemeTweaks())->register();
         (new QuizAdmin($this->config))->register();
         (new AuthMenu($this->config))->register();
+        (new UserProfilePicture())->register();
 
         $assigner = new TempResultsAssigner($this->results);
         (new GoogleAuth($this->config, $assigner))->register();

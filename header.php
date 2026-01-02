@@ -20,6 +20,25 @@
             <a href="<?php echo esc_url($home_url); ?>" class="site-logo" rel="home">
                 <?php echo esc_html($site_name); ?>
             </a>
+
+            <?php
+            $currentPath = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+            $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
+            ?>
+
+            <div class="header-auth-actions">
+                <?php if (!is_user_logged_in()) : ?>
+                    <a class="header-auth-btn mm-auth-link" data-auth="login" href="<?php echo esc_url(add_query_arg(['login' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>">
+                        Login
+                    </a>
+                    <a class="header-auth-btn header-auth-btn-primary mm-auth-link" data-auth="register" href="<?php echo esc_url(add_query_arg(['register' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>">
+                        Register
+                    </a>
+                <?php else : ?>
+                    <a class="header-auth-btn" href="<?php echo esc_url(home_url('/profile/')); ?>">My Profile</a>
+                    <a class="header-auth-btn" href="<?php echo esc_url(wp_logout_url($redirectTo)); ?>">Logout</a>
+                <?php endif; ?>
+            </div>
             
             <button class="menu-toggle" aria-controls="primary-menu" aria-expanded="false">
                 <span class="screen-reader-text"><?php esc_html_e('Primary Menu', 'match-me'); ?></span>

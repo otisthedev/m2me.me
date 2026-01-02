@@ -187,6 +187,54 @@ p {
     height: 100%;
 }
 
+/* Header auth actions (visible without hamburger) */
+.header-auth-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-left: auto;
+    margin-right: var(--space-sm);
+}
+
+.header-auth-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 var(--space-md);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.header-auth-btn:hover {
+    background: var(--color-bg-subtle);
+    border-color: var(--color-text-secondary);
+}
+
+.header-auth-btn-primary {
+    background: var(--color-text);
+    border-color: var(--color-text);
+    color: #fff;
+}
+
+.header-auth-btn-primary:hover {
+    background: #333;
+    border-color: #333;
+}
+
+/* On mobile, hide auth items inside the hamburger menu to avoid duplicates */
+@media (max-width: 768px) {
+    #primary-menu .mm-menu-login,
+    #primary-menu .mm-menu-register {
+        display: none !important;
+    }
+}
+
 .site-logo {
     font-size: var(--font-size-lg);
     font-weight: 600;

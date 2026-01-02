@@ -134,6 +134,21 @@ final class FacebookAuth
             $userId = (int) $user->ID;
             update_user_meta($userId, 'facebook_user_id', $fbUserId);
             update_user_meta($userId, 'facebook_profile_picture', $pictureUrl);
+            if ($pictureUrl !== '') {
+                update_user_meta($userId, 'profile_picture', $pictureUrl);
+            }
+            // Backfill names if missing.
+            if ($firstName !== '' && get_user_meta($userId, 'first_name', true) === '') {
+                update_user_meta($userId, 'first_name', $firstName);
+            }
+            if ($lastName !== '' && get_user_meta($userId, 'last_name', true) === '') {
+                update_user_meta($userId, 'last_name', $lastName);
+            }
+            // Improve display name if needed.
+            $currentDisplay = (string) $user->display_name;
+            if ($displayName !== '' && ($currentDisplay === '' || str_contains($currentDisplay, '@') || $currentDisplay === $user->user_login)) {
+                wp_update_user(['ID' => $userId, 'display_name' => $displayName]);
+            }
         } else {
             $base = sanitize_user((string) strtok($email, '@'), true);
             $username = $base !== '' ? $base : 'fb_user';
@@ -158,6 +173,7 @@ final class FacebookAuth
             }
 
             update_user_meta((int) $userId, 'facebook_user_id', $fbUserId);
+            update_user_meta((int) $userId, 'facebook_profile_picture', $pictureUrl);
             update_user_meta((int) $userId, 'profile_picture', $pictureUrl);
         }
 

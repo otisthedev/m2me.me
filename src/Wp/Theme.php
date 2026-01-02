@@ -33,10 +33,12 @@ final class Theme
 
         // Ensure new tables exist even if the theme was already active (runs once per schema version).
         $schemaVersion = (string) get_option('match_me_schema_version', '');
-        $targetSchemaVersion = 'quiz-v2-2026-01-02';
+        $targetSchemaVersion = 'quiz-v2-2026-01-03';
         if ($schemaVersion !== $targetSchemaVersion) {
             (new CreateQuizTables($wpdb))->run();
             update_option('match_me_schema_version', $targetSchemaVersion, true);
+            // Ensure new rewrite rules are applied after deploy (e.g., /result/{share_token}/).
+            flush_rewrite_rules();
         }
 
         $resultsTable = new QuizResultsTable($wpdb);
