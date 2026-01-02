@@ -11,6 +11,7 @@
   'use strict';
 
   const quizData = window.matchMeQuizData;
+  const quizVars = window.matchMeQuizVars || {};
 
   const root = document.querySelector('[data-match-me-quiz]');
   if (!root || !quizData) return;
@@ -70,6 +71,7 @@
         els.options.appendChild(label);
       }
 
+      // Re-select previous answer if present.
       const prev = answers[index];
       if (prev && prev.option_id) {
         const sel = els.options.querySelector(`input[value="${CSS.escape(prev.option_id)}"]`);
@@ -100,6 +102,7 @@
         anonymous_meta: {},
       });
 
+      // Fetch view representation for textual summary + permissions.
       const result = await window.MatchMeQuiz.getResult(submitRes.share_token);
       result.share_token = submitRes.share_token;
       result.share_urls = submitRes.share_urls;
