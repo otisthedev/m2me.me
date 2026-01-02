@@ -1,0 +1,90 @@
+{
+  "info": {
+    "name": "Match Me Quiz API",
+    "_postman_id": "b6f2a6d4-7b5a-4b1e-9f6d-3a7c9f3f2d11",
+    "description": "Requests for Match Me quiz submission, result retrieval, comparison, and token revocation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "quizId", "value": "communication-style-v1" },
+    { "key": "shareToken", "value": "" },
+    { "key": "resultId", "value": "" },
+    { "key": "wpNonce", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Submit Quiz",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-WP-Nonce", "value": "{{wpNonce}}", "disabled": true }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/wp-json/match-me/v1/quiz/{{quizId}}/submit",
+          "host": ["{{baseUrl}}"],
+          "path": ["wp-json", "match-me", "v1", "quiz", "{{quizId}}", "submit"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"answers\": [\n    {\"question_id\": \"q1\", \"option_id\": \"opt_1\"},\n    {\"question_id\": \"q2\", \"option_id\": \"opt_1\"},\n    {\"question_id\": \"q3\", \"option_id\": \"opt_1\"},\n    {\"question_id\": \"q4\", \"option_id\": \"opt_1\"},\n    {\"question_id\": \"q5\", \"option_id\": \"opt_1\"},\n    {\"question_id\": \"q6\", \"option_id\": \"opt_1\"}\n  ],\n  \"share_mode\": \"share_match\"\n}\n"
+        }
+      }
+    },
+    {
+      "name": "Get Result (by share token)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/wp-json/match-me/v1/result/{{shareToken}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["wp-json", "match-me", "v1", "result", "{{shareToken}}"]
+        }
+      }
+    },
+    {
+      "name": "Compare (answers vs shared result)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-WP-Nonce", "value": "{{wpNonce}}", "disabled": true }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/wp-json/match-me/v1/result/{{shareToken}}/compare",
+          "host": ["{{baseUrl}}"],
+          "path": ["wp-json", "match-me", "v1", "result", "{{shareToken}}", "compare"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"quiz_id\": \"communication-style-v1\",\n  \"answers\": [\n    {\"question_id\": \"q1\", \"option_id\": \"opt_2\"},\n    {\"question_id\": \"q2\", \"option_id\": \"opt_2\"},\n    {\"question_id\": \"q3\", \"option_id\": \"opt_2\"},\n    {\"question_id\": \"q4\", \"option_id\": \"opt_2\"},\n    {\"question_id\": \"q5\", \"option_id\": \"opt_2\"},\n    {\"question_id\": \"q6\", \"option_id\": \"opt_2\"}\n  ],\n  \"algorithm\": \"cosine\"\n}\n"
+        }
+      }
+    },
+    {
+      "name": "Compare (result_id vs shared result)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-WP-Nonce", "value": "{{wpNonce}}", "disabled": true }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/wp-json/match-me/v1/result/{{shareToken}}/compare",
+          "host": ["{{baseUrl}}"],
+          "path": ["wp-json", "match-me", "v1", "result", "{{shareToken}}", "compare"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"result_id\": {{resultId}},\n  \"algorithm\": \"cosine\"\n}\n"
+        }
+      }
+    }
+  ]
+}
+
+

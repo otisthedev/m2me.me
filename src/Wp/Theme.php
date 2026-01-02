@@ -5,6 +5,7 @@ namespace MatchMe\Wp;
 
 use MatchMe\Config\ThemeConfig;
 use MatchMe\Infrastructure\Db\ComparisonRepository;
+use MatchMe\Infrastructure\Db\Migrations\CreateQuizTables;
 use MatchMe\Infrastructure\Db\QuizResultRepository;
 use MatchMe\Infrastructure\Db\QuizResultsTable;
 use MatchMe\Infrastructure\Db\ResultRepository;
@@ -29,6 +30,14 @@ final class Theme
 
         $config = new ThemeConfig();
         Container::init($config, $wpdb);
+
+        // Ensure new tables exist even if the theme was already active (runs once per schema version).
+        $schemaVersion = (string) get_option('match_me_schema_version', '');
+        $targetSchemaVersion = 'quiz-v2-2026-01-02';
+        if ($schemaVersion !== $targetSchemaVersion) {
+            (new CreateQuizTables($wpdb))->run();
+            update_option('match_me_schema_version', $targetSchemaVersion, true);
+        }
 
         $resultsTable = new QuizResultsTable($wpdb);
         $repo = new QuizResultRepository($wpdb, $resultsTable);

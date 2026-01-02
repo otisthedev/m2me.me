@@ -22,11 +22,13 @@
             anonymous_meta: options.anonymous_meta || {}
         };
 
+        const nonce = (window.matchMeQuizVars && window.matchMeQuizVars.nonce) || (window.cqVars && window.cqVars.nonce) || '';
+
         return fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-WP-Nonce': window.cqVars?.nonce || ''
+                'X-WP-Nonce': nonce
             },
             body: JSON.stringify(body)
         })
@@ -85,11 +87,13 @@
             body.algorithm = options.algorithm;
         }
 
+        const nonce = (window.matchMeQuizVars && window.matchMeQuizVars.nonce) || (window.cqVars && window.cqVars.nonce) || '';
+
         return fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-WP-Nonce': window.cqVars?.nonce || ''
+                'X-WP-Nonce': nonce
             },
             body: JSON.stringify(body)
         })

@@ -19,6 +19,7 @@ final class QuizShortcodes
     public function register(): void
     {
         add_shortcode('X_quiz', [$this, 'renderQuiz']);
+        add_shortcode('match_me_quiz', [$this, 'renderQuizV2']);
         add_shortcode('previous_results', [$this, 'renderPreviousResults']);
         add_shortcode('post_titles_archive', [$this, 'renderPostTitlesArchive']);
 
@@ -142,6 +143,61 @@ final class QuizShortcodes
         return (string) ob_get_clean();
     }
 
+    /**
+     * New modular quiz runner that submits answers to backend (no client-side scoring).
+     *
+     * Usage: [match_me_quiz id="communication-style-v1"]
+     *
+     * @param array<string,mixed> $atts
+     */
+    public function renderQuizV2(array $atts): string
+    {
+        $quizId = isset($atts['id']) ? (string) $atts['id'] : '';
+        $quizId = sanitize_file_name($quizId);
+        if ($quizId === '') {
+            return '<p>Quiz not found</p>';
+        }
+
+        try {
+            $quizData = $this->quizzes->load($quizId);
+        } catch (\Throwable) {
+            return '<p>Quiz not found</p>';
+        }
+
+        $this->enqueueQuizRuntimeV2($quizData, [
+            'nonce' => wp_create_nonce('wp_rest'),
+            'isLoggedIn' => is_user_logged_in(),
+            'requireLogin' => $this->config->requireLoginForResults(),
+        ]);
+
+        ob_start();
+        ?>
+        <div data-match-me-quiz class="mmq" data-quiz-id="<?= esc_attr($quizId) ?>">
+            <div class="mmq-error" style="display:none;"></div>
+
+            <div class="mmq-screen">
+                <div class="mmq-header">
+                    <div class="mmq-title"><?= esc_html((string) ($quizData['meta']['title'] ?? 'Quiz')) ?></div>
+                    <div class="mmq-progress"></div>
+                </div>
+
+                <div class="mmq-question">
+                    <div class="mmq-question-text"></div>
+                    <div class="mmq-options"></div>
+                </div>
+
+                <div class="mmq-actions">
+                    <button type="button" class="mmq-back">Back</button>
+                    <button type="button" class="mmq-next">Next</button>
+                </div>
+            </div>
+
+            <div class="mmq-results" style="display:none;"></div>
+        </div>
+        <?php
+        return (string) ob_get_clean();
+    }
+
     public function appendStartQuizLink(string $excerpt): string
     {
         return $excerpt . ' <a class="start-quiz" href="' . esc_url(get_permalink()) . '">Start Quiz</a>';
@@ -202,6 +258,39 @@ final class QuizShortcodes
             . 'window.ajaxurl=' . wp_json_encode(admin_url('admin-ajax.php')) . ';';
 
         wp_add_inline_script('match-me-quiz-public', $inline, 'before');
+    }
+
+    /**
+     * @param array<string,mixed> $quizData
+     * @param array<string,mixed> $vars
+     */
+    private function enqueueQuizRuntimeV2(array $quizData, array $vars): void
+    {
+        $baseDir = (string) get_template_directory();
+        $fallback = $this->config->themeVersion();
+
+        $ajaxClient = $baseDir . '/assets/js/quiz-ajax-client.js';
+        $resultsUi = $baseDir . '/assets/js/quiz-results-ui.js';
+        $runner = $baseDir . '/assets/js/quiz-public-v2.js';
+        $resultsCss = $baseDir . '/assets/css/quiz-results.css';
+        $v2Css = $baseDir . '/assets/css/quiz-v2.css';
+
+        $ajaxClientVer = is_file($ajaxClient) ? (string) filemtime($ajaxClient) : $fallback;
+        $resultsUiVer = is_file($resultsUi) ? (string) filemtime($resultsUi) : $fallback;
+        $runnerVer = is_file($runner) ? (string) filemtime($runner) : $fallback;
+        $resultsCssVer = is_file($resultsCss) ? (string) filemtime($resultsCss) : $fallback;
+        $v2CssVer = is_file($v2Css) ? (string) filemtime($v2Css) : $fallback;
+
+        wp_enqueue_style('match-me-quiz-results', get_template_directory_uri() . '/assets/css/quiz-results.css', [], $resultsCssVer);
+        wp_enqueue_style('match-me-quiz-v2', get_template_directory_uri() . '/assets/css/quiz-v2.css', [], $v2CssVer);
+        wp_enqueue_script('match-me-quiz-ajax-client', get_template_directory_uri() . '/assets/js/quiz-ajax-client.js', [], $ajaxClientVer, true);
+        wp_enqueue_script('match-me-quiz-results-ui', get_template_directory_uri() . '/assets/js/quiz-results-ui.js', [], $resultsUiVer, true);
+        wp_enqueue_script('match-me-quiz-public-v2', get_template_directory_uri() . '/assets/js/quiz-public-v2.js', [], $runnerVer, true);
+
+        $inline = 'window.matchMeQuizData=' . wp_json_encode($quizData) . ';'
+            . 'window.matchMeQuizVars=' . wp_json_encode($vars) . ';';
+
+        wp_add_inline_script('match-me-quiz-public-v2', $inline, 'before');
     }
 
     public function renderPreviousResults(): string

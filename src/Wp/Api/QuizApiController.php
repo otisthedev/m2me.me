@@ -170,10 +170,10 @@ final class QuizApiController
             );
 
             // Generate share URLs
-            $baseUrl = $this->config->homeUrl();
             $shareUrls = [
-                'view' => $baseUrl . 'result/' . $shareToken,
-                'compare' => $baseUrl . 'compare/' . $shareToken,
+                // API URLs are guaranteed to exist (front-end pages are optional).
+                'view' => rest_url(self::NAMESPACE . '/result/' . $shareToken),
+                'compare' => rest_url(self::NAMESPACE . '/result/' . $shareToken . '/compare'),
             ];
 
             return new \WP_REST_Response([
@@ -228,12 +228,23 @@ final class QuizApiController
                 $traitVector = [];
             }
 
+            $quizTitle = 'Quiz Result';
+            $quizSlug = (string) ($result['quiz_slug'] ?? '');
+            if ($quizSlug !== '') {
+                try {
+                    $quizConfig = $this->quizRepository->load($quizSlug);
+                    $quizTitle = (string) (($quizConfig['meta']['title'] ?? '') ?: $quizTitle);
+                } catch (\Throwable) {
+                    // Ignore and fallback.
+                }
+            }
+
             // Generate textual summary (simplified - in production, use a more sophisticated generator)
             $textualSummary = $this->generateTextualSummary($traitVector);
 
             return new \WP_REST_Response([
                 'result_id' => (int) $result['result_id'],
-                'quiz_title' => 'Quiz Result', // Would come from quiz lookup
+                'quiz_title' => $quizTitle,
                 'trait_summary' => $traitVector,
                 'textual_summary' => $textualSummary,
                 'share_mode' => $shareMode,
