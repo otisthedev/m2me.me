@@ -17,6 +17,14 @@
   if (!root || !quizData) return;
 
   const quizId = root.getAttribute('data-quiz-id');
+  const urlParams = (() => {
+    try {
+      return new URL(window.location.href).searchParams;
+    } catch (e) {
+      return null;
+    }
+  })();
+  const compareToken = urlParams ? (urlParams.get('compare_token') || '').trim() : '';
   const questions = Array.isArray(quizData.questions) ? quizData.questions : [];
 
   const els = {
@@ -29,6 +37,11 @@
     results: root.querySelector('.mmq-results'),
     error: root.querySelector('.mmq-error'),
   };
+
+  const intro = root.querySelector('.mmq-intro');
+  const startBtn = root.querySelector('.mmq-start');
+  const isGated = Boolean(intro && startBtn && els.screen);
+  let hasStarted = !isGated;
 
   let index = 0;
   const answers = []; // index-aligned {question_id, option_id}
@@ -161,18 +174,28 @@
       if (els.screen) els.screen.style.display = 'none';
 
       const payloadAnswers = answers.filter(Boolean);
-      const submitRes = await window.MatchMeQuiz.submitQuiz(quizId, payloadAnswers, {
-        share_mode: 'share_match',
-        anonymous_meta: {},
-      });
+      if (compareToken) {
+        const matchResult = await window.MatchMeQuiz.compareResults(compareToken, {
+          answers: payloadAnswers,
+          quiz_id: quizId,
+        });
+        if (els.results) {
+          window.MatchMeQuizUI.renderMatchResult(matchResult, els.results);
+        }
+      } else {
+        const submitRes = await window.MatchMeQuiz.submitQuiz(quizId, payloadAnswers, {
+          share_mode: 'share_match',
+          anonymous_meta: {},
+        });
 
-      // Fetch view representation for textual summary + permissions.
-      const result = await window.MatchMeQuiz.getResult(submitRes.share_token);
-      result.share_token = submitRes.share_token;
-      result.share_urls = submitRes.share_urls;
+        // Fetch view representation for textual summary + permissions.
+        const result = await window.MatchMeQuiz.getResult(submitRes.share_token);
+        result.share_token = submitRes.share_token;
+        result.share_urls = submitRes.share_urls;
 
-      if (els.results) {
-        window.MatchMeQuizUI.renderResult(result, els.results);
+        if (els.results) {
+          window.MatchMeQuizUI.renderResult(result, els.results);
+        }
       }
     } catch (e) {
       const msg =
@@ -235,7 +258,19 @@
     });
   }
 
-  render();
+  if (isGated) {
+    // Hide quiz UI until user explicitly starts.
+    if (els.screen) els.screen.style.display = 'none';
+    if (els.results) els.results.style.display = 'none';
+    startBtn.addEventListener('click', () => {
+      hasStarted = true;
+      if (intro) intro.style.display = 'none';
+      if (els.screen) els.screen.style.display = 'block';
+      render();
+    });
+  } else {
+    render();
+  }
 })();
 
 

@@ -14,6 +14,7 @@ use MatchMe\Wp\Rewrite\RsIdRewrite;
 use MatchMe\Wp\Rewrite\ShareTokenRewrite;
 use MatchMe\Wp\Session\TempResultsAssigner;
 use MatchMe\Wp\UserProfilePicture;
+use MatchMe\Wp\ShareMeta;
 
 final class QuizFeatureSet
 {
@@ -34,6 +35,7 @@ final class QuizFeatureSet
         (new QuizAdmin($this->config))->register();
         (new AuthMenu($this->config))->register();
         (new UserProfilePicture())->register();
+        (new ShareMeta())->register();
 
         $assigner = new TempResultsAssigner($this->results);
         (new GoogleAuth($this->config, $assigner))->register();

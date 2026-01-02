@@ -189,6 +189,31 @@ final class QuizShortcodes
         <div data-match-me-quiz class="mmq" data-quiz-id="<?= esc_attr($quizId) ?>">
             <div class="mmq-error" style="display:none;"></div>
 
+            <?php
+            $postId = get_the_ID();
+            $desc = (string) (($quizData['meta']['description'] ?? '') ?: '');
+            if ($desc === '' && $postId) {
+                $desc = (string) get_post_field('post_excerpt', $postId);
+            }
+            if ($desc === '') {
+                $desc = 'Answer a few quick questions to get your result.';
+            }
+            ?>
+
+            <div class="mmq-intro">
+                <?php if ($postId && has_post_thumbnail($postId)) : ?>
+                    <div class="mmq-intro-image">
+                        <?= get_the_post_thumbnail($postId, 'large', ['loading' => 'eager', 'decoding' => 'async']) ?>
+                    </div>
+                <?php endif; ?>
+                <div class="mmq-intro-text">
+                    <p><?= esc_html($desc) ?></p>
+                </div>
+                <div class="mmq-intro-actions">
+                    <button type="button" class="mmq-start">Start Quiz</button>
+                </div>
+            </div>
+
             <div class="mmq-screen">
                 <div class="mmq-header">
                     <div class="mmq-title"><?= esc_html((string) ($quizData['meta']['title'] ?? 'Quiz')) ?></div>
@@ -214,7 +239,8 @@ final class QuizShortcodes
 
     public function appendStartQuizLink(string $excerpt): string
     {
-        return $excerpt . ' <a class="start-quiz" href="' . esc_url(get_permalink()) . '">Start Quiz</a>';
+        // Archive/listing CTA should be "View" (quiz starts only on the single page after user clicks Start Quiz).
+        return $excerpt . ' <a class="start-quiz" href="' . esc_url(get_permalink()) . '">View</a>';
     }
 
     public function logoutOnUrlParameter(): void
@@ -399,7 +425,7 @@ final class QuizShortcodes
             $out .= '<h2 class="entry-title ast-blog-single-element" itemprop="headline"><a href="' . esc_url($link) . '" rel="bookmark">' . esc_html((string) $title) . '</a></h2>';
             // Intentionally omit entry meta for minimalist design.
             $out .= '<div class="ast-excerpt-container ast-blog-single-element">';
-            $out .= $attemptId ? '<a class="start-quiz" href="' . esc_url($link) . '">View Result</a>' : '<a class="start-quiz" href="' . esc_url($link) . '">Start Quiz</a>';
+            $out .= $attemptId ? '<a class="start-quiz" href="' . esc_url($link) . '">View Result</a>' : '<a class="start-quiz" href="' . esc_url($link) . '">View</a>';
             $out .= '</div>';
             // Intentionally omit "Read More" for minimalist design.
             $out .= '<div class="entry-content clear" itemprop="text"></div>';

@@ -1,0 +1,182 @@
+<?php
+declare(strict_types=1);
+
+namespace MatchMe\Wp;
+
+use MatchMe\Infrastructure\Db\ResultRepository;
+use MatchMe\Infrastructure\Quiz\QuizJsonRepository;
+
+/**
+ * Adds Open Graph / Twitter meta tags for shareable result & compare pages.
+ */
+final class ShareMeta
+{
+    public function register(): void
+    {
+        add_filter('pre_get_document_title', [$this, 'filterDocumentTitle'], 20);
+        add_action('wp_head', [$this, 'renderMetaTags'], 1);
+    }
+
+    public function filterDocumentTitle(string $title): string
+    {
+        $token = (string) get_query_var('mm_share_token');
+        if ($token === '') {
+            return $title;
+        }
+
+        $mode = (string) get_query_var('mm_share_mode');
+        $mode = ($mode === 'compare') ? 'compare' : 'view';
+
+        $data = $this->buildMetaData($token, $mode);
+        if ($data === null) {
+            return $title;
+        }
+
+        return $data['title'];
+    }
+
+    public function renderMetaTags(): void
+    {
+        $token = (string) get_query_var('mm_share_token');
+        if ($token === '') {
+            return;
+        }
+
+        $mode = (string) get_query_var('mm_share_mode');
+        $mode = ($mode === 'compare') ? 'compare' : 'view';
+
+        $data = $this->buildMetaData($token, $mode);
+        if ($data === null) {
+            return;
+        }
+
+        $title = esc_attr($data['title']);
+        $desc = esc_attr($data['description']);
+        $url = esc_url($data['url']);
+        $image = esc_url($data['image']);
+        $siteName = esc_attr(get_bloginfo('name'));
+        $locale = esc_attr(str_replace('_', '-', (string) get_locale()));
+
+        echo "\n" . '<!-- MatchMe Share Meta -->' . "\n";
+        echo '<link rel="canonical" href="' . $url . '">' . "\n";
+        echo '<meta name="description" content="' . $desc . '">' . "\n";
+
+        // Open Graph
+        echo '<meta property="og:type" content="website">' . "\n";
+        echo '<meta property="og:site_name" content="' . $siteName . '">' . "\n";
+        echo '<meta property="og:locale" content="' . $locale . '">' . "\n";
+        echo '<meta property="og:title" content="' . $title . '">' . "\n";
+        echo '<meta property="og:description" content="' . $desc . '">' . "\n";
+        echo '<meta property="og:url" content="' . $url . '">' . "\n";
+        if ($image !== '') {
+            echo '<meta property="og:image" content="' . $image . '">' . "\n";
+        }
+
+        // Twitter
+        echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+        echo '<meta name="twitter:title" content="' . $title . '">' . "\n";
+        echo '<meta name="twitter:description" content="' . $desc . '">' . "\n";
+        if ($image !== '') {
+            echo '<meta name="twitter:image" content="' . $image . '">' . "\n";
+        }
+        echo '<!-- /MatchMe Share Meta -->' . "\n";
+    }
+
+    /**
+     * @return array{title:string,description:string,url:string,image:string}|null
+     */
+    private function buildMetaData(string $token, string $mode): ?array
+    {
+        $wpdb = Container::wpdb();
+        $config = Container::config();
+
+        $resultRepo = new ResultRepository($wpdb);
+        $row = $resultRepo->findByShareToken($token);
+        if ($row === null) {
+            return null;
+        }
+
+        // Do not leak metadata for private results.
+        $shareMode = (string) ($row['share_mode'] ?? 'private');
+        if ($shareMode === 'private') {
+            $viewerId = (int) get_current_user_id();
+            $ownerId = (int) ($row['user_id'] ?? 0);
+            if ($viewerId === 0 || $viewerId !== $ownerId) {
+                return null;
+            }
+        }
+
+        $quizSlug = (string) ($row['quiz_slug'] ?? '');
+        $quizTitle = 'Quiz Results';
+        if ($quizSlug !== '') {
+            try {
+                $quizConfig = (new QuizJsonRepository($config))->load($quizSlug);
+                $quizTitle = (string) (($quizConfig['meta']['title'] ?? '') ?: $quizTitle);
+            } catch (\Throwable) {
+                // ignore
+            }
+        }
+
+        $ownerName = 'Someone';
+        $image = $this->fallbackShareImage();
+        $ownerId = (int) ($row['user_id'] ?? 0);
+        if ($ownerId > 0) {
+            $u = get_user_by('id', $ownerId);
+            if ($u instanceof \WP_User) {
+                $first = (string) get_user_meta($ownerId, 'first_name', true);
+                $ownerName = $first !== '' ? $first : (string) ($u->display_name ?: $ownerName);
+                $image = (string) get_avatar_url($ownerId, ['size' => 512]);
+                if ($image === '') {
+                    $image = $this->fallbackShareImage();
+                }
+            }
+        }
+
+        $url = $mode === 'compare'
+            ? home_url('/compare/' . rawurlencode($token) . '/')
+            : home_url('/result/' . rawurlencode($token) . '/');
+
+        if ($mode === 'compare') {
+            $title = 'Compare with ' . $ownerName . ' — ' . $quizTitle;
+            $description = 'Take the quiz to compare your results with ' . $ownerName . '.';
+        } else {
+            $title = $ownerName . '’s ' . $quizTitle;
+            $description = 'View quiz results and trait breakdown.';
+        }
+
+        return [
+            'title' => $title,
+            'description' => $description,
+            'url' => $url,
+            'image' => $image,
+        ];
+    }
+
+    private function fallbackShareImage(): string
+    {
+        $siteIcon = (string) get_site_icon_url(512);
+        if ($siteIcon !== '') {
+            return $siteIcon;
+        }
+
+        $headerLogoId = (int) get_theme_mod('match_me_header_logo', 0);
+        if ($headerLogoId > 0) {
+            $url = wp_get_attachment_image_url($headerLogoId, 'full');
+            if (is_string($url) && $url !== '') {
+                return $url;
+            }
+        }
+
+        $customLogoId = (int) get_theme_mod('custom_logo', 0);
+        if ($customLogoId > 0) {
+            $url = wp_get_attachment_image_url($customLogoId, 'full');
+            if (is_string($url) && $url !== '') {
+                return $url;
+            }
+        }
+
+        return (string) get_template_directory_uri() . '/assets/img/M2me.me.svg';
+    }
+}
+
+

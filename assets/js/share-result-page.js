@@ -7,6 +7,7 @@
 
   async function main() {
     const token = window.matchMeShareToken;
+    const mode = window.matchMeShareMode || 'view';
     const root = document.getElementById('mm-share-result-root');
     if (!token || !root) return;
 
@@ -20,6 +21,31 @@
     try {
       const result = await window.MatchMeQuiz.getResult(String(token));
       root.innerHTML = '';
+
+      if (String(mode) === 'compare') {
+        if (!result || result.can_compare !== true) {
+          root.innerHTML =
+            '<div class="error-message">This result does not allow comparison.</div>';
+          return;
+        }
+
+        const quizSlug = String(result.quiz_slug || '').trim();
+        const quizUrl = quizSlug
+          ? `/${encodeURIComponent(quizSlug)}/?compare_token=${encodeURIComponent(
+              String(token)
+            )}`
+          : `/?compare_token=${encodeURIComponent(String(token))}`;
+
+        root.innerHTML = `
+          <div class="match-me-compare-section">
+            <h3>Compare your results</h3>
+            <p>Do a quick quiz and we’ll show you your comparison results at the end.</p>
+            <a class="btn-compare-cta" href="${quizUrl}">Start now</a>
+          </div>
+        `;
+        return;
+      }
+
       window.MatchMeQuizUI.renderResult(result, root);
     } catch (e) {
       const msg =

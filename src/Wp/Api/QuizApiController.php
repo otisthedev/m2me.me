@@ -253,12 +253,23 @@ final class QuizApiController
             // Generate textual summary (simplified - in production, use a more sophisticated generator)
             $textualSummary = $this->generateTextualSummary($traitVector);
 
+            $shareUrls = [
+                // Frontend URLs (human-friendly).
+                'view' => home_url('/result/' . $shareToken . '/'),
+                'compare' => home_url('/compare/' . $shareToken . '/'),
+                // API URLs (machine-friendly).
+                'api_view' => rest_url(self::NAMESPACE . '/result/' . $shareToken),
+                'api_compare' => rest_url(self::NAMESPACE . '/result/' . $shareToken . '/compare'),
+            ];
+
             return new \WP_REST_Response([
                 'result_id' => (int) $result['result_id'],
                 'quiz_title' => $quizTitle,
+                'quiz_slug' => $quizSlug,
                 'trait_summary' => $traitVector,
                 'trait_labels' => $traitLabels,
                 'textual_summary' => $textualSummary,
+                'share_urls' => $shareUrls,
                 'share_mode' => $shareMode,
                 'can_compare' => $shareMode === 'share_match',
                 'created_at' => $result['created_at'] ?? '',

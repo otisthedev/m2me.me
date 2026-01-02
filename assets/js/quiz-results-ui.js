@@ -401,9 +401,9 @@
             transform: translateX(-50%);
             padding: 12px 24px;
             border-radius: 8px;
-            background: ${type === 'success' ? '#8FAEA3' : type === 'warning' ? '#EFEFEF' : '#F6F5F2'};
+            background: ${type === 'success' ? '#1E2A44' : type === 'warning' ? '#EFEFEF' : '#F6F5F2'};
             color: ${type === 'success' ? '#F6F5F2' : '#2B2E34'};
-            border: 1px solid ${type === 'warning' ? '#8FAEA3' : '#1E2A44'};
+            border: 1px solid #1E2A44;
             z-index: 10000;
             font-size: 14px;
             max-width: 90%;

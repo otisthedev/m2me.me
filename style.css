@@ -12,8 +12,9 @@ Text Domain: match-me
 :root {
     /* m2me Color Palette */
     --color-primary: #1E2A44;        /* Deep Indigo / Midnight Blue */
-    --color-secondary: #8FAEA3;      /* Muted Sage Green */
-    --color-accent: #6FAFB3;         /* Soft Teal */
+    /* Derived from logo color (monochrome indigo system) */
+    --color-secondary: #2B3A5E;      /* Indigo tint */
+    --color-accent: #3A4A72;         /* Lighter indigo for interactive states */
 
     --color-bg: #F6F5F2;             /* Off-white */
     --color-bg-subtle: #EFEFEF;      /* Light gray */
@@ -112,9 +113,13 @@ img {
 }
 
 a {
-    color: var(--color-accent);
+    color: var(--color-primary);
     text-decoration: none;
     transition: color var(--transition);
+}
+
+a:hover {
+    color: var(--color-accent);
 }
 
 a:focus {
@@ -220,7 +225,7 @@ p {
 }
 
 .header-auth-btn:hover {
-    background: rgba(143, 174, 163, 0.14);
+    background: rgba(30, 42, 68, 0.08);
     border-color: rgba(30, 42, 68, 0.30);
     transform: translateY(-1px);
 }
@@ -281,14 +286,15 @@ p {
 }
 
 .site-logo-img {
-    height: 26px;
+    height: clamp(28px, 2.2vw, 36px);
     width: auto;
     display: block;
+    object-fit: contain;
 }
 
 @media (min-width: 768px) {
     .site-logo-img {
-        height: 30px;
+        height: clamp(32px, 1.8vw, 40px);
     }
 }
 
@@ -298,31 +304,6 @@ p {
     align-items: center;
     justify-content: center;
     flex: 1;
-}
-
-/* ============================================
-   Thumb-Friendly Navigation
-   ============================================ */
-.menu-toggle {
-    display: none;
-    background: none;
-    border: none;
-    padding: var(--space-sm);
-    cursor: pointer;
-    color: var(--color-text);
-    font-size: var(--font-size-xl);
-    width: 44px;
-    height: 44px;
-    align-items: center;
-    justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-}
-
-/* Ensure hamburger never shows on desktop */
-@media (min-width: 768px) {
-    header#masthead .menu-toggle {
-        display: none !important;
-    }
 }
 
 #primary-menu {
@@ -363,41 +344,40 @@ p {
 
 /* Mobile Menu */
 @media (max-width: 767px) {
-    .menu-toggle {
-        display: flex;
+    .site-header {
+        height: auto;
     }
-    
+
+    .site-header .header-inner {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px 0;
+        height: auto;
+    }
+
     .site-nav {
-        justify-content: flex-end;
-        flex: 0 0 auto;
+        flex: 1 0 100%;
+        justify-content: flex-start;
     }
 
     #primary-menu {
-        display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: var(--color-bg);
-        flex-direction: column;
-        padding: var(--space-md);
-        border-top: 1px solid var(--color-border);
-        box-shadow: var(--shadow-md);
-        gap: 0;
+        position: static;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 0;
+        margin: 0;
+        background: transparent;
+        border-top: none;
+        box-shadow: none;
     }
-    
-    #primary-menu.active {
-        display: flex;
-    }
-    
-    #primary-menu li {
-        width: 100%;
-    }
-    
+
     #primary-menu a {
-        width: 100%;
-        padding: var(--space-md);
-        border-radius: var(--radius);
+        min-height: 40px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(30, 42, 68, 0.12);
+        background: rgba(255, 255, 255, 0.25);
     }
 }
 

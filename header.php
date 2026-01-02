@@ -78,11 +78,6 @@
                     <a class="header-auth-btn" href="<?php echo esc_url(wp_logout_url($redirectTo)); ?>">Logout</a>
                 <?php endif; ?>
             </div>
-            
-            <button class="menu-toggle" aria-controls="primary-menu" aria-expanded="false">
-                <span class="screen-reader-text"><?php esc_html_e('Primary Menu', 'match-me'); ?></span>
-                <span aria-hidden="true">☰</span>
-            </button>
         </div>
     </header>
 
