@@ -123,14 +123,10 @@ final class QuizResultRepository
 
         $tableName = $this->table->name();
         $placeholders = implode(',', array_fill(0, count($attemptIds), '%d'));
-        $params = array_merge([$userId], $attemptIds);
-        array_unshift($params, null); // For prepare format string
 
         // Only update attempts with user_id = 9999 (anonymous placeholder)
         $sql = "UPDATE $tableName SET user_id = %d WHERE attempt_id IN ($placeholders) AND user_id = 9999";
         
-        // Build format array: %d for userId, then %d for each attempt ID
-        $format = array_merge(['%d'], array_fill(0, count($attemptIds), '%d'));
         $prepared = $this->wpdb->prepare($sql, $userId, ...$attemptIds);
         
         $updated = $this->wpdb->query($prepared);

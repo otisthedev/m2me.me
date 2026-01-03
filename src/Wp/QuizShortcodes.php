@@ -309,7 +309,7 @@ final class QuizShortcodes
         wp_enqueue_script('match-me-clipboard', get_template_directory_uri() . '/assets/js/mm-clipboard.js', [], $clipboardVer, true);
         wp_enqueue_script('match-me-quiz-ajax-client', get_template_directory_uri() . '/assets/js/quiz-ajax-client.js', [], $ajaxClientVer, true);
         wp_enqueue_script('match-me-quiz-results-ui', get_template_directory_uri() . '/assets/js/quiz-results-ui.js', ['match-me-clipboard'], $resultsUiVer, true);
-        wp_enqueue_script('match-me-quiz-public-v2', get_template_directory_uri() . '/assets/js/quiz-public-v2.js', ['match-me-clipboard'], $runnerVer, true);
+        wp_enqueue_script('match-me-quiz-public-v2', get_template_directory_uri() . '/assets/js/quiz-public-v2.js', ['match-me-clipboard', 'match-me-quiz-ajax-client', 'match-me-quiz-results-ui'], $runnerVer, true);
 
         $inline = 'window.matchMeQuizData=' . wp_json_encode($quizData) . ';'
             . 'window.matchMeQuizVars=' . wp_json_encode($vars) . ';';

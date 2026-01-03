@@ -94,7 +94,7 @@ final class ShareTokenRewrite
         wp_enqueue_script('match-me-clipboard', get_template_directory_uri() . '/assets/js/mm-clipboard.js', [], $clipboardVer, true);
         wp_enqueue_script('match-me-quiz-ajax-client', get_template_directory_uri() . '/assets/js/quiz-ajax-client.js', [], $ajaxClientVer, true);
         wp_enqueue_script('match-me-quiz-results-ui', get_template_directory_uri() . '/assets/js/quiz-results-ui.js', ['match-me-clipboard'], $resultsUiVer, true);
-        wp_enqueue_script('match-me-share-result-page', get_template_directory_uri() . '/assets/js/share-result-page.js', [], $pageJsVer, true);
+        wp_enqueue_script('match-me-share-result-page', get_template_directory_uri() . '/assets/js/share-result-page.js', ['match-me-quiz-ajax-client', 'match-me-quiz-results-ui'], $pageJsVer, true);
 
         $inline = 'window.matchMeShareToken=' . wp_json_encode($token) . ';'
             . 'window.matchMeComparisonToken=' . wp_json_encode($cmp) . ';'

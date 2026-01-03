@@ -169,13 +169,6 @@
   flex-shrink: 0;
 }
 
-.mmq-option input[type="radio"]:checked + span {
-  /* Text styling when checked */
-}
-
-.mmq-option input[type="radio"]:checked {
-  /* Radio button checked state */
-}
 
 /* Apply border/background when radio is checked */
 .mmq-option input[type="radio"]:checked ~ span,

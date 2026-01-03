@@ -592,6 +592,22 @@ final class QuizApiController
                 );
             }
 
+            // Validate quiz slug compatibility (must be from same quiz)
+            $quizSlugA = (string) ($resultA['quiz_slug'] ?? '');
+            $quizSlugB = isset($body['result_id']) ? (string) ($resultB['quiz_slug'] ?? '') : '';
+            if (isset($body['answers'])) {
+                // Get quiz slug from quiz_id for new result
+                $quizSlugB = (string) ($body['quiz_id'] ?? '');
+            }
+            
+            if ($quizSlugB !== '' && $quizSlugA !== '' && $quizSlugA !== $quizSlugB) {
+                return new \WP_Error(
+                    'quiz_mismatch',
+                    'Cannot compare results from different quizzes. Both results must be from the same quiz.',
+                    ['status' => 400, 'quiz_slug_a' => $quizSlugA, 'quiz_slug_b' => $quizSlugB]
+                );
+            }
+            
             // Validate quiz version compatibility
             $quizVersionA = (string) ($resultA['quiz_version'] ?? '');
             $quizVersionB = isset($body['result_id']) ? (string) ($resultB['quiz_version'] ?? '') : '';
