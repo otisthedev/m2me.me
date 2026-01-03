@@ -183,6 +183,13 @@ p {
         linear-gradient(180deg, rgba(246, 245, 242, 1), rgba(246, 245, 242, 1));
 }
 
+/* Fallback: if a page still wraps content in #content > .container, make hero full-bleed anyway */
+#content > .container .mm-hero {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+}
+
 .mm-hero-inner {
     display: grid;
     grid-template-columns: 1.25fr 0.75fr;
