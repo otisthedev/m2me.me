@@ -5,6 +5,7 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function() {
+        const header = document.querySelector('#masthead');
         const menuToggle = document.querySelector('.menu-toggle');
         const mobileMenu = document.querySelector('.mm-mobile-menu');
         const mobileOverlay = document.querySelector('.mm-mobile-menu-overlay');
@@ -12,7 +13,21 @@
         
         if (!menuToggle || !mobileMenu || !mobileOverlay) return;
 
+        function updateHeaderOffset() {
+            if (!header) return;
+            const h = Math.max(0, Math.round(header.getBoundingClientRect().height || 0));
+            if (h > 0) {
+                document.documentElement.style.setProperty('--mm-header-offset', h + 'px');
+            }
+        }
+
+        updateHeaderOffset();
+        // Fonts/layout can shift after load; do a delayed measurement too.
+        setTimeout(updateHeaderOffset, 150);
+        setTimeout(updateHeaderOffset, 600);
+
         function openMenu() {
+            updateHeaderOffset();
             document.body.classList.add('mm-menu-open');
             menuToggle.setAttribute('aria-expanded', 'true');
             mobileMenu.style.display = 'block';
@@ -52,6 +67,7 @@
 
         // Ensure menu is closed when switching to desktop widths.
         window.addEventListener('resize', function() {
+            updateHeaderOffset();
             if (window.innerWidth >= 768) {
                 closeMenu();
             }

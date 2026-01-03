@@ -327,17 +327,75 @@
 
 @media (max-width: 480px) {
   .mm-auth-dialog {
-    padding: 16px;
-    margin-top: 18px;
-    max-height: calc(100vh - 36px);
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border-radius: 0;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    height: 100svh;
+    max-height: 100svh;
+  }
+
+  .mm-auth-close {
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+  }
+
+  .mm-auth-header {
+    padding-right: 40px;
+  }
+
+  .mm-auth-title {
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+
+  .mm-auth-subtitle {
+    font-size: 13px;
+  }
+
+  .mm-auth-tabs {
+    margin-top: 12px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .mm-auth-tab {
+    min-height: 40px;
+    font-size: 0.9rem;
+  }
+
+  .mm-auth-panels {
+    margin-top: 12px;
+    padding-right: 0;
   }
 
   .mm-auth-social {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .mm-auth-grid-2 {
     grid-template-columns: 1fr;
+  }
+
+  .mm-auth-divider {
+    margin: 12px 0;
+  }
+
+  .mm-auth-form {
+    gap: 10px;
+  }
+
+  .mm-auth-field input {
+    min-height: 44px;
+  }
+
+  .mm-auth-submit {
+    min-height: 46px;
   }
 }
 

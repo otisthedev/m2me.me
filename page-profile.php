@@ -66,18 +66,25 @@ get_header();
             </div>
         <?php endif; ?>
 
-        <section class="mm-section mm-mb-lg">
-            <h2>Profile details</h2>
-
-            <div class="mm-flex mm-mb-md">
-                <div>
-                    <?php echo get_avatar($userId, 64); ?>
+        <section class="mm-profile-hero mm-mt-md">
+            <div class="mm-profile-hero-top">
+                <div class="mm-profile-avatar">
+                    <?php echo get_avatar($userId, 72); ?>
                 </div>
-                <div class="mm-muted">
-                    <div><strong><?php echo esc_html($user->display_name ?: $user->user_login); ?></strong></div>
-                    <div><?php echo esc_html($user->user_email); ?></div>
+                <div class="mm-profile-identity">
+                    <div class="mm-profile-name"><?php echo esc_html($user->display_name ?: $user->user_login); ?></div>
+                    <div class="mm-profile-email"><?php echo esc_html($user->user_email); ?></div>
                 </div>
             </div>
+            <div class="mm-profile-quick">
+                <a class="mm-pill-link" href="<?php echo esc_url(home_url('/matches/')); ?>">Matches</a>
+                <a class="mm-pill-link" href="<?php echo esc_url(home_url('/comparisons/')); ?>">Comparisons</a>
+                <a class="mm-pill-link" href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>">Logout</a>
+            </div>
+        </section>
+
+        <section class="mm-section mm-mb-lg">
+            <h2>Profile details</h2>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" class="mm-grid">
                 <input type="hidden" name="action" value="match_me_profile_update">
@@ -156,12 +163,12 @@ get_header();
                                 </div>
                                 <div class="mm-row-actions">
                                     <?php if ($viewUrl !== '') : ?>
-                                        <a href="<?php echo esc_url($viewUrl); ?>">View</a>
+                                        <a class="mm-pill-link" href="<?php echo esc_url($viewUrl); ?>">View</a>
                                     <?php endif; ?>
                                     <?php if ($compareUrl !== '') : ?>
-                                        <a href="<?php echo esc_url($compareUrl); ?>">Compare</a>
+                                        <a class="mm-pill-link" href="<?php echo esc_url($compareUrl); ?>">Compare</a>
                                     <?php endif; ?>
-                                    <a href="<?php echo esc_url(home_url('/' . $quizSlug . '/')); ?>">Take again</a>
+                                    <a class="mm-pill-link" href="<?php echo esc_url(home_url('/' . $quizSlug . '/')); ?>">Take again</a>
                                 </div>
                             </div>
                         </li>

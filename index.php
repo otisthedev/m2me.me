@@ -24,7 +24,6 @@ get_header();
                 <div class="container">
                     <div class="mm-hero-inner">
                         <div class="mm-hero-copy">
-                            <div class="mm-hero-eyebrow">Personality quizzes • Results • Comparison</div>
                             <h1 class="mm-hero-title">Know yourself.<br>Match better.</h1>
                             <p class="mm-hero-subtitle">
                                 Take quick personality quizzes, get a clear trait breakdown, and compare with others in seconds.
@@ -73,7 +72,6 @@ get_header();
             <section class="mm-recent-comparisons">
                 <div class="container">
                     <div class="mm-recent-header">
-                        <div class="mm-hero-eyebrow">Your activity</div>
                         <h2 class="mm-recent-title">Recent comparisons</h2>
                     </div>
 

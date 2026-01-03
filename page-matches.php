@@ -210,7 +210,6 @@ function mm_overall_match_from_maps(
 
             <section class="mm-mt-md">
                 <div class="mm-recent-header">
-                    <div class="mm-hero-eyebrow">Overall</div>
                     <h2 class="mm-recent-title">Top matches</h2>
                 </div>
 
@@ -245,7 +244,6 @@ function mm_overall_match_from_maps(
 
             <section class="mm-mt-lg">
                 <div class="mm-recent-header">
-                    <div class="mm-hero-eyebrow">People</div>
                     <h2 class="mm-recent-title">All matches</h2>
                 </div>
 
