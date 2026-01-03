@@ -1113,6 +1113,96 @@ final class QuizApiController
                 return new \WP_Error('forbidden', 'This comparison is not available', ['status' => 403]);
             }
 
+            // If either participant retook the quiz, recompute this comparison using latest results (keep share link stable).
+            $cmpId = (int) ($comparison['id'] ?? 0);
+            $algo = (string) ($comparison['algorithm_used'] ?? 'cosine');
+            $ownerIdA = (int) ($resultA['user_id'] ?? 0);
+            $ownerIdB = (int) ($resultB['user_id'] ?? 0);
+            $quizSlugA = (string) ($resultA['quiz_slug'] ?? '');
+            $canRefresh = ($cmpId > 0 && $ownerIdA > 0 && $ownerIdB > 0 && $quizSlugA !== '');
+            if ($canRefresh) {
+                $latestA = $this->resultRepository->latestByUserAndQuizSlug($ownerIdA, $quizSlugA);
+                $latestB = $this->resultRepository->latestByUserAndQuizSlug($ownerIdB, $quizSlugA);
+
+                if (is_array($latestA) && is_array($latestB)) {
+                    $latestAId = (int) ($latestA['result_id'] ?? 0);
+                    $latestBId = (int) ($latestB['result_id'] ?? 0);
+
+                    $needsUpdate = ($latestAId > 0 && $latestBId > 0)
+                        && ($latestAId !== (int) ($resultA['result_id'] ?? 0) || $latestBId !== (int) ($resultB['result_id'] ?? 0));
+
+                    // Ensure the shared owner result still allows comparison.
+                    if ($needsUpdate) {
+                        $latestShareModeA = (string) ($latestA['share_mode'] ?? 'private');
+                        if ($latestShareModeA === 'share_match' && empty($latestA['revoked_at'])) {
+                            $matchResult = $this->matchingService->matchResults($latestAId, $latestBId, $algo);
+
+                            // Trait labels + quiz info for narrative and display.
+                            $traitLabelsLive = [];
+                            $quizTitleLive = 'Quiz Results';
+                            $quizAspectLive = '';
+                            $currentQuizVersionLive = '';
+                            $cmpMinWordsLive = 450;
+                            try {
+                                $quizConfig = $this->quizRepository->load($quizSlugA);
+                                $quizTitleLive = (string) (($quizConfig['meta']['title'] ?? '') ?: $quizTitleLive);
+                                $quizAspectLive = (string) (($quizConfig['meta']['aspect'] ?? '') ?: '');
+                                $currentQuizVersionLive = (string) (($quizConfig['meta']['version'] ?? '') ?: '');
+                                $traitLabelsLive = $this->extractTraitLabels($quizConfig);
+                                $cmpMinWordsCfg = $quizConfig['comparison_narrative']['min_words'] ?? null;
+                                if (is_numeric($cmpMinWordsCfg)) {
+                                    $cmpMinWordsLive = max(250, (int) $cmpMinWordsCfg);
+                                }
+                            } catch (\Throwable) {
+                                // ignore
+                            }
+
+                            // Names: B is the viewer in our UI convention, A is the shared person.
+                            $nameA = 'Them';
+                            $nameB = 'You';
+                            $uA = get_user_by('id', $ownerIdA);
+                            $uB = get_user_by('id', $ownerIdB);
+                            if ($uA instanceof \WP_User) {
+                                $first = (string) get_user_meta($ownerIdA, 'first_name', true);
+                                $nameA = $first !== '' ? $first : (string) ($uA->display_name ?: $nameA);
+                            }
+                            if ($uB instanceof \WP_User) {
+                                $first = (string) get_user_meta($ownerIdB, 'first_name', true);
+                                $nameB = $first !== '' ? $first : (string) ($uB->display_name ?: $nameB);
+                            }
+
+                            [$cmpShortLive, $cmpLongLive] = $this->generateComparisonSummaries(
+                                (float) ($matchResult['match_score'] ?? 0.0),
+                                is_array($matchResult['breakdown'] ?? null) ? (array) $matchResult['breakdown'] : [],
+                                $traitLabelsLive,
+                                $nameB,
+                                $nameA,
+                                $quizTitleLive,
+                                $quizAspectLive,
+                                $cmpMinWordsLive
+                            );
+
+                            $this->comparisonRepository->updateComparison(
+                                $cmpId,
+                                $latestAId,
+                                $latestBId,
+                                (float) ($matchResult['match_score'] ?? 0.0),
+                                is_array($matchResult['breakdown'] ?? null) ? (array) $matchResult['breakdown'] : [],
+                                (string) ($matchResult['algorithm_used'] ?? $algo),
+                                $cmpShortLive,
+                                $cmpLongLive,
+                                $currentQuizVersionLive !== '' ? $currentQuizVersionLive : (string) ($latestA['quiz_version'] ?? '')
+                            );
+
+                            // Reload local variables for response (ensures updated match_score/breakdown/summaries).
+                            $comparison = $this->comparisonRepository->findByShareToken($shareToken) ?? $comparison;
+                            $resultA = $this->resultRepository->findById($latestAId) ?? $resultA;
+                            $resultB = $this->resultRepository->findById($latestBId) ?? $resultB;
+                        }
+                    }
+                }
+            }
+
             $ownerA = null;
             $ownerIdA = (int) ($resultA['user_id'] ?? 0);
             if ($ownerIdA > 0) {

@@ -128,6 +128,45 @@ final class ComparisonRepository
     }
 
     /**
+     * Update comparison to point at new result ids and store new match output.
+     *
+     * @param array<string,mixed> $breakdown
+     */
+    public function updateComparison(
+        int $comparisonId,
+        int $resultA,
+        int $resultB,
+        float $matchScore,
+        array $breakdown,
+        string $algorithm,
+        string $summaryShort,
+        string $summaryLong,
+        string $summaryQuizVersion
+    ): bool {
+        $table = $this->tableName();
+        $breakdownJson = json_encode($breakdown, JSON_THROW_ON_ERROR);
+
+        $updated = $this->wpdb->update(
+            $table,
+            [
+                'result_a' => $resultA,
+                'result_b' => $resultB,
+                'match_score' => $matchScore,
+                'breakdown' => $breakdownJson,
+                'algorithm_used' => $algorithm,
+                'comparison_summary_short' => $summaryShort,
+                'comparison_summary_long' => $summaryLong,
+                'comparison_summary_quiz_version' => $summaryQuizVersion,
+            ],
+            ['id' => $comparisonId],
+            ['%d', '%d', '%f', '%s', '%s', '%s', '%s', '%s'],
+            ['%d']
+        );
+
+        return $updated !== false;
+    }
+
+    /**
      * Latest comparisons involving a given user (by result_a.user_id or result_b.user_id).
      *
      * @return array<int, array<string, mixed>>

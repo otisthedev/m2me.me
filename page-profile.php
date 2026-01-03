@@ -68,9 +68,18 @@ get_header();
 
         <section class="mm-profile-hero mm-mt-md">
             <div class="mm-profile-hero-top">
-                <div class="mm-profile-avatar">
+                <button type="button" class="mm-profile-avatar mm-profile-avatar-edit" data-mm-avatar-edit aria-expanded="false" aria-controls="mm-profile-photo-panel">
                     <?php echo get_avatar($userId, 72); ?>
-                </div>
+                    <span class="mm-profile-avatar-overlay" aria-hidden="true">
+                        <span class="mm-profile-avatar-pencil" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 17.25V21h3.75L19.81 7.94l-3.75-3.75L3 17.25Z" fill="currentColor"/>
+                                <path d="M20.71 6.04a1 1 0 0 0 0-1.41l-1.34-1.34a1 1 0 0 0-1.41 0l-1.06 1.06 3.75 3.75 1.06-1.06Z" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <span class="mm-profile-avatar-edit-text">Edit</span>
+                    </span>
+                </button>
                 <div class="mm-profile-identity">
                     <div class="mm-profile-name"><?php echo esc_html($user->display_name ?: $user->user_login); ?></div>
                     <div class="mm-profile-email"><?php echo esc_html($user->user_email); ?></div>
@@ -101,6 +110,7 @@ get_header();
                     </label>
                 </div>
 
+                <div id="mm-profile-photo-panel" class="mm-profile-photo-panel" hidden>
                 <label class="mm-field">
                     <span class="mm-field-label">Profile image (upload)</span>
                     <div class="mm-file">
@@ -114,6 +124,7 @@ get_header();
                     <span class="mm-field-label">Or profile image URL</span>
                     <input class="mm-input" type="url" name="profile_picture_url" value="<?php echo esc_attr($currentPic); ?>" placeholder="https://...">
                 </label>
+                </div>
 
                 <label class="mm-toggle">
                     <input type="checkbox" name="email_compare_notify" value="1" <?php checked($emailNotifyOn); ?>>
@@ -128,12 +139,36 @@ get_header();
 
             <script>
                 (function () {
+                    const avatarBtn = document.querySelector('[data-mm-avatar-edit]');
+                    const panel = document.getElementById('mm-profile-photo-panel');
                     const input = document.getElementById('mm_profile_picture_file');
                     const nameEl = document.querySelector('.mm-file-name');
-                    if (!input || !nameEl) return;
-                    input.addEventListener('change', function () {
-                        const f = input.files && input.files[0] ? input.files[0].name : '';
-                        nameEl.textContent = f || 'No file chosen';
+
+                    if (input && nameEl) {
+                        input.addEventListener('change', function () {
+                            const f = input.files && input.files[0] ? input.files[0].name : '';
+                            nameEl.textContent = f || 'No file chosen';
+                        });
+                    }
+
+                    if (!avatarBtn || !panel) return;
+
+                    function openPanel() {
+                        panel.hidden = false;
+                        avatarBtn.setAttribute('aria-expanded', 'true');
+                        // Focus the first control for better mobile UX
+                        const focusable = panel.querySelector('input, button, a, select, textarea');
+                        if (focusable && typeof focusable.focus === 'function') focusable.focus();
+                    }
+
+                    function closePanel() {
+                        panel.hidden = true;
+                        avatarBtn.setAttribute('aria-expanded', 'false');
+                    }
+
+                    avatarBtn.addEventListener('click', function () {
+                        if (panel.hidden) openPanel();
+                        else closePanel();
                     });
                 })();
             </script>

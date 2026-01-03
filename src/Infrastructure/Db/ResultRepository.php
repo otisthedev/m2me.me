@@ -180,6 +180,32 @@ final class ResultRepository
     }
 
     /**
+     * Latest result for a user for a given quiz_slug (non-revoked).
+     *
+     * @return array<string,mixed>|null
+     */
+    public function latestByUserAndQuizSlug(int $userId, string $quizSlug): ?array
+    {
+        $table = $this->tableName();
+        $quizSlug = (string) $quizSlug;
+
+        $row = $this->wpdb->get_row(
+            $this->wpdb->prepare(
+                "SELECT result_id, quiz_id, quiz_slug, user_id, trait_vector, textual_summary_short, textual_summary_long, textual_summary_quiz_version, share_token, share_mode, quiz_version, created_at, revoked_at
+                 FROM $table
+                 WHERE user_id = %d AND quiz_slug = %s AND revoked_at IS NULL
+                 ORDER BY created_at DESC
+                 LIMIT 1",
+                $userId,
+                $quizSlug
+            ),
+            ARRAY_A
+        );
+
+        return is_array($row) ? $row : null;
+    }
+
+    /**
      * Latest result per quiz for a given user (grouped by quiz_slug).
      *
      * @return array<int, array{quiz_slug:string, result_id:int, share_token:string, share_mode:string, created_at:string}>

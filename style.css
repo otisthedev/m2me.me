@@ -213,10 +213,74 @@ Text Domain: match-me
     background: rgba(30, 42, 68, 0.06);
 }
 
+.mm-profile-avatar-edit {
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+}
+
 .mm-profile-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.mm-profile-avatar-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(30, 42, 68, 0.45);
+    color: #F6F5F2;
+    opacity: 0;
+    transition: opacity var(--transition), transform var(--transition);
+    transform: translateY(2px);
+}
+
+.mm-profile-avatar-edit:hover .mm-profile-avatar-overlay,
+.mm-profile-avatar-edit:focus-visible .mm-profile-avatar-overlay,
+.mm-profile-avatar-edit[aria-expanded="true"] .mm-profile-avatar-overlay {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mm-profile-avatar-pencil {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.mm-profile-avatar-edit-text {
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    font-size: 0.95rem;
+}
+
+.mm-profile-photo-panel {
+    display: grid;
+    gap: 12px;
+    padding-top: 6px;
+}
+
+@media (max-width: 640px) {
+    /* No hover on touch: show the pencil affordance more readily */
+    .mm-profile-avatar-overlay {
+        opacity: 1;
+        background: rgba(30, 42, 68, 0.28);
+        transform: none;
+    }
+    .mm-profile-avatar-edit-text {
+        display: none;
+    }
 }
 
 .mm-profile-name {
