@@ -94,7 +94,11 @@ get_header();
 
                 <label style="display:block;">
                     <span style="display:block; font-size:0.85rem; color:var(--color-text-secondary,#666); margin-bottom:6px;">Profile image (upload)</span>
-                    <input type="file" name="profile_picture_file" accept="image/*">
+                    <div class="mm-file">
+                        <input id="mm_profile_picture_file" class="mm-file-input" type="file" name="profile_picture_file" accept="image/*">
+                        <label for="mm_profile_picture_file" class="mm-profile-btn mm-profile-btn-outline">Choose file</label>
+                        <span class="mm-file-name" aria-live="polite">No file chosen</span>
+                    </div>
                 </label>
 
                 <label style="display:block;">
@@ -102,8 +106,20 @@ get_header();
                     <input type="url" name="profile_picture_url" value="<?php echo esc_attr($currentPic); ?>" placeholder="https://..." style="width:100%; min-height:48px; border-radius:10px; border:1px solid var(--color-border,#e5e5e5); padding:0 14px;">
                 </label>
 
-                <button type="submit" class="mm-auth-submit" style="max-width:220px;">Save changes</button>
+                <button type="submit" class="mm-profile-btn mm-profile-btn-primary">Save changes</button>
             </form>
+
+            <script>
+                (function () {
+                    const input = document.getElementById('mm_profile_picture_file');
+                    const nameEl = document.querySelector('.mm-file-name');
+                    if (!input || !nameEl) return;
+                    input.addEventListener('change', function () {
+                        const f = input.files && input.files[0] ? input.files[0].name : '';
+                        nameEl.textContent = f || 'No file chosen';
+                    });
+                })();
+            </script>
         </section>
 
         <section style="margin-top: 1.5rem;">
@@ -144,32 +160,7 @@ get_header();
             <?php endif; ?>
         </section>
 
-        <section style="margin-top: 2rem;">
-            <h2>Latest Results (legacy quizzes)</h2>
-            <?php if ($latestV1 === []) : ?>
-                <p>No legacy results yet.</p>
-            <?php else : ?>
-                <ul style="list-style:none; padding:0; margin:0; display:grid; gap:12px;">
-                    <?php foreach ($latestV1 as $row) : ?>
-                        <?php
-                        $quizId = (string) $row['quiz_id'];
-                        $attemptId = (int) $row['latest_attempt'];
-                        $title = mm_quiz_title($quizRepo, $quizId);
-                        $viewUrl = home_url('/' . $quizId . '/' . $attemptId . '/');
-                        ?>
-                        <li style="border:1px solid var(--color-border, #e5e5e5); border-radius:10px; padding:14px;">
-                            <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-                                <div style="font-weight:600;"><?php echo esc_html($title); ?></div>
-                                <div style="display:flex; gap:10px; align-items:center;">
-                                    <a href="<?php echo esc_url($viewUrl); ?>">View</a>
-                                    <a href="<?php echo esc_url(home_url('/' . $quizId . '/')); ?>">Take again</a>
-                                </div>
-                            </div>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
-        </section>
+        <?php /* Legacy results removed */ ?>
 
         <section style="margin-top: 2.5rem; border-top: 1px solid var(--color-border, #e5e5e5); padding-top: 1.5rem;">
             <h2>Delete account</h2>
@@ -183,7 +174,7 @@ get_header();
                 <?php wp_nonce_field('match_me_delete_account', 'match_me_delete_account_nonce'); ?>
                 <input type="hidden" name="confirm_delete" value="">
 
-                <button type="button" class="mm-danger-btn" id="mm-delete-account-btn">
+                <button type="button" class="mm-profile-btn mm-profile-btn-danger" id="mm-delete-account-btn">
                     Delete my account
                 </button>
             </form>

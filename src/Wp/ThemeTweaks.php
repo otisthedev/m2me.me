@@ -9,7 +9,6 @@ final class ThemeTweaks
     {
         add_action('admin_init', [$this, 'restrictSubscriberDashboard']);
         add_action('after_setup_theme', [$this, 'hideAdminBarForSubscribers']);
-        add_action('wp_enqueue_scripts', [$this, 'hideHeaderButtonForLoggedInUsers']);
     }
 
     public function restrictSubscriberDashboard(): void
@@ -31,7 +30,7 @@ final class ThemeTweaks
             return;
         }
 
-        wp_redirect(home_url('/'));
+        wp_safe_redirect(home_url('/'));
         exit;
     }
 
@@ -42,15 +41,7 @@ final class ThemeTweaks
         }
     }
 
-    public function hideHeaderButtonForLoggedInUsers(): void
-    {
-        if (!is_user_logged_in()) {
-            return;
-        }
-
-        $script = "document.addEventListener('DOMContentLoaded',function(){var b=document.querySelector('header .ast-custom-button-link');if(b){b.style.display='none';}});";
-        wp_add_inline_script('wp-hooks', $script);
-    }
+    // (Removed) hideHeaderButtonForLoggedInUsers: legacy Astra tweak not used in this theme.
 }
 
 

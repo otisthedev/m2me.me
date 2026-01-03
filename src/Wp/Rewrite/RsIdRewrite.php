@@ -59,7 +59,7 @@ final class RsIdRewrite
 
         $rsid = absint($_GET['rsID']);
         $cleanUrl = home_url("/{$post->post_name}/{$rsid}/");
-        wp_redirect($cleanUrl, 301);
+        wp_safe_redirect($cleanUrl, 301);
         exit;
     }
 }

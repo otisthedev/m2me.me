@@ -31,12 +31,7 @@ final class FacebookAuth
         $redirectTo = wp_validate_redirect(home_url($current), home_url('/'));
         $authUrl = esc_url(add_query_arg(['facebook_auth' => '1', 'redirect_to' => $redirectTo], home_url('/')));
 
-        $html = '<div class="facebook-login-container" style="background-color:#f7f7f7;padding:20px;border-radius:8px;text-align:center;max-width:300px;margin:20px auto;">';
-        $html .= '<a href="' . $authUrl . '" style="background-color:#1877f2;color:#fff;padding:10px 20px;text-decoration:none;border-radius:5px;font-weight:bold;display:inline-block;font-family:sans-serif;font-size:16px;">';
-        $html .= 'Login with Facebook';
-        $html .= '</a></div>';
-
-        return $html;
+        return '<div class="mm-social-auth"><a class="mm-social-auth-btn mm-social-auth-btn-facebook" href="' . $authUrl . '">Continue with Facebook</a></div>';
     }
 
     public function handle(): void
@@ -181,7 +176,7 @@ final class FacebookAuth
         $this->assigner->assignFromSessionToUser($userId);
         wp_set_current_user($userId);
         wp_set_auth_cookie($userId, true);
-        wp_redirect($redirectTo);
+        wp_safe_redirect($redirectTo);
         exit;
     }
 

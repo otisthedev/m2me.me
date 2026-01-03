@@ -4,6 +4,36 @@
 (function () {
   'use strict';
 
+  let lastActiveElement = null;
+  let isOpen = false;
+
+  function getPageRoot() {
+    return document.getElementById('page');
+  }
+
+  function setBackgroundInert(enabled) {
+    const page = getPageRoot();
+    if (!page) return;
+    try {
+      page.inert = !!enabled;
+    } catch (e) {
+      // ignore (inert not supported)
+    }
+  }
+
+  function getFocusable(modal) {
+    const dialog = qs('.mm-auth-dialog', modal) || modal;
+    const nodes = qsa(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      dialog
+    ).filter((el) => {
+      // Exclude elements that are not actually visible.
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    });
+    return nodes;
+  }
+
   function qs(sel, root) {
     return (root || document).querySelector(sel);
   }
@@ -69,25 +99,88 @@
     });
   }
 
+  function setAlert(modal, errorCode) {
+    const alert = qs('[data-mm-auth-alert]', modal);
+    if (!alert) return;
+
+    const code = (errorCode || '').toString();
+    const messages = {
+      invalid_email: 'Please enter a valid email address.',
+      weak_password: 'Your password is too short. Use at least 8 characters.',
+      email_exists: 'An account with this email already exists. Try logging in instead.',
+      register_failed: 'Registration failed. Please try again in a moment.',
+    };
+
+    const msg = messages[code] || '';
+    if (!msg) {
+      alert.style.display = 'none';
+      alert.textContent = '';
+      return;
+    }
+
+    alert.textContent = msg;
+    alert.style.display = 'block';
+  }
+
   function openModal(mode, redirectTo) {
     const modal = qs('#mm-auth-modal');
     if (!modal) return;
+
+    lastActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const cleanRedirect = sanitizeRedirect(stripAuthParams(redirectTo || window.location.href));
     setRedirect(modal, cleanRedirect);
     setMode(modal, mode || 'login');
 
+    // Show error message if present in URL (?error=...).
+    try {
+      const u = new URL(window.location.href);
+      const err = u.searchParams.get('error') || '';
+      setAlert(modal, err);
+    } catch (e) {
+      setAlert(modal, '');
+    }
+
     modal.style.display = 'block';
     modal.setAttribute('aria-hidden', 'false');
+    try { modal.inert = false; } catch (e) { /* ignore */ }
     document.documentElement.style.overflow = 'hidden';
+    setBackgroundInert(true);
+    isOpen = true;
+
+    // Move focus into the dialog for accessibility.
+    const firstField = qs('input[name="log"], input[name="email"], button[data-mm-auth-close]', modal);
+    if (firstField && typeof firstField.focus === 'function') {
+      firstField.focus();
+    }
   }
 
   function closeModal() {
     const modal = qs('#mm-auth-modal');
     if (!modal) return;
+
+    // If focus is inside the modal, move it out before hiding (prevents aria-hidden console warnings).
+    try {
+      const active = document.activeElement;
+      if (active && modal.contains(active)) {
+        if (lastActiveElement && typeof lastActiveElement.focus === 'function') {
+          lastActiveElement.focus();
+        } else if (document.body && typeof document.body.focus === 'function') {
+          document.body.focus();
+        } else if (active && typeof active.blur === 'function') {
+          active.blur();
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
+    try { modal.inert = true; } catch (e) { /* ignore */ }
     document.documentElement.style.overflow = '';
+    setBackgroundInert(false);
+    isOpen = false;
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -108,6 +201,32 @@
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') closeModal();
+
+      if (e.key !== 'Tab') return;
+      if (!isOpen) return;
+
+      const modal = qs('#mm-auth-modal');
+      if (!modal) return;
+
+      const focusable = getFocusable(modal);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      // Cycle focus within the modal.
+      if (e.shiftKey) {
+        if (active === first || !modal.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     });
 
     // Global click handler for auth links.

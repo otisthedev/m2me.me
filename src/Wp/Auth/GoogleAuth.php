@@ -25,7 +25,7 @@ final class GoogleAuth
         $current = (string) wp_unslash($_SERVER['REQUEST_URI'] ?? '/');
         $redirectTo = wp_validate_redirect(home_url($current), home_url('/'));
         $authUrl = esc_url(add_query_arg(['google_auth' => '1', 'redirect_to' => $redirectTo], home_url('/')));
-        return '<p style="text-align:center;"><a href="' . $authUrl . '">Login with Google</a></p>';
+        return '<div class="mm-social-auth"><a class="mm-social-auth-btn mm-social-auth-btn-google" href="' . $authUrl . '">Continue with Google</a></div>';
     }
 
     public function handle(): void
@@ -164,7 +164,7 @@ final class GoogleAuth
         $this->assigner->assignFromSessionToUser((int) $user->ID);
         wp_set_current_user((int) $user->ID);
         wp_set_auth_cookie((int) $user->ID);
-        wp_redirect($redirectTo);
+        wp_safe_redirect($redirectTo);
         exit;
     }
 }

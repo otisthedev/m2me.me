@@ -13,12 +13,17 @@
     function renderResult(result, container) {
         container.innerHTML = '';
 
+        const shortSummary = result.textual_summary_short || result.textual_summary || 'Quiz completed successfully.';
+        const longSummary = result.textual_summary_long || '';
+
         // Result summary
         const summaryEl = document.createElement('div');
         summaryEl.className = 'match-me-result-summary';
         summaryEl.innerHTML = `
             <h2>Your Results</h2>
-            <p class="result-summary-text">${escapeHtml(result.textual_summary || 'Quiz completed successfully.')}</p>
+            <div class="result-summary-text">
+                ${renderLongSummary(longSummary || shortSummary)}
+            </div>
             <div class="trait-breakdown">
                 ${renderTraitBreakdown(result.trait_summary || {}, result.trait_labels || {})}
             </div>
@@ -69,6 +74,47 @@
     }
 
     /**
+     * Render long-form summary text with simple formatting:
+     * - section headings on their own line
+     * - bullet lines starting with "- "
+     */
+    function renderLongSummary(text) {
+        const raw = String(text || '').trim();
+        if (!raw) return `<p>${escapeHtml('Quiz completed successfully.')}</p>`;
+
+        const paragraphs = raw.split(/\n\s*\n/);
+        const out = [];
+
+        const isHeading = (line) => {
+            const t = String(line || '').trim();
+            return /^[A-Za-z][A-Za-z &/]+$/.test(t) && t.length <= 40;
+        };
+
+        for (const p of paragraphs) {
+            const lines = p.split('\n').map(l => l.trim()).filter(Boolean);
+            if (lines.length === 0) continue;
+
+            if (lines.length === 1 && isHeading(lines[0])) {
+                out.push(`<h3 class="mm-result-section-title">${escapeHtml(lines[0])}</h3>`);
+                continue;
+            }
+
+            const bullets = lines.filter(l => l.startsWith('- '));
+            const nonBullets = lines.filter(l => !l.startsWith('- '));
+
+            if (nonBullets.length) {
+                out.push(`<p>${escapeHtml(nonBullets.join(' '))}</p>`);
+            }
+
+            if (bullets.length) {
+                out.push('<ul class="mm-result-bullets">' + bullets.map(b => `<li>${escapeHtml(b.replace(/^-\\s+/, ''))}</li>`).join('') + '</ul>');
+            }
+        }
+
+        return out.join('');
+    }
+
+    /**
      * Render share section.
      */
     function renderShareSection(shareToken, shareUrls, result) {
@@ -80,7 +126,7 @@
         // not the view-only result link.
         const compareUrl = shareUrls?.compare || '';
         const instagramButton = isMobile ? `
-            <button class="btn-share-instagram" data-quiz-title="${escapeHtml(result.quiz_title || 'Quiz Results')}" data-summary="${escapeHtml(result.textual_summary || 'My quiz results')}" data-url="${escapeHtml(compareUrl)}">
+            <button class="btn-share-instagram" data-quiz-title="${escapeHtml(result.quiz_title || 'Quiz Results')}" data-summary="${escapeHtml(result.textual_summary_short || result.textual_summary || 'My quiz results')}" data-url="${escapeHtml(compareUrl)}">
                 Share to Instagram Story
             </button>
         ` : '';
@@ -115,12 +161,22 @@
             copyBtn.addEventListener('click', function() {
                 const input = section.querySelector('.share-url-input');
                 if (input) {
-                    input.select();
-                    document.execCommand('copy');
-                    this.textContent = 'Copied!';
-                    setTimeout(() => {
-                        this.textContent = 'Copy';
-                    }, 2000);
+                    const url = input.value || '';
+                    const doCopy = async () => {
+                        const ok = window.MatchMeClipboard && typeof window.MatchMeClipboard.writeText === 'function'
+                            ? await window.MatchMeClipboard.writeText(url)
+                            : false;
+                        if (!ok) {
+                            // Last resort: select text for manual copy.
+                            input.focus();
+                            input.select();
+                        }
+                        this.textContent = ok ? 'Copied!' : 'Select + copy';
+                        setTimeout(() => {
+                            this.textContent = 'Copy';
+                        }, 2000);
+                    };
+                    doCopy();
                 }
             });
         }
@@ -452,8 +508,7 @@
      */
     function showCompareDialog(shareToken) {
         // In a real implementation, this would show a dialog/modal
-        // For now, just log
-        console.log('Compare dialog for token:', shareToken);
+        // For now, show a simple prompt.
         alert('Compare feature: Enter the other person\'s share token or have them take the quiz.');
     }
 
@@ -474,6 +529,8 @@
         const avatarA = (a && a.avatar_url) ? String(a.avatar_url) : '';
         const avatarB = (b && b.avatar_url) ? String(b.avatar_url) : '';
         const shareUrl = matchResult.share_urls && matchResult.share_urls.match ? String(matchResult.share_urls.match) : '';
+        const cmpShort = matchResult.comparison_summary_short || '';
+        const cmpLong = matchResult.comparison_summary_long || '';
 
         const matchEl = document.createElement('div');
         matchEl.className = 'match-me-match-result';
@@ -499,6 +556,14 @@
                     <div class="mm-match-score-label">Match</div>
                 </div>
             </div>
+            ${(cmpLong || cmpShort) ? `
+              <div class="match-me-result-summary">
+                <h2>Overview</h2>
+                <div class="result-summary-text">
+                  ${renderLongSummary(String(cmpLong || cmpShort))}
+                </div>
+              </div>
+            ` : ''}
             ${shareUrl ? `
               <div class="match-me-share-section">
                 <h3>Share comparison</h3>
@@ -569,17 +634,14 @@
     }
 
     async function copyToClipboard(text) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(text);
+        const t = String(text || '');
+        if (!t) return;
+        if (window.MatchMeClipboard && typeof window.MatchMeClipboard.writeText === 'function') {
+            const ok = await window.MatchMeClipboard.writeText(t);
+            if (ok) return;
         }
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
+        // If helper is missing or copying failed, throw so caller can show a warning.
+        throw new Error('copy_failed');
     }
 
     /**

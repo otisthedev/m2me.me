@@ -11,19 +11,24 @@
 .mm-auth-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
 }
 
 .mm-auth-dialog {
   position: relative;
   width: calc(100% - 2rem);
   max-width: 520px;
-  margin: 8vh auto 0;
+  margin: min(8vh, 64px) auto 0;
   background: var(--color-bg, #F6F5F2);
   border-radius: 12px;
-  padding: 24px;
+  padding: 22px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(30, 42, 68, 0.10);
+  max-height: min(86vh, 720px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .mm-auth-close {
@@ -39,11 +44,13 @@
   font-size: 24px;
   line-height: 1;
   color: var(--color-text-secondary, #6B7280);
+  transition: background var(--transition), color var(--transition), transform var(--transition);
 }
 
 .mm-auth-close:hover {
   background: var(--color-bg-subtle, #EFEFEF);
   color: var(--color-text, #2B2E34);
+  transform: translateY(-1px);
 }
 
 .mm-auth-header {
@@ -51,8 +58,8 @@
 }
 
 .mm-auth-title {
-  font-size: 28px;
-  font-weight: 400;
+  font-size: 26px;
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--color-primary, #1E2A44);
   margin-bottom: 6px;
@@ -64,30 +71,62 @@
   line-height: 1.5;
 }
 
+.mm-auth-alert {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #1E2A44;
+  background: rgba(111, 175, 179, 0.14);
+  border: 1px solid rgba(111, 175, 179, 0.30);
+}
+
+.mm-auth-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .mm-auth-tabs {
   display: flex;
-  gap: 8px;
-  margin-top: 18px;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(30, 42, 68, 0.12);
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(6px);
 }
 
 .mm-auth-tab {
   flex: 1;
   min-height: 44px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border, #E5E7EB);
-  background: var(--color-bg, #F6F5F2);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--color-text, #2B2E34);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 700;
+  font-size: 0.92rem;
+  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
 }
 
 .mm-auth-tab.is-active {
-  background: var(--color-bg-subtle, #EFEFEF);
-  border-color: var(--color-primary, #1E2A44);
+  background: #ffffff;
+  border-color: rgba(30, 42, 68, 0.10);
+  box-shadow: 0 10px 24px rgba(30, 42, 68, 0.10);
+}
+
+.mm-auth-tab:hover {
+  transform: translateY(-1px);
 }
 
 .mm-auth-panels {
   margin-top: 18px;
+  overflow: auto;
+  padding-right: 2px;
+  min-height: 0;
 }
 
 .mm-auth-panel {
@@ -115,19 +154,40 @@
 .mm-auth-social-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 44px;
   border-radius: 10px;
   border: 1px solid var(--color-border, #E5E7EB);
-  background: var(--color-bg, #F6F5F2);
+  background: rgba(255, 255, 255, 0.65);
   color: var(--color-text, #2B2E34);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 700;
+  gap: 10px;
+  padding: 0 12px;
+  box-shadow: 0 10px 24px rgba(30, 42, 68, 0.08);
+  transition: transform var(--transition), background var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
 .mm-auth-social-btn:hover {
-  background: var(--color-bg-subtle, #EFEFEF);
-  border-color: var(--color-primary, #1E2A44);
+  background: rgba(30, 42, 68, 0.06);
+  border-color: rgba(30, 42, 68, 0.22);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px rgba(30, 42, 68, 0.12);
+}
+
+.mm-auth-social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(143, 174, 163, 0.18);
+  border: 1px solid rgba(143, 174, 163, 0.28);
+}
+
+.mm-auth-social-text {
+  font-size: 0.93rem;
 }
 
 .mm-auth-divider {
@@ -171,10 +231,21 @@
   padding: 0 14px;
   font-size: 14px;
   outline: none;
+  background: rgba(255, 255, 255, 0.75);
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
 .mm-auth-field input:focus {
   border-color: var(--color-primary, #1E2A44);
+  box-shadow: 0 0 0 4px rgba(111, 175, 179, 0.18);
+  background: #ffffff;
+}
+
+.mm-auth-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #6B7280);
 }
 
 .mm-auth-checkbox {
@@ -185,6 +256,30 @@
   color: var(--color-text-secondary, #6B7280);
 }
 
+.mm-auth-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mm-auth-link-subtle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary, #1E2A44);
+  text-decoration: none;
+}
+
+.mm-auth-link-subtle:hover {
+  text-decoration: underline;
+}
+
+.mm-auth-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
 .mm-auth-submit {
   min-height: 52px;
   border-radius: 10px;
@@ -193,20 +288,55 @@
   color: var(--color-bg, #F6F5F2);
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 12px 30px rgba(30, 42, 68, 0.18);
+  transition: transform var(--transition), background var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
 .mm-auth-submit:hover {
   background: #243454;
   border-color: #243454;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 38px rgba(30, 42, 68, 0.22);
+}
+
+.mm-auth-submit:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.mm-auth-fineprint {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--color-text-secondary, #6B7280);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-auth-close,
+  .mm-auth-tab,
+  .mm-auth-social-btn,
+  .mm-auth-submit {
+    transition: background var(--transition), border-color var(--transition);
+  }
+  .mm-auth-close:hover,
+  .mm-auth-tab:hover,
+  .mm-auth-social-btn:hover,
+  .mm-auth-submit:hover {
+    transform: none;
+  }
 }
 
 @media (max-width: 480px) {
   .mm-auth-dialog {
-    padding: 18px;
-    margin-top: 6vh;
+    padding: 16px;
+    margin-top: 18px;
+    max-height: calc(100vh - 36px);
   }
 
   .mm-auth-social {
+    grid-template-columns: 1fr;
+  }
+
+  .mm-auth-grid-2 {
     grid-template-columns: 1fr;
   }
 }

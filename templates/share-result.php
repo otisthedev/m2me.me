@@ -9,8 +9,8 @@ $mode = (string) get_query_var('mm_share_mode');
 $mode = ($mode === 'compare') ? 'compare' : (($mode === 'match') ? 'match' : 'view');
 ?>
 
-<main id="main" class="site-main" style="max-width: 720px; margin: 0 auto;">
-    <div class="mm-share-result">
+<main id="main" class="site-main">
+    <div class="mm-share-result container" style="max-width: 720px;">
         <?php if ($mode === 'match') : ?>
             <h1>Comparison Result</h1>
             <p>Your match breakdown.</p>
@@ -21,7 +21,19 @@ $mode = ($mode === 'compare') ? 'compare' : (($mode === 'match') ? 'match' : 'vi
             <h1>Quiz Results</h1>
         <?php endif; ?>
 
-        <div id="mm-share-result-root"></div>
+        <noscript>
+            <div class="error-message mm-share-noscript">
+                JavaScript is required to view shared results.
+            </div>
+        </noscript>
+
+        <div id="mm-share-result-root">
+            <div class="mm-result-loading">
+                <div class="mm-result-loading-title">Loading…</div>
+                <div class="mm-spinner" aria-hidden="true"></div>
+                <div class="mm-result-loading-subtitle">One moment.</div>
+            </div>
+        </div>
     </div>
 </main>
 

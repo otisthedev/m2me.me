@@ -170,6 +170,11 @@ final class QuizApiController
             // For now, we'll use a slug-based lookup - in production, you'd have a quizzes table
             $dbQuizId = $this->getOrCreateQuizId($quizId, $quizConfig);
 
+            // Generate deterministic short + long narrative
+            $traitLabels = $this->extractTraitLabels($quizConfig);
+            $traitDescriptions = $this->extractTraitDescriptions($quizConfig);
+            [$summaryShort, $summaryLong] = $this->generateTextualSummaries($traitVector, $traitLabels, $traitDescriptions, (string) ($quizConfig['meta']['aspect'] ?? ''));
+
             // Store result
             $resultId = $this->resultRepository->insert(
                 $dbQuizId,
@@ -178,7 +183,10 @@ final class QuizApiController
                 $traitVector,
                 $shareToken,
                 $shareMode,
-                $quizVersion
+                $quizVersion,
+                $summaryShort,
+                $summaryLong,
+                (string) $quizVersion
             );
 
             // Generate share URLs
@@ -197,6 +205,9 @@ final class QuizApiController
                 'share_token' => $shareToken,
                 'share_urls' => $shareUrls,
                 'quiz_version' => $quizVersion,
+                'textual_summary' => $summaryShort,
+                'textual_summary_short' => $summaryShort,
+                'textual_summary_long' => $summaryLong,
             ], 200);
 
         } catch (\InvalidArgumentException $e) {
@@ -245,25 +256,45 @@ final class QuizApiController
 
             $quizTitle = 'Quiz Result';
             $traitLabels = [];
+            $traitDescriptions = [];
+            $quizAspect = '';
+            $currentQuizVersion = '';
             $quizSlug = (string) ($result['quiz_slug'] ?? '');
             if ($quizSlug !== '') {
                 try {
                     $quizConfig = $this->quizRepository->load($quizSlug);
                     $quizTitle = (string) (($quizConfig['meta']['title'] ?? '') ?: $quizTitle);
-                    // Extract trait labels from quiz config
-                    $traits = $quizConfig['traits'] ?? [];
-                    foreach ($traits as $traitId => $traitData) {
-                        if (is_array($traitData) && isset($traitData['label'])) {
-                            $traitLabels[$traitId] = (string) $traitData['label'];
-                        }
-                    }
+                    $traitLabels = $this->extractTraitLabels($quizConfig);
+                    $traitDescriptions = $this->extractTraitDescriptions($quizConfig);
+                    $quizAspect = (string) ($quizConfig['meta']['aspect'] ?? '');
+                    $currentQuizVersion = (string) (($quizConfig['meta']['version'] ?? '') ?: '');
                 } catch (\Throwable) {
                     // Ignore and fallback.
                 }
             }
 
-            // Generate textual summary (simplified - in production, use a more sophisticated generator)
-            $textualSummary = $this->generateTextualSummary($traitVector);
+            // Prefer stored narrative (stable). If missing (older rows), generate + backfill.
+            $storedShort = isset($result['textual_summary_short']) ? (string) ($result['textual_summary_short'] ?? '') : '';
+            $storedLong = isset($result['textual_summary_long']) ? (string) ($result['textual_summary_long'] ?? '') : '';
+            $storedQuizVer = isset($result['textual_summary_quiz_version']) ? (string) ($result['textual_summary_quiz_version'] ?? '') : '';
+
+            // Regenerate only if missing OR the quiz version changed since the summaries were generated.
+            $shouldRegenerate = ($storedShort === '' || $storedLong === '');
+            if ($currentQuizVersion !== '' && $storedQuizVer !== $currentQuizVersion) {
+                $shouldRegenerate = true;
+            }
+
+            if ($shouldRegenerate) {
+                [$genShort, $genLong] = $this->generateTextualSummaries($traitVector, $traitLabels, $traitDescriptions, (string) $quizAspect);
+                $storedShort = $storedShort !== '' ? $storedShort : $genShort;
+                $storedLong = $storedLong !== '' ? $storedLong : $genLong;
+                $this->resultRepository->updateSummaries(
+                    (int) $result['result_id'],
+                    $storedShort,
+                    $storedLong,
+                    $currentQuizVersion !== '' ? $currentQuizVersion : (string) ($result['quiz_version'] ?? '')
+                );
+            }
 
             $owner = null;
             $ownerId = (int) ($result['user_id'] ?? 0);
@@ -295,7 +326,9 @@ final class QuizApiController
                 'quiz_slug' => $quizSlug,
                 'trait_summary' => $traitVector,
                 'trait_labels' => $traitLabels,
-                'textual_summary' => $textualSummary,
+                'textual_summary' => $storedShort, // backwards compatible
+                'textual_summary_short' => $storedShort,
+                'textual_summary_long' => $storedLong,
                 'share_token' => (string) $shareToken,
                 'share_urls' => $shareUrls,
                 'owner' => $owner,
@@ -365,6 +398,10 @@ final class QuizApiController
                 $userId = is_user_logged_in() ? (int) get_current_user_id() : null;
                 $dbQuizId = $this->getOrCreateQuizId($quizId, $quizConfig);
 
+                $traitLabelsB = $this->extractTraitLabels($quizConfig);
+                $traitDescriptionsB = $this->extractTraitDescriptions($quizConfig);
+                [$summaryShortB, $summaryLongB] = $this->generateTextualSummaries($traitVectorB, $traitLabelsB, $traitDescriptionsB, (string) ($quizConfig['meta']['aspect'] ?? ''));
+
                 $resultIdB = $this->resultRepository->insert(
                     $dbQuizId,
                     $quizId, // quiz_slug
@@ -372,7 +409,10 @@ final class QuizApiController
                     $traitVector,
                     $shareTokenB,
                     'private',
-                    $quizVersion
+                    $quizVersion,
+                    $summaryShortB,
+                    $summaryLongB,
+                    (string) $quizVersion
                 );
             } else {
                 return new \WP_Error('invalid_request', 'Either result_id or answers+quiz_id required', ['status' => 400]);
@@ -429,6 +469,41 @@ final class QuizApiController
             // Store shareable comparison token
             $comparisonShareToken = $this->tokenGenerator->generate();
 
+            // Generate deterministic comparison narrative (short + long), cached on comparison row.
+            $cmpNameA = ($ownerA && isset($ownerA['name'])) ? (string) $ownerA['name'] : 'Them';
+            $cmpNameB = (is_array($viewer) && isset($viewer['name'])) ? (string) $viewer['name'] : 'You';
+            $quizTitle = 'Quiz Results';
+            $quizAspect = '';
+            $quizVersionA = '';
+            $cmpMinWords = 450;
+            try {
+                $quizSlugA = (string) ($resultA['quiz_slug'] ?? '');
+                if ($quizSlugA !== '') {
+                    $quizConfigForCompare = $this->quizRepository->load($quizSlugA);
+                    $quizTitle = (string) (($quizConfigForCompare['meta']['title'] ?? '') ?: $quizTitle);
+                    $quizAspect = (string) (($quizConfigForCompare['meta']['aspect'] ?? '') ?: '');
+                    $quizVersionA = (string) (($quizConfigForCompare['meta']['version'] ?? '') ?: '');
+                    $traitLabels = $this->extractTraitLabels($quizConfigForCompare);
+                    $cmpMinWordsCfg = $quizConfigForCompare['comparison_narrative']['min_words'] ?? null;
+                    if (is_numeric($cmpMinWordsCfg)) {
+                        $cmpMinWords = max(250, (int) $cmpMinWordsCfg);
+                    }
+                }
+            } catch (\Throwable) {
+                // ignore
+            }
+
+            [$cmpShort, $cmpLong] = $this->generateComparisonSummaries(
+                (float) ($matchResult['match_score'] ?? 0.0),
+                is_array($matchResult['breakdown'] ?? null) ? (array) $matchResult['breakdown'] : [],
+                $traitLabels,
+                $cmpNameB,
+                $cmpNameA,
+                $quizTitle,
+                $quizAspect,
+                $cmpMinWords
+            );
+
             // Store comparison
             $comparisonId = $this->comparisonRepository->insert(
                 $resultIdA,
@@ -436,7 +511,10 @@ final class QuizApiController
                 $comparisonShareToken,
                 $matchResult['match_score'],
                 $matchResult['breakdown'],
-                $matchResult['algorithm_used']
+                $matchResult['algorithm_used'],
+                $cmpShort,
+                $cmpLong,
+                $quizVersionA
             );
 
             return new \WP_REST_Response([
@@ -449,6 +527,8 @@ final class QuizApiController
                 'match_score' => $matchResult['match_score'],
                 'breakdown' => $matchResult['breakdown'],
                 'algorithm_used' => $matchResult['algorithm_used'],
+                'comparison_summary_short' => $cmpShort,
+                'comparison_summary_long' => $cmpLong,
                 'participants' => [
                     'a' => $ownerA,
                     'b' => $viewer,
@@ -526,33 +606,203 @@ final class QuizApiController
     }
 
     /**
-     * Generate textual summary from trait vector.
+     * Extract trait labels from quiz config.
      */
-    private function generateTextualSummary(array $traitVector): string
+    private function extractTraitLabels(array $quizConfig): array
     {
-        if (empty($traitVector)) {
-            return 'No trait data available.';
+        $labels = [];
+        $traits = $quizConfig['traits'] ?? [];
+        if (!is_array($traits)) {
+            return $labels;
         }
-
-        $traits = array_keys($traitVector);
-        $dominantTraits = [];
-        foreach ($traitVector as $trait => $value) {
-            if ($value >= 0.7) {
-                $dominantTraits[] = ucfirst(str_replace('_', ' ', $trait));
+        foreach ($traits as $traitId => $traitData) {
+            if (is_string($traitId) && is_array($traitData) && isset($traitData['label'])) {
+                $labels[$traitId] = (string) $traitData['label'];
             }
         }
+        return $labels;
+    }
 
-        if (empty($dominantTraits)) {
-            return 'Your profile shows a balanced mix of traits.';
+    /**
+     * Extract trait descriptions from quiz config.
+     *
+     * @return array<string, string>
+     */
+    private function extractTraitDescriptions(array $quizConfig): array
+    {
+        $descs = [];
+        $traits = $quizConfig['traits'] ?? [];
+        if (!is_array($traits)) {
+            return $descs;
+        }
+        foreach ($traits as $traitId => $traitData) {
+            if (!is_string($traitId) || !is_array($traitData)) {
+                continue;
+            }
+            $d = isset($traitData['description']) ? trim((string) $traitData['description']) : '';
+            if ($d !== '') {
+                $descs[$traitId] = $d;
+            }
+        }
+        return $descs;
+    }
+
+    /**
+     * Generate deterministic short + long result narratives.
+     *
+     * @param array<string, float> $traitVector
+     * @param array<string, string> $traitLabels
+     * @param array<string, string> $traitDescriptions
+     * @return array{0:string,1:string} [short, long]
+     */
+    private function generateTextualSummaries(array $traitVector, array $traitLabels, array $traitDescriptions, string $aspect): array
+    {
+        if ($traitVector === []) {
+            return ['Quiz completed successfully.', "We couldn't generate a detailed overview because trait data is missing."];
         }
 
-        if (count($dominantTraits) === 1) {
-            return "Your profile highlights {$dominantTraits[0]} as a key trait.";
+        // Normalize / clamp.
+        $clean = [];
+        foreach ($traitVector as $k => $v) {
+            if (!is_string($k)) continue;
+            $val = (float) $v;
+            if ($val < 0.0) $val = 0.0;
+            if ($val > 1.0) $val = 1.0;
+            $clean[$k] = $val;
+        }
+        if ($clean === []) {
+            return ['Quiz completed successfully.', "We couldn't generate a detailed overview because trait data is missing."];
         }
 
-        $lastTrait = array_pop($dominantTraits);
-        $traitList = implode(', ', $dominantTraits) . ', and ' . $lastTrait;
-        return "Your profile highlights key traits such as {$traitList}.";
+        arsort($clean);
+        $keys = array_keys($clean);
+
+        $top1 = $keys[0] ?? null;
+        $top2 = $keys[1] ?? null;
+        $top3 = $keys[2] ?? null;
+        $bottom1 = $keys[count($keys) - 1] ?? null;
+
+        $score1 = $top1 !== null ? (float) ($clean[$top1] ?? 0.0) : 0.0;
+        $score3 = $top3 !== null ? (float) ($clean[$top3] ?? 0.0) : ($top2 !== null ? (float) ($clean[$top2] ?? 0.0) : 0.0);
+        $dominance = $score1 - $score3;
+
+        $profileType = 'flexible';
+        if ($dominance >= 0.18) {
+            $profileType = 'decisive';
+        } elseif ($dominance <= 0.10) {
+            $profileType = 'balanced';
+        }
+
+        $label = function (?string $traitId) use ($traitLabels): string {
+            if ($traitId === null || $traitId === '') return 'this trait';
+            return $traitLabels[$traitId] ?? ucfirst(str_replace('_', ' ', $traitId));
+        };
+
+        $desc = function (?string $traitId) use ($traitDescriptions): string {
+            if ($traitId === null || $traitId === '') return '';
+            $d = $traitDescriptions[$traitId] ?? '';
+            $d = trim((string) $d);
+            if ($d === '') return '';
+            return preg_match('/[.!?]$/', $d) ? $d : ($d . '.');
+        };
+
+        $primary = $label($top1);
+        $secondary = $label($top2);
+        $support = $label($top3);
+        $low = $label($bottom1);
+
+        // Short summary (1–2 sentences) for UI headers, share text, meta, etc.
+        if ($profileType === 'balanced') {
+            $short = "Your results show a balanced profile with a slight tilt toward {$primary} and {$secondary}.";
+        } elseif ($profileType === 'decisive') {
+            $short = "Your results strongly highlight {$primary}, supported by {$secondary}.";
+        } else {
+            $short = "Your profile leans toward {$primary} and {$secondary}, with {$support} as a supporting trait.";
+        }
+
+        // Long overview: plain text with simple section headings + bullets (UI will format).
+        $overview = [];
+        $overview[] = "Overview";
+        $overview[] = "Your strongest signals are in {$primary} and {$secondary}. " .
+            ($support !== '' ? "A supporting theme is {$support}. " : '') .
+            ($profileType === 'decisive'
+                ? "This is a more \"decisive\" pattern, meaning a few traits clearly stand out."
+                : ($profileType === 'balanced'
+                    ? "This is a more \"balanced\" pattern, meaning you likely adapt depending on context."
+                    : "This looks \"context-flexible\": you have clear preferences, but you can still shift when needed."));
+        $overview[] = "These percentages aren’t good or bad—they’re simply a snapshot of what you tend to default to in decisions, collaboration, and under pressure.";
+        $overview[] = "This is informational and not a diagnosis.";
+
+        $strengths = [];
+        $strengths[] = "Strengths";
+        $strengths[] = "- You can rely on your {$primary} side to create momentum when something needs a push forward.";
+        $strengths[] = "- Your {$secondary} side helps you stay consistent and follow through, especially when things get busy.";
+        $strengths[] = "- With {$support} as a supporting trait, you can round out your approach instead of using only one style.";
+        $d1 = $desc($top1);
+        $d2 = $desc($top2);
+        if ($d1 !== '' || $d2 !== '') {
+            $strengths[] = "- In plain language: " . trim(($d1 !== '' ? "{$primary} — {$d1} " : '') . ($d2 !== '' ? "{$secondary} — {$d2}" : ''));
+        }
+
+        $edges = [];
+        $edges[] = "Growth edges";
+        $edges[] = "- When you overuse {$primary}, you might move too fast for others or skip alignment.";
+        $edges[] = "- When {$secondary} runs high, you may prefer certainty—so ambiguity can feel uncomfortable.";
+        $edges[] = "- With lower {$low}, you might not naturally prioritize that style unless you choose it intentionally.";
+
+        $stress = [];
+        $stress[] = "Under stress";
+        if ($profileType === 'decisive') {
+            $stress[] = "Under pressure, you may double down on what works: faster decisions, more direction, more structure. That can be effective—but it can also feel intense to others.";
+        } elseif ($profileType === 'balanced') {
+            $stress[] = "Under pressure, balanced profiles often start scanning for the “best” option. The upside is flexibility; the downside can be overthinking or delaying a clear decision.";
+        } else {
+            $stress[] = "Under pressure, you may switch styles quickly: sometimes pushing forward, other times pausing to reassess. The key is to pick one next step and commit to it.";
+        }
+        $stress[] = "A simple reset: name the goal, choose one next step, and decide what would count as “good enough” for today.";
+
+        $rel = [];
+        $rel[] = ($aspect === 'personality') ? "Relationships & teamwork" : "How this shows up with other people";
+        $rel[] = "People may experience you as someone who brings {$primary} energy with a {$secondary} backbone. In collaboration, this often looks like wanting clarity, momentum, and a practical path forward.";
+        $rel[] = "If conflict appears, try to separate intent from impact: you can stay direct while also checking how it lands on the other person.";
+
+        $next = [];
+        $next[] = "Next steps";
+        $next[] = "- Before offering a solution, ask: “What outcome matters most here?”";
+        $next[] = "- If you feel urgency, say it out loud: “I’m feeling urgency—can we decide on one next step?”";
+        $next[] = "- Practice balance: pick one small moment today to deliberately act from a lower trait (like {$low}) and notice what changes.";
+
+        $long = implode("\n", array_merge(
+            $overview,
+            [''],
+            $strengths,
+            [''],
+            $edges,
+            [''],
+            $stress,
+            [''],
+            $rel,
+            [''],
+            $next
+        ));
+
+        // Ensure we hit the "long enough" target (doc suggests 350–600+ words).
+        $minWords = 350;
+        $words = preg_split('/\s+/', trim(preg_replace('/[^A-Za-z0-9]+/u', ' ', $long) ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+        $wordCount = is_array($words) ? count($words) : 0;
+        if ($wordCount < $minWords) {
+            $extra = [];
+            $extra[] = "How to use this";
+            $extra[] = "Treat your top traits as your default tools, not your identity. When something feels stuck, ask yourself: am I overusing my strongest tool, or avoiding a tool that would help right now?";
+            $extra[] = "A simple way to get value from these results is to notice patterns for one week: when do you feel most like {$primary}, and when does {$secondary} show up? The goal is awareness first—change comes after you can name what’s happening.";
+            $extra[] = "Practical prompts";
+            $extra[] = "- What situations bring out the best of {$primary} in you?";
+            $extra[] = "- Where does {$secondary} help you stay grounded, and where does it slow you down?";
+            $extra[] = "- What’s one small habit you can try for 7 days to strengthen a lower style like {$low}?";
+            $long = $long . "\n\n" . implode("\n", $extra);
+        }
+
+        return [$short, $long];
     }
 
     /**
@@ -626,12 +876,75 @@ final class QuizApiController
                 $breakdown = [];
             }
 
+            // Build trait labels + quiz info for narrative and display.
+            $traitLabels = [];
+            $quizTitle = 'Quiz Results';
+            $quizAspect = '';
+            $currentQuizVersion = '';
+            $cmpMinWords = 450;
+            try {
+                $quizSlug = (string) ($resultA['quiz_slug'] ?? '');
+                if ($quizSlug !== '') {
+                    $quizConfig = $this->quizRepository->load($quizSlug);
+                    $quizTitle = (string) (($quizConfig['meta']['title'] ?? '') ?: $quizTitle);
+                    $quizAspect = (string) (($quizConfig['meta']['aspect'] ?? '') ?: '');
+                    $currentQuizVersion = (string) (($quizConfig['meta']['version'] ?? '') ?: '');
+                    $traitLabels = $this->extractTraitLabels($quizConfig);
+                    $cmpMinWordsCfg = $quizConfig['comparison_narrative']['min_words'] ?? null;
+                    if (is_numeric($cmpMinWordsCfg)) {
+                        $cmpMinWords = max(250, (int) $cmpMinWordsCfg);
+                    }
+                }
+            } catch (\Throwable) {
+                // ignore
+            }
+
+            // Prefer stored comparison narrative; regenerate only when missing or quiz version changes.
+            $storedShort = isset($comparison['comparison_summary_short']) ? (string) ($comparison['comparison_summary_short'] ?? '') : '';
+            $storedLong = isset($comparison['comparison_summary_long']) ? (string) ($comparison['comparison_summary_long'] ?? '') : '';
+            $storedQuizVer = isset($comparison['comparison_summary_quiz_version']) ? (string) ($comparison['comparison_summary_quiz_version'] ?? '') : '';
+
+            $shouldRegenerate = ($storedShort === '' || $storedLong === '');
+            if ($currentQuizVersion !== '' && $storedQuizVer !== $currentQuizVersion) {
+                $shouldRegenerate = true;
+            }
+
+            $nameA = $ownerA && isset($ownerA['name']) ? (string) $ownerA['name'] : 'Them';
+            $nameB = $ownerB && isset($ownerB['name']) ? (string) $ownerB['name'] : 'You';
+
+            if ($shouldRegenerate) {
+                [$genShort, $genLong] = $this->generateComparisonSummaries(
+                    (float) ($comparison['match_score'] ?? 0.0),
+                    $breakdown,
+                    $traitLabels,
+                    $nameB,
+                    $nameA,
+                    $quizTitle,
+                    $quizAspect,
+                    $cmpMinWords
+                );
+                $storedShort = $genShort;
+                $storedLong = $genLong;
+                $cmpId = (int) ($comparison['id'] ?? 0);
+                if ($cmpId > 0) {
+                    $this->comparisonRepository->updateSummaries(
+                        $cmpId,
+                        $storedShort,
+                        $storedLong,
+                        $currentQuizVersion !== '' ? $currentQuizVersion : (string) ($resultA['quiz_version'] ?? '')
+                    );
+                }
+            }
+
             return new \WP_REST_Response([
                 'comparison_id' => (int) ($comparison['id'] ?? 0),
                 'share_token' => (string) ($comparison['share_token'] ?? ''),
                 'match_score' => (float) ($comparison['match_score'] ?? 0.0),
                 'breakdown' => $breakdown,
                 'algorithm_used' => (string) ($comparison['algorithm_used'] ?? 'cosine'),
+                'quiz_title' => $quizTitle,
+                'comparison_summary_short' => $storedShort,
+                'comparison_summary_long' => $storedLong,
                 'share_urls' => [
                     'match' => home_url('/match/' . rawurlencode($shareToken) . '/'),
                     'api_match' => rest_url(self::NAMESPACE . '/comparison/' . rawurlencode($shareToken)),
@@ -644,6 +957,153 @@ final class QuizApiController
         } catch (\Throwable) {
             return new \WP_Error('server_error', 'An unexpected error occurred', ['status' => 500]);
         }
+    }
+
+    /**
+     * Generate deterministic comparison summaries based on match score + breakdown.
+     *
+     * @param float $matchScore 0-100
+     * @param array<string,mixed> $breakdown
+     * @param array<string,string> $traitLabels
+     * @return array{0:string,1:string} [short, long]
+     */
+    private function generateComparisonSummaries(
+        float $matchScore,
+        array $breakdown,
+        array $traitLabels,
+        string $nameYou,
+        string $nameThem,
+        string $quizTitle,
+        string $aspect,
+        int $minWords = 450
+    ): array {
+        $score = max(0.0, min(100.0, (float) $matchScore));
+        $band = ($score >= 80.0) ? 'high' : (($score >= 55.0) ? 'medium' : 'low');
+
+        $you = $nameYou !== '' ? $nameYou : 'You';
+        $them = $nameThem !== '' ? $nameThem : 'Them';
+
+        $label = function (string $traitId) use ($traitLabels): string {
+            return $traitLabels[$traitId] ?? ucfirst(str_replace('_', ' ', $traitId));
+        };
+
+        $traits = [];
+        $rawTraits = $breakdown['traits'] ?? null;
+        if (is_array($rawTraits)) {
+            foreach ($rawTraits as $traitId => $data) {
+                if (!is_string($traitId) || !is_array($data)) continue;
+                $sim = isset($data['similarity']) ? (float) $data['similarity'] : 0.0;
+                $hasA = array_key_exists('a', $data);
+                $hasB = array_key_exists('b', $data);
+                $a = $hasA ? (float) $data['a'] : null;
+                $b = $hasB ? (float) $data['b'] : null;
+                $gap = (is_float($a) && is_float($b)) ? abs($a - $b) : null;
+                $traits[] = [
+                    'id' => $traitId,
+                    'label' => $label($traitId),
+                    'similarity' => max(0.0, min(1.0, $sim)),
+                    'gap' => $gap,
+                ];
+            }
+        }
+
+        $bySim = $traits;
+        usort($bySim, fn($x, $y) => ($y['similarity'] <=> $x['similarity']));
+        $topAlignPref = array_values(array_filter($bySim, fn($t) => (float) ($t['similarity'] ?? 0.0) >= 0.70));
+        $topAlign = array_slice(($topAlignPref !== [] ? $topAlignPref : $bySim), 0, 4);
+
+        $byGap = array_values(array_filter($traits, fn($t) => is_float($t['gap'] ?? null)));
+        usort($byGap, fn($x, $y) => (($y['gap'] ?? 0.0) <=> ($x['gap'] ?? 0.0)));
+        $topGapsPref = array_values(array_filter($byGap, fn($t) => (float) ($t['gap'] ?? 0.0) >= 0.25));
+        $topGaps = array_slice(($topGapsPref !== [] ? $topGapsPref : $byGap), 0, 4);
+
+        // Short summary
+        if ($band === 'high') {
+            $short = "{$you} and {$them} show high alignment ({$score}%). You likely share similar defaults in how you approach decisions and daily life.";
+        } elseif ($band === 'medium') {
+            $short = "{$you} and {$them} show a mixed-but-promising match ({$score}%). You align in some areas and differ in others—often a complementary pairing when coordinated well.";
+        } else {
+            $short = "{$you} and {$them} have different defaults ({$score}%). This can be workable with clear communication and shared routines, but it may not feel effortless.";
+        }
+
+        $lines = [];
+        $lines[] = "Headline";
+        if ($band === 'high') {
+            $lines[] = "{$you} and {$them} show high alignment in your defaults. This often feels smooth day-to-day—especially around pace, decisions, and follow-through.";
+        } elseif ($band === 'medium') {
+            $lines[] = "{$you} and {$them} share some strong overlap, with a few meaningful differences. This can feel exciting and growth-oriented when you coordinate well.";
+        } else {
+            $lines[] = "{$you} and {$them} have different defaults. That doesn’t mean “bad”—but it usually means you’ll need clearer agreements so you don’t rely on mind-reading.";
+        }
+        $lines[] = "This {$quizTitle} comparison is based on trait similarity across your results. Similarity can feel comfortable; differences can be complementary—but they usually require clearer coordination.";
+        $lines[] = "Score: " . round($score) . "% (" . ($band === 'high' ? 'high alignment' : ($band === 'medium' ? 'mixed' : 'different styles')) . ").";
+
+        $lines[] = "";
+        $lines[] = "Where you align";
+        if ($topAlign === []) {
+            $lines[] = "Your results don’t show strong alignment peaks. That usually means your overlap is spread across smaller areas rather than a few dominant shared traits.";
+        } else {
+            foreach ($topAlign as $t) {
+                $pct = (int) round(($t['similarity'] ?? 0) * 100);
+                $lines[] = "- {$t['label']} ({$pct}% similar): You’ll more easily “get” each other’s default approach here, which often reduces friction and speeds up repair.";
+            }
+        }
+
+        $lines[] = "";
+        $lines[] = "Where friction may show up";
+        if ($topGaps === []) {
+            $lines[] = "No clear trait gaps were detected (or per-person values weren’t available). If you still feel friction, it’s likely situational: timing, stress, expectations, or communication habits.";
+        } else {
+            foreach ($topGaps as $t) {
+                $gapPct = (int) round((float) ($t['gap'] ?? 0) * 100);
+                $lines[] = "- {$t['label']} (gap ~{$gapPct}%): One of you likely defaults to this more strongly; when rushed, this can look like mismatched pace, priorities, or expectations.";
+            }
+        }
+
+        $lines[] = "";
+        $lines[] = ($aspect === 'personality') ? "Communication tips" : "Coordination tips";
+        if ($band === 'high') {
+            $lines[] = "- Try saying: “I want to move fast, and I also want you to feel fully on my side—are we aligned?”";
+            $lines[] = "- Try saying: “What would ‘good enough’ look like for today so we don’t over-optimize?”";
+        } elseif ($band === 'medium') {
+            $lines[] = "- Try saying: “Can we pick a simple plan for today, and keep it flexible if new info shows up?”";
+            $lines[] = "- Try saying: “What do you need before you feel ready to commit—more info, more time, or more reassurance?”";
+        } else {
+            $lines[] = "- Try saying: “Help me understand what matters most to you here—speed, certainty, or connection?”";
+            $lines[] = "- Try saying: “Can we slow down for 2 minutes so we don’t misread each other?”";
+        }
+        $lines[] = "When conflict appears: validate first (“I get why that matters to you”), then propose one small experiment (“Can we try X for 7 days?”).";
+
+        $lines[] = "";
+        $lines[] = "Do more / Do less";
+        $lines[] = "- Do more: name expectations early (time, plans, tone) and confirm them out loud.";
+        $lines[] = "- Do more: pick one weekly ritual that reduces ambiguity (10-minute planning check-in works well).";
+        $lines[] = "- Do less: assume intent from tone; ask one clarifying question instead.";
+        $lines[] = "- Do less: re-litigate the past—focus on the next repeatable process.";
+
+        $lines[] = "";
+        $lines[] = "Next steps";
+        $lines[] = "- Choose one area to be “structured” and one to be “flexible,” so you stop fighting the same category repeatedly.";
+        $lines[] = "- If a conflict repeats, ask: “Is this a values issue, or a process issue?”";
+        $lines[] = "- Use a bridge sentence before solutions: “I’m on your team—here’s what I’m noticing.”";
+
+        $lines[] = "";
+        $lines[] = "This is an informational snapshot, not professional advice.";
+
+        $long = implode("\n", $lines);
+
+        // Ensure it's long enough (comparison doc suggests ~450+ words).
+        $minWords = max(250, $minWords);
+        $words = preg_split('/\s+/', trim(preg_replace('/[^A-Za-z0-9]+/u', ' ', $long) ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+        $wordCount = is_array($words) ? count($words) : 0;
+        if ($wordCount < $minWords) {
+            $pad = [];
+            $pad[] = "How to interpret this";
+            $pad[] = "If your match is high, the main risk is moving fast and skipping emotional alignment. If your match is medium, the main task is coordination—agree on decision rules. If your match is low, the main skill is translation: build shared routines so you don’t rely on “mind-reading.”";
+            $long .= "\n\n" . implode("\n", $pad);
+        }
+
+        return [$short, $long];
     }
 }
 

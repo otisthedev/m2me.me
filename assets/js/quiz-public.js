@@ -1106,44 +1106,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Utility Functions ---
     async function copyToClipboard(textToCopy, successMessage = 'Link copied to clipboard!') {
-        if (navigator.clipboard && window.isSecureContext) { // Use modern API in secure contexts (HTTPS)
-            try {
-                await navigator.clipboard.writeText(textToCopy);
-                alert(successMessage + '\n' + textToCopy);
-            } catch (err) {
-                console.error('Failed to copy with navigator.clipboard:', err);
-                // Fallback to execCommand if modern API fails
-                copyToClipboardExecCommand(textToCopy, successMessage);
-            }
-        } else {
-            // Fallback for insecure contexts or older browsers
-             copyToClipboardExecCommand(textToCopy, successMessage);
+        const text = String(textToCopy || '');
+        const ok = window.MatchMeClipboard && typeof window.MatchMeClipboard.writeText === 'function'
+            ? await window.MatchMeClipboard.writeText(text)
+            : false;
+
+        if (ok) {
+            alert(successMessage + '\n' + text);
+            return;
         }
-    }
 
-    function copyToClipboardExecCommand(textToCopy, successMessage){
-         const tempInput = document.createElement('textarea'); // Use textarea for potentially long URLs
-         tempInput.style.position = 'absolute';
-         tempInput.style.left = '-9999px'; // Move off-screen
-         tempInput.value = textToCopy;
-         document.body.appendChild(tempInput);
-         tempInput.select();
-         tempInput.setSelectionRange(0, 99999); // For mobile devices
-
-         try {
-             const successful = document.execCommand('copy');
-             if (successful) {
-                 alert(successMessage + '\n' + textToCopy);
-             } else {
-                 console.error('execCommand copy failed');
-                 alert('Failed to copy the link automatically. Please copy it manually.');
-             }
-         } catch (err) {
-             console.error('execCommand copy error:', err);
-             alert('Failed to copy the link automatically. Please copy it manually.');
-         } finally {
-             document.body.removeChild(tempInput);
-         }
+        // Last resort: show the link and ask for manual copy.
+        alert('Copy this link:\n' + text);
     }
 
 

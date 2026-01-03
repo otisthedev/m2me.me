@@ -24,7 +24,6 @@ final class QuizShortcodes
         add_shortcode('post_titles_archive', [$this, 'renderPostTitlesArchive']);
 
         add_filter('the_excerpt', [$this, 'appendStartQuizLink']);
-        add_action('init', [$this, 'logoutOnUrlParameter']);
         add_action('wp_enqueue_scripts', [$this, 'enqueueAssets']);
     }
 
@@ -214,7 +213,7 @@ final class QuizShortcodes
                 </div>
             </div>
 
-            <div class="mmq-screen">
+            <div class="mmq-screen" style="display:none;">
                 <div class="mmq-header">
                     <div class="mmq-title"><?= esc_html((string) ($quizData['meta']['title'] ?? 'Quiz')) ?></div>
                     <div class="mmq-progress"></div>
@@ -243,16 +242,6 @@ final class QuizShortcodes
         return $excerpt . ' <a class="start-quiz" href="' . esc_url(get_permalink()) . '">View</a>';
     }
 
-    public function logoutOnUrlParameter(): void
-    {
-        if (!isset($_GET['logout'])) {
-            return;
-        }
-        wp_logout();
-        wp_redirect(home_url('/'));
-        exit;
-    }
-
     public function enqueueAssets(): void
     {
         wp_enqueue_style('match-me-font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css', [], null);
@@ -272,7 +261,9 @@ final class QuizShortcodes
 
         wp_enqueue_style('match-me-quiz-public', get_template_directory_uri() . '/assets/css/quiz-public.css', [], $publicCssVer);
         wp_enqueue_style('match-me-quiz-popup', get_template_directory_uri() . '/assets/css/quiz-popup.css', [], $popupCssVer);
-        wp_enqueue_script('match-me-quiz-public', get_template_directory_uri() . '/assets/js/quiz-public.js', [], $publicJsVer, true);
+        // Register clipboard helper and make it a dependency for copy/share actions.
+        wp_register_script('match-me-clipboard', get_template_directory_uri() . '/assets/js/mm-clipboard.js', [], $this->config->themeVersion(), true);
+        wp_enqueue_script('match-me-quiz-public', get_template_directory_uri() . '/assets/js/quiz-public.js', ['match-me-clipboard'], $publicJsVer, true);
     }
 
     /**
@@ -281,6 +272,8 @@ final class QuizShortcodes
      */
     private function enqueueQuizRuntime(array $quizData, array $vars): void
     {
+        // Ensure clipboard helper is loaded on pages where the old runner is present.
+        wp_enqueue_script('match-me-clipboard');
         $inline = 'window.cqData=' . wp_json_encode($quizData) . ';'
             . 'window.cqVars=' . wp_json_encode($vars) . ';'
             . 'window.ajaxurl=' . wp_json_encode(admin_url('admin-ajax.php')) . ';';
@@ -298,12 +291,14 @@ final class QuizShortcodes
         $fallback = $this->config->themeVersion();
 
         $ajaxClient = $baseDir . '/assets/js/quiz-ajax-client.js';
+        $clipboard = $baseDir . '/assets/js/mm-clipboard.js';
         $resultsUi = $baseDir . '/assets/js/quiz-results-ui.js';
         $runner = $baseDir . '/assets/js/quiz-public-v2.js';
         $resultsCss = $baseDir . '/assets/css/quiz-results.css';
         $v2Css = $baseDir . '/assets/css/quiz-v2.css';
 
         $ajaxClientVer = is_file($ajaxClient) ? (string) filemtime($ajaxClient) : $fallback;
+        $clipboardVer = is_file($clipboard) ? (string) filemtime($clipboard) : $fallback;
         $resultsUiVer = is_file($resultsUi) ? (string) filemtime($resultsUi) : $fallback;
         $runnerVer = is_file($runner) ? (string) filemtime($runner) : $fallback;
         $resultsCssVer = is_file($resultsCss) ? (string) filemtime($resultsCss) : $fallback;
@@ -311,9 +306,10 @@ final class QuizShortcodes
 
         wp_enqueue_style('match-me-quiz-results', get_template_directory_uri() . '/assets/css/quiz-results.css', [], $resultsCssVer);
         wp_enqueue_style('match-me-quiz-v2', get_template_directory_uri() . '/assets/css/quiz-v2.css', [], $v2CssVer);
+        wp_enqueue_script('match-me-clipboard', get_template_directory_uri() . '/assets/js/mm-clipboard.js', [], $clipboardVer, true);
         wp_enqueue_script('match-me-quiz-ajax-client', get_template_directory_uri() . '/assets/js/quiz-ajax-client.js', [], $ajaxClientVer, true);
-        wp_enqueue_script('match-me-quiz-results-ui', get_template_directory_uri() . '/assets/js/quiz-results-ui.js', [], $resultsUiVer, true);
-        wp_enqueue_script('match-me-quiz-public-v2', get_template_directory_uri() . '/assets/js/quiz-public-v2.js', [], $runnerVer, true);
+        wp_enqueue_script('match-me-quiz-results-ui', get_template_directory_uri() . '/assets/js/quiz-results-ui.js', ['match-me-clipboard'], $resultsUiVer, true);
+        wp_enqueue_script('match-me-quiz-public-v2', get_template_directory_uri() . '/assets/js/quiz-public-v2.js', ['match-me-clipboard'], $runnerVer, true);
 
         $inline = 'window.matchMeQuizData=' . wp_json_encode($quizData) . ';'
             . 'window.matchMeQuizVars=' . wp_json_encode($vars) . ';';

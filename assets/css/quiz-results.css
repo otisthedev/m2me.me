@@ -29,6 +29,32 @@
   font-weight: 400;
 }
 
+.result-summary-text p {
+  margin: 0 0 var(--spacing-md);
+}
+
+.result-summary-text p:last-child {
+  margin-bottom: 0;
+}
+
+.result-summary-text .mm-result-section-title {
+  margin: var(--spacing-lg) 0 var(--spacing-sm);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: -0.01em;
+}
+
+.result-summary-text .mm-result-bullets {
+  margin: 0 0 var(--spacing-md);
+  padding-left: 1.1rem;
+}
+
+.result-summary-text .mm-result-bullets li {
+  margin: 0.35rem 0;
+  color: var(--color-text);
+}
+
 /* Trait Breakdown */
 .trait-breakdown {
   display: flex;
@@ -446,4 +472,8 @@
   margin-bottom: var(--spacing-md);
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+.mm-share-noscript {
+  margin-top: 12px;
 }

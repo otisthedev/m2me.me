@@ -185,7 +185,7 @@ final class QuizAdmin
 
         $content = (string) file_get_contents($path);
 
-        echo '<div class="card" style="margin-top:20px;">';
+        echo '<div class="card mm-admin-card">';
         echo '<h2>Edit: ' . esc_html($file) . '</h2>';
         echo '<form method="post">';
         wp_nonce_field('jqm_edit_' . $file, 'jqm_edit_nonce');

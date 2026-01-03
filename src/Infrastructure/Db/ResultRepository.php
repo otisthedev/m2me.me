@@ -27,7 +27,7 @@ final class ResultRepository
         $table = $this->tableName();
         $row = $this->wpdb->get_row(
             $this->wpdb->prepare(
-                "SELECT result_id, quiz_id, quiz_slug, user_id, trait_vector, share_token, share_mode, quiz_version, created_at, revoked_at 
+                "SELECT result_id, quiz_id, quiz_slug, user_id, trait_vector, textual_summary_short, textual_summary_long, textual_summary_quiz_version, share_token, share_mode, quiz_version, created_at, revoked_at 
                  FROM $table 
                  WHERE result_id = %d 
                  LIMIT 1",
@@ -49,7 +49,7 @@ final class ResultRepository
         $table = $this->tableName();
         $row = $this->wpdb->get_row(
             $this->wpdb->prepare(
-                "SELECT result_id, quiz_id, quiz_slug, user_id, trait_vector, share_token, share_mode, quiz_version, created_at, revoked_at 
+                "SELECT result_id, quiz_id, quiz_slug, user_id, trait_vector, textual_summary_short, textual_summary_long, textual_summary_quiz_version, share_token, share_mode, quiz_version, created_at, revoked_at 
                  FROM $table 
                  WHERE share_token = %s 
                  LIMIT 1",
@@ -80,7 +80,10 @@ final class ResultRepository
         array $traitVector,
         string $shareToken,
         string $shareMode,
-        string $quizVersion
+        string $quizVersion,
+        ?string $textualSummaryShort = null,
+        ?string $textualSummaryLong = null,
+        ?string $textualSummaryQuizVersion = null
     ): int {
         $table = $this->tableName();
         $traitVectorJson = json_encode($traitVector, JSON_THROW_ON_ERROR);
@@ -90,12 +93,15 @@ final class ResultRepository
             'quiz_slug' => $quizSlug,
             'user_id' => $userId,
             'trait_vector' => $traitVectorJson,
+            'textual_summary_short' => $textualSummaryShort,
+            'textual_summary_long' => $textualSummaryLong,
+            'textual_summary_quiz_version' => $textualSummaryQuizVersion ?? '',
             'share_token' => $shareToken,
             'share_mode' => $shareMode,
             'quiz_version' => $quizVersion,
         ];
 
-        $format = ['%d', '%s', '%d', '%s', '%s', '%s', '%s'];
+        $format = ['%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s'];
 
         $result = $this->wpdb->insert($table, $data, $format);
 
@@ -104,6 +110,24 @@ final class ResultRepository
         }
 
         return (int) $this->wpdb->insert_id;
+    }
+
+    public function updateSummaries(int $resultId, string $short, string $long, string $quizVersion): bool
+    {
+        $table = $this->tableName();
+        $updated = $this->wpdb->update(
+            $table,
+            [
+                'textual_summary_short' => $short,
+                'textual_summary_long' => $long,
+                'textual_summary_quiz_version' => $quizVersion,
+            ],
+            ['result_id' => $resultId],
+            ['%s', '%s', '%s'],
+            ['%d']
+        );
+
+        return $updated !== false;
     }
 
     /**

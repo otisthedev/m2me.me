@@ -28,7 +28,7 @@ final class InstagramAuth
         $appId = $this->config->instagramAppId();
         $appSecret = $this->config->instagramAppSecret();
         if (!$appId || !$appSecret) {
-            return '<div class="instagram-login-container"><p style="color:red;">Instagram Login Error: App ID or Secret not configured.</p></div>';
+            return '<div class="mm-social-auth"><p class="mm-social-auth-error">Instagram login is not configured.</p></div>';
         }
 
         if (is_user_logged_in()) {
@@ -38,11 +38,7 @@ final class InstagramAuth
         $current = (string) wp_unslash($_SERVER['REQUEST_URI'] ?? '/');
         $redirectTo = wp_validate_redirect(home_url($current), home_url('/'));
         $authUrl = esc_url(add_query_arg(['instagram_auth' => '1', 'redirect_to' => $redirectTo], home_url('/')));
-        $html = '<div class="instagram-login-container" style="background-color:#f0f0f0;padding:20px;border-radius:8px;text-align:center;max-width:300px;margin:20px auto;">';
-        $html .= '<a href="' . $authUrl . '" style="background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fdf497 5%,#fd5949 45%,#d6249f 60%,#285AEB 90%);color:white;padding:10px 20px;text-decoration:none;border-radius:5px;font-weight:bold;display:inline-block;font-family:sans-serif;font-size:16px;">';
-        $html .= 'Login with Instagram';
-        $html .= '</a></div>';
-        return $html;
+        return '<div class="mm-social-auth"><a class="mm-social-auth-btn mm-social-auth-btn-instagram" href="' . $authUrl . '">Continue with Instagram</a></div>';
     }
 
     public function handle(): void
@@ -177,7 +173,7 @@ final class InstagramAuth
         $this->assigner->assignFromSessionToUser($userId);
         wp_set_current_user($userId);
         wp_set_auth_cookie($userId, true);
-        wp_redirect($redirectTo);
+        wp_safe_redirect($redirectTo);
         exit;
     }
 

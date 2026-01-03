@@ -34,7 +34,10 @@ final class ComparisonRepository
         string $shareToken,
         float $matchScore,
         array $breakdown,
-        string $algorithm
+        string $algorithm,
+        ?string $summaryShort = null,
+        ?string $summaryLong = null,
+        ?string $summaryQuizVersion = null
     ): int {
         $table = $this->tableName();
         $breakdownJson = json_encode($breakdown, JSON_THROW_ON_ERROR);
@@ -45,10 +48,13 @@ final class ComparisonRepository
             'share_token' => $shareToken,
             'match_score' => $matchScore,
             'breakdown' => $breakdownJson,
+            'comparison_summary_short' => $summaryShort,
+            'comparison_summary_long' => $summaryLong,
+            'comparison_summary_quiz_version' => $summaryQuizVersion ?? '',
             'algorithm_used' => $algorithm,
         ];
 
-        $format = ['%d', '%d', '%s', '%f', '%s', '%s'];
+        $format = ['%d', '%d', '%s', '%f', '%s', '%s', '%s', '%s', '%s'];
 
         $result = $this->wpdb->insert($table, $data, $format);
 
@@ -69,7 +75,7 @@ final class ComparisonRepository
         $table = $this->tableName();
         $row = $this->wpdb->get_row(
             $this->wpdb->prepare(
-                "SELECT id, result_a, result_b, share_token, match_score, breakdown, algorithm_used, created_at 
+                "SELECT id, result_a, result_b, share_token, match_score, breakdown, comparison_summary_short, comparison_summary_long, comparison_summary_quiz_version, algorithm_used, created_at 
                  FROM $table 
                  WHERE id = %d 
                  LIMIT 1",
@@ -91,7 +97,7 @@ final class ComparisonRepository
         $table = $this->tableName();
         $row = $this->wpdb->get_row(
             $this->wpdb->prepare(
-                "SELECT id, result_a, result_b, share_token, match_score, breakdown, algorithm_used, created_at
+                "SELECT id, result_a, result_b, share_token, match_score, breakdown, comparison_summary_short, comparison_summary_long, comparison_summary_quiz_version, algorithm_used, created_at
                  FROM $table
                  WHERE share_token = %s
                  LIMIT 1",
@@ -101,6 +107,24 @@ final class ComparisonRepository
         );
 
         return is_array($row) ? $row : null;
+    }
+
+    public function updateSummaries(int $comparisonId, string $short, string $long, string $quizVersion): bool
+    {
+        $table = $this->tableName();
+        $updated = $this->wpdb->update(
+            $table,
+            [
+                'comparison_summary_short' => $short,
+                'comparison_summary_long' => $long,
+                'comparison_summary_quiz_version' => $quizVersion,
+            ],
+            ['id' => $comparisonId],
+            ['%s', '%s', '%s'],
+            ['%d']
+        );
+
+        return $updated !== false;
     }
 }
 
