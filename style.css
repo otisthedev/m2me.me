@@ -172,10 +172,8 @@ p {
 }
 
 .mm-hero {
-    /* Full-bleed background outside the container */
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
+    /* Full-bleed section (DOM is moved outside .container via theme.js) */
+    width: 100%;
     margin-bottom: var(--space-xl);
     padding: var(--space-2xl) 0;
     border-bottom: 1px solid var(--color-border-light);
@@ -831,21 +829,19 @@ label {
 }
 
 .mm-footer-menu a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 40px;
-    padding: 8px 10px;
-    border-radius: 999px;
+    display: inline;
     color: var(--color-text);
     font-size: var(--font-size-sm);
-    border: 1px solid rgba(30, 42, 68, 0.10);
-    background: rgba(246, 245, 242, 0.5);
+    font-weight: 500;
+    padding: 0;
+    border: none;
+    background: transparent;
 }
 
 .mm-footer-menu a:hover {
     color: var(--color-primary);
-    background: rgba(30, 42, 68, 0.06);
-    border-color: rgba(30, 42, 68, 0.18);
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .site-info {
