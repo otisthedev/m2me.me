@@ -19,6 +19,7 @@ final class AuthMenu
 
         add_action('init', [$this, 'ensureAccountPageOnce']);
         add_action('init', [$this, 'ensureProfilePageOnce']);
+        add_action('init', [$this, 'ensureResultsPageOnce']);
         add_action('init', [$this, 'ensureComparisonsPageOnce']);
         add_action('init', [$this, 'ensureMatchesPageOnce']);
 
@@ -48,11 +49,13 @@ final class AuthMenu
         if (is_user_logged_in()) {
             $comparisonsUrl = home_url('/comparisons/');
             $matchesUrl = home_url('/matches/');
+            $resultsUrl = home_url('/results/');
             $accountUrl = home_url('/profile/');
             $logoutUrl = wp_logout_url($redirectTo);
 
             $items .= $this->menuItem($matchesUrl, 'Matches', 'mm-menu-matches', '');
             $items .= $this->menuItem($comparisonsUrl, 'Comparisons', 'mm-menu-comparisons', '');
+            $items .= $this->menuItem($resultsUrl, 'Results', 'mm-menu-results', '');
             $items .= $this->menuItem($accountUrl, 'My Profile', 'mm-menu-account', '');
             $items .= $this->menuItem($logoutUrl, 'Logout', 'mm-menu-logout', '');
             return $items;
@@ -182,6 +185,43 @@ final class AuthMenu
         }
 
         update_option('match_me_profile_page_id', (int) $pageId, true);
+    }
+
+    public function ensureResultsPageOnce(): void
+    {
+        $opt = get_option('match_me_results_page_id');
+        if (is_numeric($opt) && (int) $opt > 0) {
+            $p = get_post((int) $opt);
+            if ($p instanceof \WP_Post && $p->post_status !== 'trash') {
+                return;
+            }
+        }
+
+        $slug = 'results';
+        $existing = get_page_by_path($slug);
+        if ($existing instanceof \WP_Post) {
+            update_option('match_me_results_page_id', (int) $existing->ID, true);
+            return;
+        }
+
+        $pageId = wp_insert_post([
+            'post_title' => 'My Results',
+            'post_name' => $slug,
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_content' => '',
+        ], true);
+
+        if (is_wp_error($pageId)) {
+            return;
+        }
+
+        $templateFile = (string) get_template_directory() . '/page-results.php';
+        if (is_file($templateFile)) {
+            update_post_meta((int) $pageId, '_wp_page_template', 'page-results.php');
+        }
+
+        update_option('match_me_results_page_id', (int) $pageId, true);
     }
 
     public function ensureComparisonsPageOnce(): void

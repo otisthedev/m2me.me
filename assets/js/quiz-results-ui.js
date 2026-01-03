@@ -724,21 +724,72 @@
         const aName = opts.aName ? String(opts.aName) : 'Them';
         const bName = opts.bName ? String(opts.bName) : 'You';
 
-        const traits = Object.entries(breakdown.traits);
-        return traits.map(([trait, data]) => {
-            const similarity = Math.round((data.similarity || 0) * 100);
+        function bandFor(simPct) {
+            if (simPct >= 97) return 'In sync';
+            if (simPct >= 92) return 'Very close';
+            if (simPct >= 85) return 'Strongly aligned';
+            if (simPct >= 75) return 'Similar';
+            if (simPct >= 65) return 'Some overlap';
+            return 'Different';
+        }
+
+        function clamp01(n) {
+            const x = Number(n);
+            if (!Number.isFinite(x)) return 0;
+            return Math.max(0, Math.min(1, x));
+        }
+
+        const traits = Object.entries(breakdown.traits).map(([trait, data]) => {
+            const simPct = Math.round(clamp01(data.similarity) * 100);
+            const aPct = Math.round(clamp01(data.a) * 100);
+            const bPct = Math.round(clamp01(data.b) * 100);
+            const gap = Math.abs(aPct - bPct);
             const label = trait.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            return { trait, label, simPct, aPct, bPct, gap };
+        });
+
+        // Order by gap (largest first) so the content feels more informative,
+        // even when similarity percentages are identical across traits.
+        traits.sort((x, y) => (y.gap - x.gap) || (y.simPct - x.simPct) || x.label.localeCompare(y.label));
+
+        const simValues = traits.map(t => t.simPct);
+        const simMin = Math.min(...simValues);
+        const simMax = Math.max(...simValues);
+        const clustered = (simMax - simMin) <= 4; // e.g. everything ~95%
+
+        const summary = clustered
+            ? `<div class="match-breakdown-summary">You’re consistently aligned across traits (differences are small and steady).</div>`
+            : '';
+
+        const items = traits.map(t => {
+            const band = bandFor(t.simPct);
+            const gapText = t.gap === 0 ? 'Same score' : `Gap: ${t.gap} pts`;
             return `
                 <div class="match-trait-item">
-                    <div class="match-trait-label">${label}</div>
-                    <div class="match-trait-similarity">${similarity}% similar</div>
-                    <div class="match-trait-values">
-                        <span>${escapeHtml(bName)}: ${Math.round((data.b || 0) * 100)}%</span>
-                        <span>${escapeHtml(aName)}: ${Math.round((data.a || 0) * 100)}%</span>
+                    <div class="match-trait-top">
+                        <div class="match-trait-label">${escapeHtml(t.label)}</div>
+                        <div class="match-trait-badges">
+                            <span class="match-badge match-badge-band">${escapeHtml(band)}</span>
+                            <span class="match-badge match-badge-gap">${escapeHtml(gapText)}</span>
+                        </div>
+                    </div>
+                    <div class="match-trait-bars" role="group" aria-label="${escapeHtml(t.label)} comparison">
+                        <div class="match-trait-barrow">
+                            <div class="match-trait-barlabel">${escapeHtml(bName)}</div>
+                            <div class="match-trait-bar"><span class="match-trait-barfill" style="width:${t.bPct}%"></span></div>
+                            <div class="match-trait-barvalue">${t.bPct}%</div>
+                        </div>
+                        <div class="match-trait-barrow">
+                            <div class="match-trait-barlabel">${escapeHtml(aName)}</div>
+                            <div class="match-trait-bar"><span class="match-trait-barfill is-a" style="width:${t.aPct}%"></span></div>
+                            <div class="match-trait-barvalue">${t.aPct}%</div>
+                        </div>
                     </div>
                 </div>
             `;
         }).join('');
+
+        return `${summary}${items}`;
     }
 
     // Export to global scope

@@ -401,6 +401,16 @@
   gap: var(--spacing-md);
 }
 
+.match-breakdown-summary {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid rgba(30, 42, 68, 0.10);
+  background: rgba(143, 174, 163, 0.12);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .match-trait-item {
   padding: var(--spacing-md);
   background: var(--color-bg-subtle);
@@ -411,24 +421,93 @@
   gap: var(--spacing-sm);
 }
 
+.match-trait-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .match-trait-label {
   font-size: 0.9375rem;
   font-weight: 400;
   color: var(--color-text);
 }
 
-.match-trait-similarity {
-  font-size: 0.875rem;
-  color: var(--color-text-light);
-  font-weight: 400;
+.match-trait-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.match-trait-values {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.875rem;
+.match-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  border: 1px solid rgba(30, 42, 68, 0.12);
+  background: rgba(255, 255, 255, 0.60);
+  color: var(--color-primary);
+}
+
+.match-badge-gap {
+  color: var(--color-text);
+  border-color: rgba(30, 42, 68, 0.10);
+  background: rgba(255, 255, 255, 0.50);
+}
+
+.match-trait-bars {
+  display: grid;
+  gap: 8px;
+}
+
+.match-trait-barrow {
+  display: grid;
+  grid-template-columns: 1fr 5fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.match-trait-barlabel {
+  font-size: 0.85rem;
   color: var(--color-text-light);
-  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.match-trait-barvalue {
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+  font-variant-numeric: tabular-nums;
+  width: 3.2ch;
+  text-align: right;
+}
+
+.match-trait-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(30, 42, 68, 0.10);
+  overflow: hidden;
+}
+
+.match-trait-barfill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(143, 174, 163, 0.95), rgba(111, 175, 179, 0.95));
+}
+
+.match-trait-barfill.is-a {
+  background: linear-gradient(90deg, rgba(30, 42, 68, 0.95), rgba(111, 175, 179, 0.95));
+}
+
 }
 
 /* Responsive: Tablet and up */
