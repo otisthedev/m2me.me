@@ -102,8 +102,14 @@ final class Theme
 
         $vars = [
             'homeUrl' => home_url('/'),
+            'themeUrl' => get_template_directory_uri(),
             'restUrl' => esc_url_raw(rest_url()),
             'restNonce' => wp_create_nonce('wp_rest'),
+            'currentUser' => [
+                'id' => (int) get_current_user_id(),
+                'name' => is_user_logged_in() ? (string) (wp_get_current_user()->display_name ?: 'You') : '',
+                'avatarUrl' => is_user_logged_in() ? (string) get_avatar_url((int) get_current_user_id(), ['size' => 256]) : '',
+            ],
         ];
         wp_add_inline_script('match-me-theme', 'window.matchMeTheme=' . wp_json_encode($vars) . ';', 'before');
     }

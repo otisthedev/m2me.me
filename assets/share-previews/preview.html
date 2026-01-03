@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>m2me share image previews</title>
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background: #F6F5F2;
+        color: #2B2E34;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h1 { font-size: 20px; margin: 0 0 16px; color: #1E2A44; }
+      p { margin: 0 0 16px; color: #6B7280; }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+      @media (min-width: 980px) {
+        .grid { grid-template-columns: 1fr 1fr; }
+      }
+      .card {
+        background: #fff;
+        border: 1px solid rgba(30,42,68,0.12);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 14px 30px rgba(30,42,68,0.08);
+      }
+      .label {
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        font-size: 14px;
+        margin: 0 0 10px;
+        color: #1E2A44;
+      }
+      img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 12px;
+        border: 1px solid rgba(30,42,68,0.10);
+        background: #EFEFEF;
+      }
+      .note {
+        font-size: 12px;
+        margin-top: 10px;
+        color: #6B7280;
+        line-height: 1.4;
+      }
+      code { background: rgba(30,42,68,0.06); padding: 2px 6px; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Share image previews (mockups)</h1>
+      <p>Open this file in your browser. These SVGs are only previews; they’re not yet wired into result/comparison sharing.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="label">Personal result (OG 1200×630)</div>
+          <img src="./personal-result.svg" alt="Personal result share image preview" />
+          <div class="note">File: <code>assets/share-previews/personal-result.svg</code></div>
+        </div>
+        <div class="card">
+          <div class="label">Comparison result (OG 1200×630)</div>
+          <img src="./comparison-result.svg" alt="Comparison result share image preview" />
+          <div class="note">File: <code>assets/share-previews/comparison-result.svg</code></div>
+        </div>
+        <div class="card">
+          <div class="label">Personal result (Instagram Story 1080×1920)</div>
+          <img src="./personal-story.svg" alt="Personal story share image preview" />
+          <div class="note">File: <code>assets/share-previews/personal-story.svg</code></div>
+        </div>
+        <div class="card">
+          <div class="label">Comparison result (Instagram Story 1080×1920)</div>
+          <img src="./comparison-story.svg" alt="Comparison story share image preview" />
+          <div class="note">File: <code>assets/share-previews/comparison-story.svg</code></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
+

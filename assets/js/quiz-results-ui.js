@@ -30,6 +30,21 @@
         `;
         container.appendChild(summaryEl);
 
+        // Build a nicer story headline from trait summary (top trait)
+        const storyTop = (() => {
+            try {
+                const entries = Object.entries(result.trait_summary || {});
+                if (!entries.length) return null;
+                entries.sort((a, b) => (Number(b[1]) - Number(a[1])));
+                const [trait, val] = entries[0];
+                const pct = Math.round(Number(val) * 100);
+                const label = (result.trait_labels && result.trait_labels[trait]) ? String(result.trait_labels[trait]) : String(trait).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                return { label, pct };
+            } catch (e) {
+                return null;
+            }
+        })();
+
         // Share section
         if (result.share_token) {
             const shareSection = renderUnifiedShareSection({
@@ -42,6 +57,13 @@
                 defaultKey: 'compare',
                 instagramTitle: String(result.quiz_title || 'Quiz Results'),
                 instagramSummary: String(result.textual_summary_short || result.textual_summary || 'My quiz results'),
+                storyData: {
+                    headline: 'Result',
+                    bigValue: storyTop ? `${storyTop.pct}%` : '',
+                    secondary: storyTop ? `${storyTop.label}` : '',
+                    name: (window.matchMeTheme && window.matchMeTheme.currentUser && window.matchMeTheme.currentUser.name) ? String(window.matchMeTheme.currentUser.name) : 'You',
+                    avatarUrl: (window.matchMeTheme && window.matchMeTheme.currentUser && window.matchMeTheme.currentUser.avatarUrl) ? String(window.matchMeTheme.currentUser.avatarUrl) : '',
+                },
             });
             container.appendChild(shareSection);
         }
@@ -194,108 +216,82 @@
         const kind = opts && opts.kind ? String(opts.kind) : 'result';
         const title = opts && opts.title ? String(opts.title) : 'Share';
         const urls = (opts && opts.urls && typeof opts.urls === 'object') ? opts.urls : {};
-        const defaultKey = opts && opts.defaultKey ? String(opts.defaultKey) : Object.keys(urls)[0];
         const instagramTitle = opts && opts.instagramTitle ? String(opts.instagramTitle) : 'Quiz Results';
         const instagramSummary = opts && opts.instagramSummary ? String(opts.instagramSummary) : '';
+        const storyData = (opts && opts.storyData && typeof opts.storyData === 'object') ? opts.storyData : null;
 
-        const keys = Object.keys(urls).filter(k => urls[k]);
-        const hasMultiple = keys.length > 1;
-        let currentKey = keys.includes(defaultKey) ? defaultKey : (keys[0] || '');
-
-        const labelFor = (k) => {
-            if (k === 'compare') return 'Compare link';
-            if (k === 'view') return 'Result link';
-            if (k === 'match') return 'Match link';
-            return 'Link';
-        };
-
-        const currentUrl = () => (currentKey && urls[currentKey]) ? String(urls[currentKey]) : '';
-
-        const selectorHtml = hasMultiple ? `
-            <div class="mm-share-selector" role="group" aria-label="Select link type">
-                ${keys.map(k => `
-                    <button type="button" class="mm-share-type ${k === currentKey ? 'is-active' : ''}" data-mm-share-type="${escapeHtml(k)}">
-                        ${escapeHtml(labelFor(k))}
-                    </button>
-                `).join('')}
-            </div>
-        ` : '';
+        // Always show the same buttons everywhere:
+        // 1) Share as image (Instagram Story)
+        // 2) Share comparison link
+        // 3) Share result link
+        //
+        // Mapping:
+        // - "comparison link" = match (comparison result) OR compare (take-quiz link)
+        // - "result link" = view (result page)
+        const comparisonUrl = (urls.match ? String(urls.match) : (urls.compare ? String(urls.compare) : ''));
+        const resultUrl = (urls.view ? String(urls.view) : '');
 
         section.innerHTML = `
             <h3>${escapeHtml(title)}</h3>
-            ${selectorHtml}
             <div class="share-buttons">
-                ${isMobileSharingContext() ? `<button type="button" class="btn-share-instagram">Share to Instagram Story</button>` : ''}
-                <button type="button" class="btn-share-native">Share</button>
-                <button type="button" class="btn-share-copy">Copy link</button>
-            </div>
-            <div class="share-url-display">
-                <input type="text" readonly class="share-url-input" value="${escapeHtml(currentUrl())}">
+                <button type="button" class="btn-share-instagram">Share as image (Instagram Story)</button>
+                <button type="button" class="btn-share-compare" ${comparisonUrl ? '' : 'disabled aria-disabled="true"'}>Share comparison link</button>
+                <button type="button" class="btn-share-view" ${resultUrl ? '' : 'disabled aria-disabled="true"'}>Share result link</button>
             </div>
         `;
-
-        const input = section.querySelector('.share-url-input');
-        const updateInput = () => { if (input) input.value = currentUrl(); };
-
-        if (hasMultiple) {
-            section.querySelectorAll('[data-mm-share-type]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const k = String(this.getAttribute('data-mm-share-type') || '');
-                    if (!k || !urls[k]) return;
-                    currentKey = k;
-                    section.querySelectorAll('[data-mm-share-type]').forEach(b => b.classList.remove('is-active'));
-                    this.classList.add('is-active');
-                    updateInput();
-                });
-            });
-        }
-
-        const copyBtn = section.querySelector('.btn-share-copy');
-        if (copyBtn) {
-            copyBtn.addEventListener('click', async function() {
-                const u = currentUrl();
-                if (!u) return;
-                try {
-                    await copyToClipboard(u);
-                    showMessage('Link copied!', 'success');
-                } catch (e) {
-                    if (input) {
-                        input.focus();
-                        input.select();
-                    }
-                    showMessage('Select and copy the link.', 'warning');
-                }
-            });
-        }
-
-        const shareBtn = section.querySelector('.btn-share-native');
-        if (shareBtn) {
-            shareBtn.addEventListener('click', async function() {
-                const u = currentUrl();
-                if (!u) return;
-                try {
-                    if (navigator.share) {
-                        const shareTitle = kind === 'match' ? 'Comparison Result' : 'Quiz Results';
-                        const text = kind === 'match'
-                            ? (instagramSummary || 'Comparison result')
-                            : (instagramSummary || 'My quiz results');
-                        await navigator.share({ title: shareTitle, text, url: u });
-                    } else {
-                        await copyToClipboard(u);
-                        showMessage('Link copied. Paste it anywhere to share.', 'success');
-                    }
-                } catch (e) {
-                    showMessage('Could not share. Try copying the link instead.', 'warning');
-                }
-            });
-        }
 
         const instagramBtn = section.querySelector('.btn-share-instagram');
         if (instagramBtn) {
             instagramBtn.addEventListener('click', async function() {
-                const u = currentUrl();
+                // Prefer sharing a comparison-capable link in the story (match > compare > view)
+                const u = comparisonUrl || resultUrl;
                 if (!u) return;
-                await handleInstagramStoryShare(instagramTitle, instagramSummary, u);
+                await handleInstagramStoryShareV2({
+                    kind,
+                    title: instagramTitle,
+                    summary: instagramSummary,
+                    shareUrl: u,
+                    storyData,
+                });
+            });
+        }
+
+        async function shareLink(url) {
+            const u = String(url || '');
+            if (!u) return;
+            try {
+                if (navigator.share) {
+                    const shareTitle = kind === 'match' ? 'Comparison Result' : 'Quiz Results';
+                    const text = kind === 'match'
+                        ? (instagramSummary || 'Comparison result')
+                        : (instagramSummary || 'My quiz results');
+                    await navigator.share({ title: shareTitle, text, url: u });
+                    return;
+                }
+            } catch (e) {
+                // fall through to copy
+            }
+            try {
+                await copyToClipboard(u);
+                showMessage('Link copied. Paste it anywhere to share.', 'success');
+            } catch (e) {
+                showMessage('Could not share. Please try again.', 'warning');
+            }
+        }
+
+        const compareBtn = section.querySelector('.btn-share-compare');
+        if (compareBtn) {
+            compareBtn.addEventListener('click', async function() {
+                if (!comparisonUrl) return;
+                await shareLink(comparisonUrl);
+            });
+        }
+
+        const viewBtn = section.querySelector('.btn-share-view');
+        if (viewBtn) {
+            viewBtn.addEventListener('click', async function() {
+                if (!resultUrl) return;
+                await shareLink(resultUrl);
             });
         }
 
@@ -352,7 +348,42 @@
     /**
      * Generate Instagram Story image as PNG blob
      */
-    async function renderInstagramStoryPngBlob(title, summary, shareUrl = '') {
+    async function loadImageToCanvas(ctx, url, x, y, size, clipCircle = true) {
+        const u = String(url || '');
+        if (!u) return false;
+        return await new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                try {
+                    if (clipCircle) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+                        ctx.closePath();
+                        ctx.clip();
+                    }
+                    // cover
+                    const iw = img.naturalWidth || size;
+                    const ih = img.naturalHeight || size;
+                    const scale = Math.max(size / iw, size / ih);
+                    const dw = iw * scale;
+                    const dh = ih * scale;
+                    const dx = x + (size - dw) / 2;
+                    const dy = y + (size - dh) / 2;
+                    ctx.drawImage(img, dx, dy, dw, dh);
+                    if (clipCircle) ctx.restore();
+                    resolve(true);
+                } catch (e) {
+                    resolve(false);
+                }
+            };
+            img.onerror = () => resolve(false);
+            img.src = u;
+        });
+    }
+
+    async function renderInstagramStoryPngBlobV2(data) {
         const width = 1080;
         const height = 1920;
 
@@ -363,95 +394,145 @@
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Canvas not supported');
 
-        // Background gradient
-        const bg = ctx.createLinearGradient(0, 0, 0, height);
-        bg.addColorStop(0, '#fff4e6');
-        bg.addColorStop(1, '#ffffff');
+        const kind = data && data.kind ? String(data.kind) : 'result';
+        const title = data && data.title ? String(data.title) : 'Quiz Results';
+        const sd = data && data.storyData && typeof data.storyData === 'object' ? data.storyData : null;
+
+        // Brand background + modern blobs
+        const bg = ctx.createLinearGradient(0, 0, width, height);
+        bg.addColorStop(0, '#1E2A44');
+        bg.addColorStop(0.55, '#6FAFB3');
+        bg.addColorStop(1, '#8FAEA3');
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, width, height);
 
-        // Top accent
-        ctx.fillStyle = '#fd9800';
-        ctx.fillRect(0, 0, width, 18);
+        // Mesh-like blobs (blur filter if available)
+        ctx.save();
+        try { ctx.filter = 'blur(70px)'; } catch (e) { /* ignore */ }
+        ctx.globalAlpha = 0.55;
+        drawBlob(ctx, 220, 260, 280, 'rgba(246,245,242,0.20)');
+        drawBlob(ctx, 880, 360, 300, 'rgba(111,175,179,0.26)');
+        drawBlob(ctx, 720, 1120, 380, 'rgba(143,174,163,0.22)');
+        ctx.globalAlpha = 1;
+        try { ctx.filter = 'none'; } catch (e) { /* ignore */ }
+        ctx.restore();
 
-        const padX = 90;
-        let y = 160;
+        // Very subtle grain
+        drawGrain(ctx, width, height, 1100);
+
+        const padX = 80;
+        const topY = 130;
+
+        // Pill
+        drawPill(ctx, padX, topY, 'QUIZ RESULTS');
 
         // Title
-        ctx.fillStyle = '#111111';
-        ctx.font = '700 64px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-        const titleLines = wrapTextLines(ctx, String(title || ''), width - padX * 2, 3);
+        ctx.fillStyle = '#F6F5F2';
+        ctx.font = '950 62px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        const titleLines = wrapTextLines(ctx, title, width - padX * 2, 2);
+        let y = topY + 120;
         for (const line of titleLines) {
             ctx.fillText(line, padX, y);
-            y += 78;
+            y += 74;
         }
 
-        y += 20;
+        const headline = sd && sd.headline ? String(sd.headline) : (kind === 'match' ? 'Match' : 'Result');
+        const bigValue = sd && sd.bigValue ? String(sd.bigValue) : '';
+        const secondary = sd && sd.secondary ? String(sd.secondary) : '';
 
-        // Divider
-        ctx.fillStyle = 'rgba(0,0,0,0.08)';
-        ctx.fillRect(padX, y, width - padX * 2, 2);
-        y += 60;
+        // Glass card
+        const cardX = 70;
+        const cardY = 520;
+        const cardW = width - 140;
+        const cardH = 980;
+        drawGlassCard(ctx, cardX, cardY, cardW, cardH, 46);
 
-        // Summary
-        ctx.fillStyle = '#222222';
-        ctx.font = '500 42px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-        const summaryLines = wrapTextLines(ctx, String(summary || ''), width - padX * 2, 18);
-        for (const line of summaryLines) {
-            ctx.fillText(line, padX, y);
-            y += 58;
-            if (y > height - 400) break; // Leave more space for URL
+        // Stat header
+        ctx.fillStyle = 'rgba(246,245,242,0.86)';
+        ctx.font = '800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.fillText(headline, cardX + 44, cardY + 84);
+
+        if (bigValue) {
+            ctx.fillStyle = '#F6F5F2';
+            ctx.font = '950 110px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            ctx.fillText(bigValue, cardX + 44, cardY + 195);
         }
 
-        // URL section
-        if (shareUrl) {
-            y += 40;
-            
-            // Divider before URL
-            ctx.fillStyle = 'rgba(0,0,0,0.08)';
-            ctx.fillRect(padX, y, width - padX * 2, 2);
-            y += 50;
-
-            // URL label
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.font = '500 32px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-            ctx.fillText('Take the quiz:', padX, y);
-            y += 50;
-
-            // URL text (shortened if needed)
-            let urlText = shareUrl;
-            if (urlText.length > 40) {
-                // Try to extract domain and path
-                try {
-                    const urlObj = new URL(urlText);
-                    urlText = urlObj.hostname.replace('www.', '') + urlObj.pathname;
-                    if (urlText.length > 40) {
-                        urlText = urlText.substring(0, 37) + '...';
-                    }
-                } catch (e) {
-                    urlText = urlText.substring(0, 37) + '...';
-                }
+        if (secondary) {
+            ctx.fillStyle = 'rgba(246,245,242,0.92)';
+            ctx.font = '900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            const secLines = wrapTextLines(ctx, secondary, cardW - 88, 2);
+            let sy = cardY + 250;
+            for (const line of secLines) {
+                ctx.fillText(line, cardX + 44, sy);
+                sy += 54;
             }
-
-            ctx.fillStyle = '#000000';
-            ctx.font = '600 36px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-            const urlLines = wrapTextLines(ctx, urlText, width - padX * 2, 2);
-            for (const line of urlLines) {
-                ctx.fillText(line, padX, y);
-                y += 45;
-            }
-
-            // Call to action
-            y += 20;
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.font = '500 28px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-            ctx.fillText('Compare your results!', padX, y);
         }
 
-        // Footer
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.font = '600 34px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-        ctx.fillText('m2me.me', padX, height - 120);
+        // Avatars
+        if (kind === 'match') {
+            const aName = sd && sd.aName ? String(sd.aName) : 'Them';
+            const bName = sd && sd.bName ? String(sd.bName) : 'You';
+            const aAvatar = sd && sd.aAvatar ? String(sd.aAvatar) : '';
+            const bAvatar = sd && sd.bAvatar ? String(sd.bAvatar) : '';
+
+            const cy = cardY + 610;
+            const leftX = cardX + cardW * 0.34;
+            const rightX = cardX + cardW * 0.66;
+            const size = 260;
+
+            drawAvatarRing(ctx, leftX, cy, size);
+            drawAvatarRing(ctx, rightX, cy, size);
+            await loadImageToCanvas(ctx, aAvatar, leftX - size / 2, cy - size / 2, size, true);
+            await loadImageToCanvas(ctx, bAvatar, rightX - size / 2, cy - size / 2, size, true);
+
+            // Connector
+            ctx.save();
+            ctx.shadowColor = 'rgba(11,18,32,0.26)';
+            ctx.shadowBlur = 18;
+            ctx.shadowOffsetY = 10;
+            const cx = cardX + cardW / 2;
+            roundRect(ctx, cx - 40, cy - 30, 80, 60, 30);
+            ctx.fillStyle = 'rgba(246,245,242,0.18)';
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(246,245,242,0.26)';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.fillStyle = '#F6F5F2';
+            ctx.font = '950 26px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('+', cx, cy + 10);
+            ctx.textAlign = 'left';
+            ctx.restore();
+
+            // Names
+            ctx.fillStyle = 'rgba(246,245,242,0.92)';
+            ctx.font = '850 28px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(aName, leftX, cy + 190);
+            ctx.fillText(bName, rightX, cy + 190);
+            ctx.textAlign = 'left';
+        } else {
+            const name = sd && sd.name ? String(sd.name) : ((window.matchMeTheme && window.matchMeTheme.currentUser && window.matchMeTheme.currentUser.name) ? String(window.matchMeTheme.currentUser.name) : 'You');
+            const avatarUrl = sd && sd.avatarUrl ? String(sd.avatarUrl) : ((window.matchMeTheme && window.matchMeTheme.currentUser && window.matchMeTheme.currentUser.avatarUrl) ? String(window.matchMeTheme.currentUser.avatarUrl) : '');
+
+            const cx = cardX + cardW / 2;
+            const cy = cardY + 650;
+            const size = 320;
+
+            drawAvatarRing(ctx, cx, cy, size);
+            await loadImageToCanvas(ctx, avatarUrl, cx - size / 2, cy - size / 2, size, true);
+            drawNamePill(ctx, cx, cardY + 870, name);
+        }
+
+        // Logo (only branding)
+        const themeUrl = (window.matchMeTheme && window.matchMeTheme.themeUrl) ? String(window.matchMeTheme.themeUrl) : '';
+        const logoUrl = themeUrl ? `${themeUrl.replace(/\\/$/, '')}/assets/img/M2me.me-white.svg` : '';
+        if (logoUrl) {
+            await loadImageContain(ctx, logoUrl, padX, height - 164, 240, 70);
+        }
 
         return await new Promise((resolve, reject) => {
             canvas.toBlob((blob) => {
@@ -461,25 +542,167 @@
         });
     }
 
+    function drawBlob(ctx, x, y, r, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function drawGrain(ctx, w, h, count) {
+        const n = Math.max(0, Math.min(3000, count || 0));
+        ctx.save();
+        ctx.globalAlpha = 0.08;
+        ctx.fillStyle = '#F6F5F2';
+        for (let i = 0; i < n; i++) {
+            const x = Math.random() * w;
+            const y = Math.random() * h;
+            const s = Math.random() < 0.86 ? 1 : 2;
+            ctx.fillRect(x, y, s, s);
+        }
+        ctx.restore();
+    }
+
+    function drawPill(ctx, x, y, text) {
+        ctx.save();
+        ctx.font = '900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        const padX = 18;
+        const padY = 12;
+        const tw = ctx.measureText(text).width;
+        const w = tw + padX * 2;
+        const h = 24 + padY * 2;
+        roundRect(ctx, x, y - h + 6, w, h, h / 2);
+        ctx.fillStyle = 'rgba(246,245,242,0.16)';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(246,245,242,0.26)';
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(246,245,242,0.92)';
+        ctx.fillText(text, x + padX, y);
+        ctx.restore();
+    }
+
+    function drawGlassCard(ctx, x, y, w, h, r) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(11,18,32,0.26)';
+        ctx.shadowBlur = 28;
+        ctx.shadowOffsetY = 18;
+        roundRect(ctx, x, y, w, h, r);
+        ctx.fillStyle = 'rgba(246,245,242,0.10)';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(246,245,242,0.20)';
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawAvatarRing(ctx, cx, cy, size) {
+        ctx.save();
+        const r = size / 2;
+        ctx.shadowColor = 'rgba(11,18,32,0.22)';
+        ctx.shadowBlur = 26;
+        ctx.shadowOffsetY = 14;
+        ctx.beginPath(); ctx.arc(cx, cy, r + 18, 0, Math.PI * 2); ctx.closePath();
+        ctx.fillStyle = 'rgba(246,245,242,0.12)'; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(246,245,242,0.26)'; ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI * 2); ctx.closePath();
+        ctx.fillStyle = 'rgba(30,42,68,0.22)'; ctx.fill();
+        ctx.restore();
+    }
+
+    function drawNamePill(ctx, cx, y, name) {
+        ctx.save();
+        const text = String(name || '').trim() || 'You';
+        ctx.font = '950 32px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        const tw = ctx.measureText(text).width;
+        const w = Math.min(760, tw + 64);
+        const h = 84;
+        const x = cx - w / 2;
+        ctx.shadowColor = 'rgba(11,18,32,0.20)';
+        ctx.shadowBlur = 22;
+        ctx.shadowOffsetY = 14;
+        roundRect(ctx, x, y, w, h, 42);
+        ctx.fillStyle = 'rgba(246,245,242,0.92)';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.fillStyle = '#1E2A44';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, cx, y + 55);
+        ctx.textAlign = 'left';
+        ctx.restore();
+    }
+
+    async function loadImageContain(ctx, url, x, y, w, h) {
+        const u = String(url || '');
+        if (!u) return false;
+        return await new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                try {
+                    const iw = img.naturalWidth || w;
+                    const ih = img.naturalHeight || h;
+                    const scale = Math.min(w / iw, h / ih);
+                    const dw = iw * scale;
+                    const dh = ih * scale;
+                    const dx = x + (w - dw) / 2;
+                    const dy = y + (h - dh) / 2;
+                    ctx.drawImage(img, dx, dy, dw, dh);
+                    resolve(true);
+                } catch (e) {
+                    resolve(false);
+                }
+            };
+            img.onerror = () => resolve(false);
+            img.src = u;
+        });
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+        const rr = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+    }
+
     /**
      * Handle Instagram Stories sharing
      */
-    async function handleInstagramStoryShare(title, summary, shareUrl = '') {
-        if (!isMobileSharingContext()) {
-            showMessage('Instagram Story sharing is available only on mobile devices.', 'warning');
-            return;
-        }
+    async function handleInstagramStoryShareV2(data) {
+        const isMobile = isMobileSharingContext();
 
         let blob;
         try {
-            blob = await renderInstagramStoryPngBlob(title, summary, shareUrl);
+            blob = await renderInstagramStoryPngBlobV2(data);
         } catch (e) {
             console.error('Failed to render story image:', e);
             showMessage('Could not generate the story image. Please try again.', 'error');
             return;
         }
 
-        const file = new File([blob], 'quiz-story.png', { type: 'image/png' });
+        const file = new File([blob], 'm2me-story.png', { type: 'image/png' });
+
+        // Desktop/non-mobile: just download (keeps the same button everywhere).
+        if (!isMobile) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'm2me-story.png';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+            showMessage('Image downloaded. Upload it to Instagram Story and add a link sticker.', 'success');
+            return;
+        }
 
         // Attempt Web Share API if available
         const hasShareAPI =
@@ -490,17 +713,17 @@
         if (hasShareAPI) {
             try {
                 const shareData = {
-                    title: title,
+                    title: (data && data.title) ? String(data.title) : 'Quiz Results',
                     files: [file],
                 };
                 
                 // Add URL if available (some browsers/platforms support this)
-                if (shareUrl) {
-                    shareData.url = shareUrl;
+                if (data && data.shareUrl) {
+                    shareData.url = String(data.shareUrl);
                 }
                 
                 await navigator.share(shareData);
-                showMessage('Select Instagram in the share sheet, then choose Story. Add a link sticker with the comparison URL shown on the image.', 'success');
+                showMessage('Select Instagram in the share sheet, then choose Story. Add a link sticker with the link you’re sharing.', 'success');
                 return;
             } catch (error) {
                 // User cancelled - don't show error
@@ -522,7 +745,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'quiz-story.png';
+        a.download = 'm2me-story.png';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -544,7 +767,7 @@
             }
         }
 
-        showMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos. Then add a link sticker with the comparison URL shown on the image.', 'success');
+        showMessage('Story image downloaded. Instagram should open. If it didn\'t, open Instagram → Story → select it from your Photos. Then add a link sticker with the link you’re sharing.', 'success');
     }
 
     /**
@@ -576,17 +799,7 @@
         }, 5000);
     }
 
-    /**
-     * Show share URL input.
-     */
-    function showShareUrl(section, url) {
-        const display = section.querySelector('.share-url-display');
-        const input = section.querySelector('.share-url-input');
-        if (display && input) {
-            input.value = url;
-            display.style.display = 'block';
-        }
-    }
+    // (Share UI is fully button-based now; no URL input needed.)
 
     /**
      * Render compare section.
@@ -696,6 +909,14 @@
                     defaultKey: 'match',
                     instagramTitle: 'Comparison Result',
                     instagramSummary: `${nameB} + ${nameA}: ${matchScore}% match`,
+                    storyData: {
+                        headline: 'Match',
+                        bigValue: `${matchScore}%`,
+                        aName: nameA,
+                        bName: nameB,
+                        aAvatar: avatarA,
+                        bAvatar: avatarB,
+                    },
                 });
                 mount.appendChild(shareSection);
             }

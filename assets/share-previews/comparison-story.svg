@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E2A44"/>
+      <stop offset="0.45" stop-color="#6FAFB3"/>
+      <stop offset="1" stop-color="#8FAEA3"/>
+    </linearGradient>
+    <filter id="blur70" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="70"/>
+    </filter>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0B1220" flood-opacity="0.30"/>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <g filter="url(#blur70)" opacity="0.6">
+    <circle cx="220" cy="260" r="280" fill="rgba(246,245,242,0.20)"/>
+    <circle cx="880" cy="360" r="300" fill="rgba(111,175,179,0.26)"/>
+    <circle cx="720" cy="1120" r="380" fill="rgba(143,174,163,0.22)"/>
+  </g>
+
+  <g>
+    <rect x="80" y="104" width="250" height="56" rx="28" fill="rgba(246,245,242,0.16)" stroke="rgba(246,245,242,0.26)"/>
+    <text x="105" y="141" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="24" font-weight="900" fill="rgba(246,245,242,0.92)">QUIZ RESULTS</text>
+  </g>
+  <text x="80" y="258" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="62" font-weight="950" letter-spacing="-0.02em" fill="#F6F5F2">Comparison</text>
+  <text x="80" y="336" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="34" font-weight="750" fill="rgba(246,245,242,0.92)">Personality Type</text>
+
+  <g filter="url(#shadow)">
+    <rect x="70" y="520" width="940" height="980" rx="46" fill="rgba(246,245,242,0.10)" stroke="rgba(246,245,242,0.20)"/>
+  </g>
+  <text x="114" y="604" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="28" font-weight="850" fill="rgba(246,245,242,0.86)">Match</text>
+  <text x="114" y="716" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="110" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">87%</text>
+
+  <g>
+    <circle cx="325" cy="1022" r="178" fill="rgba(246,245,242,0.12)" stroke="rgba(246,245,242,0.26)" stroke-width="2"/>
+    <circle cx="325" cy="1022" r="166" fill="rgba(30,42,68,0.22)"/>
+    <text x="325" y="1050" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="110" font-weight="900" fill="#F6F5F2">A</text>
+    <text x="325" y="1218" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="26" font-weight="850" fill="rgba(246,245,242,0.92)">Alex</text>
+
+    <circle cx="755" cy="1022" r="178" fill="rgba(246,245,242,0.12)" stroke="rgba(246,245,242,0.26)" stroke-width="2"/>
+    <circle cx="755" cy="1022" r="166" fill="rgba(30,42,68,0.22)"/>
+    <text x="755" y="1050" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="110" font-weight="900" fill="#F6F5F2">L</text>
+    <text x="755" y="1218" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="26" font-weight="850" fill="rgba(246,245,242,0.92)">Lika</text>
+
+    <rect x="500" y="992" width="80" height="60" rx="30" fill="rgba(246,245,242,0.18)" stroke="rgba(246,245,242,0.26)"/>
+    <text x="540" y="1032" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="26" font-weight="950" fill="#F6F5F2">+</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="180" y="1388" width="720" height="84" rx="42" fill="rgba(246,245,242,0.92)"/>
+    <text x="540" y="1442" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="30" font-weight="950" fill="#1E2A44">Lika + Alex</text>
+  </g>
+
+  <image href="../img/M2me.me-white.svg" x="84" y="1766" width="210" height="60" preserveAspectRatio="xMinYMid meet" opacity="0.96"/>
+</svg>
+
+

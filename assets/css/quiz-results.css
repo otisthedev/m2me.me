@@ -105,44 +105,6 @@
   margin-bottom: var(--spacing-xl);
 }
 
-/* Unified share UI */
-.mm-share-selector {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin: 10px 0 12px;
-}
-
-.mm-share-type {
-    border-radius: 999px;
-    border: 1px solid rgba(30, 42, 68, 0.14);
-    background: rgba(255, 255, 255, 0.55);
-    color: var(--color-text);
-    padding: 8px 12px;
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-
-.mm-share-type.is-active {
-    background: rgba(30, 42, 68, 0.08);
-    border-color: rgba(30, 42, 68, 0.28);
-    color: var(--color-primary);
-}
-
-.share-url-display {
-    margin-top: 10px;
-}
-
-.share-url-input {
-    width: 100%;
-    min-height: 44px;
-    border-radius: 12px;
-    border: 1px solid rgba(30, 42, 68, 0.12);
-    padding: 0 12px;
-    background: rgba(255, 255, 255, 0.70);
-    color: var(--color-text);
-}
-
 .match-me-share-section h3 {
   font-size: 1.125rem;
   font-weight: 400;
@@ -198,52 +160,13 @@
   transform: translateY(0);
 }
 
-/* Hide Instagram button on desktop */
-@media (min-width: 901px) {
-  .btn-share-instagram {
-    display: none !important;
-  }
-}
-
-.share-url-display {
-  margin-top: var(--spacing-md);
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.share-url-input {
-  flex: 1;
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: 0.875rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: inherit;
-}
-
-.share-url-input:focus {
-  outline: none;
-  border-color: var(--color-text-light);
-}
-
-.btn-copy-url {
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: 0.875rem;
-  color: var(--color-text);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  min-height: 44px;
-  white-space: nowrap;
-  transition: var(--transition);
-  font-weight: 500;
-}
-
-.btn-copy-url:hover {
-  background: var(--color-bg-subtle);
-  border-color: var(--color-primary);
+/* Share buttons: only 3 buttons everywhere (story image + two links) */
+.btn-share-view:disabled,
+.btn-share-compare:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* Compare Section */

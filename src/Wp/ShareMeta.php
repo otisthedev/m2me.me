@@ -159,6 +159,24 @@ final class ShareMeta
                 ? home_url('/match/' . rawurlencode($comparisonToken) . '/')
                 : home_url('/result/' . rawurlencode($token) . '/'));
 
+        // Prefer our dynamic share image endpoint (SVG). Fall back to avatar/site icon if needed.
+        // Mode mapping:
+        // - view/compare -> result image (based on mm_share_token)
+        // - match -> match image (based on mm_comparison_token)
+        $imgMode = ($mode === 'match') ? 'match' : 'result';
+        $imgToken = ($mode === 'match') ? $comparisonToken : $token;
+        if ($imgToken !== '') {
+            $image = add_query_arg(
+                [
+                    'mm_share_image' => '1',
+                    'mode' => $imgMode,
+                    'token' => $imgToken,
+                    'size' => 'og',
+                ],
+                home_url('/')
+            );
+        }
+
         if ($mode === 'compare') {
             $title = 'Compare with ' . $ownerName . ' — ' . $quizTitle;
             $description = 'Take the quiz to compare your results with ' . $ownerName . '.';
