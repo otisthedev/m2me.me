@@ -99,6 +99,13 @@ final class Theme
     {
         wp_enqueue_style('match-me-theme', get_stylesheet_uri(), [], $this->config->themeVersion());
         wp_enqueue_script('match-me-theme', get_template_directory_uri() . '/assets/js/theme.js', [], $this->config->themeVersion(), true);
+
+        $vars = [
+            'homeUrl' => home_url('/'),
+            'restUrl' => esc_url_raw(rest_url()),
+            'restNonce' => wp_create_nonce('wp_rest'),
+        ];
+        wp_add_inline_script('match-me-theme', 'window.matchMeTheme=' . wp_json_encode($vars) . ';', 'before');
     }
 
     public function registerCustomizer(\WP_Customize_Manager $wpCustomize): void

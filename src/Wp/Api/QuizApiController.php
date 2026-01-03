@@ -20,6 +20,8 @@ final class QuizApiController
     private const RATE_LIMIT_KEY_PREFIX = 'match_me_compare_';
     private const RATE_LIMIT_MAX = 10;
     private const RATE_LIMIT_WINDOW = 3600; // 1 hour
+    private const NOTIFICATIONS_LAST_SEEN_META = 'match_me_last_seen_comparison_ts';
+    private const EMAIL_NOTIFY_META = 'match_me_email_compare_notify'; // optional future opt-out
 
     public function __construct(
         private QuizJsonRepository $quizRepository,
@@ -99,6 +101,102 @@ final class QuizApiController
                 ],
             ],
         ]);
+
+        register_rest_route(self::NAMESPACE, '/notifications/comparisons', [
+            'methods' => 'GET',
+            'callback' => [$this, 'getComparisonNotifications'],
+            'permission_callback' => fn(\WP_REST_Request $r) => is_user_logged_in() && $this->hasRestNonce($r),
+        ]);
+
+        register_rest_route(self::NAMESPACE, '/notifications/comparisons/seen', [
+            'methods' => 'POST',
+            'callback' => [$this, 'markComparisonNotificationsSeen'],
+            'permission_callback' => fn(\WP_REST_Request $r) => is_user_logged_in() && $this->hasRestNonce($r),
+        ]);
+    }
+
+    private function hasRestNonce(\WP_REST_Request $request): bool
+    {
+        $nonce = (string) $request->get_header('X-WP-Nonce');
+        if ($nonce === '') {
+            return false;
+        }
+        return (bool) wp_verify_nonce($nonce, 'wp_rest');
+    }
+
+    /**
+     * GET /wp-json/match-me/v1/notifications/comparisons
+     */
+    public function getComparisonNotifications(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $userId = (int) get_current_user_id();
+        $lastSeen = (int) get_user_meta($userId, self::NOTIFICATIONS_LAST_SEEN_META, true);
+        $limit = (int) $request->get_param('limit');
+        if ($limit <= 0) {
+            $limit = 10;
+        }
+        $limit = max(1, min(20, $limit));
+
+        $rows = $this->comparisonRepository->latestForOwnerUser($userId, $limit, $lastSeen);
+
+        $items = [];
+        $nowTs = (int) current_time('timestamp');
+        foreach ($rows as $row) {
+            $viewerId = isset($row['viewer_user_id']) ? (int) $row['viewer_user_id'] : 0;
+            $name = 'Someone';
+            $avatar = '';
+            if ($viewerId > 0) {
+                $u = get_user_by('id', $viewerId);
+                if ($u instanceof \WP_User) {
+                    $first = (string) get_user_meta($viewerId, 'first_name', true);
+                    $name = $first !== '' ? $first : (string) ($u->display_name ?: $name);
+                    $avatar = (string) get_avatar_url($viewerId, ['size' => 128]);
+                }
+            }
+
+            $createdAt = (string) ($row['created_at'] ?? '');
+            $createdTs = $createdAt !== '' ? (int) strtotime($createdAt) : 0;
+            $ago = $createdTs > 0 ? human_time_diff($createdTs, $nowTs) . ' ago' : '';
+
+            $shareToken = (string) ($row['share_token'] ?? '');
+            if ($shareToken === '') {
+                continue;
+            }
+
+            $items[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'viewer' => [
+                    'id' => $viewerId,
+                    'name' => $name,
+                    'avatar_url' => $avatar,
+                ],
+                'match_score' => (float) ($row['match_score'] ?? 0.0),
+                'created_at' => $createdAt,
+                'ago' => $ago,
+                'share_url' => home_url('/match/' . $shareToken . '/'),
+            ];
+        }
+
+        return new \WP_REST_Response([
+            'unseen_count' => count($items),
+            'items' => $items,
+            'last_seen_ts' => $lastSeen,
+        ], 200);
+    }
+
+    /**
+     * POST /wp-json/match-me/v1/notifications/comparisons/seen
+     */
+    public function markComparisonNotificationsSeen(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $userId = (int) get_current_user_id();
+        $now = (int) current_time('timestamp');
+        update_user_meta($userId, self::NOTIFICATIONS_LAST_SEEN_META, $now);
+
+        return new \WP_REST_Response([
+            'success' => true,
+            'last_seen_ts' => $now,
+        ], 200);
     }
 
     /**
@@ -517,6 +615,19 @@ final class QuizApiController
                 $quizVersionA
             );
 
+            // Email the owner of result A (the shared result) that someone compared with them.
+            $this->sendComparisonEmailNotification(
+                $ownerIdA,
+                [
+                    'viewer_id' => (int) ($viewer['id'] ?? 0),
+                    'viewer_name' => (string) ($viewer['name'] ?? 'Someone'),
+                    'viewer_avatar_url' => (string) ($viewer['avatar_url'] ?? ''),
+                ],
+                (float) ($matchResult['match_score'] ?? 0.0),
+                home_url('/match/' . $comparisonShareToken . '/'),
+                (string) $quizTitle
+            );
+
             return new \WP_REST_Response([
                 'comparison_id' => $comparisonId,
                 'comparison_share_token' => $comparisonShareToken,
@@ -544,6 +655,167 @@ final class QuizApiController
         } catch (\Throwable $e) {
             return new \WP_Error('server_error', 'An unexpected error occurred', ['status' => 500]);
         }
+    }
+
+    /**
+     * Send an HTML email to the owner when someone compares with their shared result.
+     *
+     * @param int $ownerUserId
+     * @param array{viewer_id:int,viewer_name:string,viewer_avatar_url:string} $viewer
+     * @param float $matchScore
+     * @param string $matchUrl
+     * @param string $quizTitle
+     */
+    private function sendComparisonEmailNotification(int $ownerUserId, array $viewer, float $matchScore, string $matchUrl, string $quizTitle): void
+    {
+        $ownerUserId = (int) $ownerUserId;
+        if ($ownerUserId <= 0) {
+            return;
+        }
+
+        // Don't email if the owner compared with themselves.
+        if (isset($viewer['viewer_id']) && (int) $viewer['viewer_id'] === $ownerUserId) {
+            return;
+        }
+
+        $owner = get_user_by('id', $ownerUserId);
+        if (!$owner instanceof \WP_User) {
+            return;
+        }
+
+        $to = (string) $owner->user_email;
+        if ($to === '') {
+            return;
+        }
+        // Don't send to known placeholder emails (e.g., Instagram pseudo-email).
+        if (str_contains($to, '@instagram.invalid')) {
+            return;
+        }
+        // Some providers may create accounts with placeholder emails; respect that marker too.
+        if ((string) get_user_meta($ownerUserId, 'has_placeholder_email', true) === 'true') {
+            return;
+        }
+
+        // Optional future opt-out support. Default: send.
+        $pref = get_user_meta($ownerUserId, self::EMAIL_NOTIFY_META, true);
+        if (is_string($pref) && $pref !== '' && $pref === 'off') {
+            return;
+        }
+
+        $siteName = (string) get_bloginfo('name');
+        $viewerName = (string) ($viewer['viewer_name'] ?? 'Someone');
+        $viewerAvatar = (string) ($viewer['viewer_avatar_url'] ?? '');
+        $matchPct = (int) round(max(0.0, min(100.0, $matchScore)));
+
+        $subject = sprintf('%s compared with you — %d%% match', $viewerName, $matchPct);
+        if ($siteName !== '') {
+            $subject .= ' • ' . $siteName;
+        }
+
+        $html = $this->buildComparisonEmailHtml([
+            'site_name' => $siteName,
+            'viewer_name' => $viewerName,
+            'viewer_avatar_url' => $viewerAvatar,
+            'match_pct' => $matchPct,
+            'match_url' => $matchUrl,
+            'quiz_title' => $quizTitle,
+        ]);
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+        ];
+
+        // Best-effort: don't fail the API call if email sending fails.
+        try {
+            wp_mail($to, $subject, $html, $headers);
+        } catch (\Throwable) {
+            // ignore
+        }
+    }
+
+    /**
+     * @param array{site_name:string,viewer_name:string,viewer_avatar_url:string,match_pct:int,match_url:string,quiz_title:string} $data
+     */
+    private function buildComparisonEmailHtml(array $data): string
+    {
+        $siteName = esc_html((string) ($data['site_name'] ?? ''));
+        $viewerName = esc_html((string) ($data['viewer_name'] ?? 'Someone'));
+        $avatar = (string) ($data['viewer_avatar_url'] ?? '');
+        $avatarEsc = $avatar !== '' ? esc_url($avatar) : '';
+        $matchPct = (int) ($data['match_pct'] ?? 0);
+        $matchUrl = esc_url((string) ($data['match_url'] ?? home_url('/')));
+        $quizTitle = esc_html((string) ($data['quiz_title'] ?? 'Quiz'));
+
+        $preheader = esc_html($viewerName . ' did a comparison with you. See your match and the full breakdown.');
+
+        $brand = '#1E2A44';
+        $bg = '#F6F5F2';
+        $card = '#FFFFFF';
+        $muted = '#6B7280';
+        $border = 'rgba(30,42,68,0.12)';
+
+        $avatarBlock = $avatarEsc !== ''
+            ? '<img src="' . $avatarEsc . '" width="48" height="48" style="display:block;width:48px;height:48px;border-radius:999px;object-fit:cover;" alt="">'
+            : '<div style="width:48px;height:48px;border-radius:999px;background:rgba(30,42,68,0.08);display:flex;align-items:center;justify-content:center;font-weight:800;color:' . $brand . ';">' . esc_html(mb_substr((string) ($data['viewer_name'] ?? 'S'), 0, 1)) . '</div>';
+
+        return '<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>' . $viewerName . ' compared with you</title>
+</head>
+<body style="margin:0;padding:0;background:' . $bg . ';font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Inter,Arial,sans-serif;color:#2B2E34;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">' . $preheader . '</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:' . $bg . ';padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:600px;max-width:92vw;">
+          <tr>
+            <td style="padding:0 12px 12px 12px;">
+              <div style="font-weight:800;letter-spacing:-0.01em;color:' . $brand . ';font-size:16px;">' . ($siteName !== '' ? $siteName : 'm2me.me') . '</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:' . $card . ';border:1px solid ' . $border . ';border-radius:18px;box-shadow:0 18px 46px rgba(30,42,68,0.12);padding:18px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="vertical-align:top;width:56px;">' . $avatarBlock . '</td>
+                  <td style="vertical-align:top;padding-left:12px;">
+                    <div style="font-size:18px;line-height:1.2;font-weight:900;letter-spacing:-0.02em;color:' . $brand . ';">' . $viewerName . ' did a comparison with you</div>
+                    <div style="margin-top:6px;color:' . $muted . ';font-size:13px;line-height:1.35;">' . $quizTitle . '</div>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="margin-top:16px;padding:14px;border-radius:16px;background:rgba(143,174,163,0.10);border:1px solid rgba(143,174,163,0.25);">
+                <div style="font-size:13px;color:' . $muted . ';margin-bottom:6px;">Your match score</div>
+                <div style="font-size:32px;font-weight:900;letter-spacing:-0.02em;color:' . $brand . ';">' . (int) $matchPct . '%</div>
+              </div>
+
+              <div style="margin-top:16px;">
+                <a href="' . $matchUrl . '" style="display:inline-block;background:' . $brand . ';color:#F6F5F2;text-decoration:none;padding:12px 16px;border-radius:999px;font-weight:800;">
+                  Check full result
+                </a>
+              </div>
+
+              <div style="margin-top:14px;color:' . $muted . ';font-size:12px;line-height:1.4;">
+                If the button doesn’t work, copy this link:<br>
+                <a href="' . $matchUrl . '" style="color:' . $brand . ';text-decoration:underline;">' . $matchUrl . '</a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px;color:' . $muted . ';font-size:12px;line-height:1.4;">
+              You’re receiving this because someone used your shared comparison link.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>';
     }
 
     /**

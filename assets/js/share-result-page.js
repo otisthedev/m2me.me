@@ -39,12 +39,10 @@
           return;
         }
 
+        const base = (window.matchMeTheme && window.matchMeTheme.homeUrl) ? String(window.matchMeTheme.homeUrl).replace(/\/+$/, '') : '';
         const quizSlug = String(result.quiz_slug || '').trim();
-        const quizUrl = quizSlug
-          ? `/${encodeURIComponent(quizSlug)}/?compare_token=${encodeURIComponent(
-              String(token)
-            )}`
-          : `/?compare_token=${encodeURIComponent(String(token))}`;
+        const quizPath = quizSlug ? `/${encodeURIComponent(quizSlug)}/` : `/`;
+        const quizUrl = `${base}${quizPath}?compare_token=${encodeURIComponent(String(token))}`;
 
         root.innerHTML = `
           <div class="match-me-compare-section">

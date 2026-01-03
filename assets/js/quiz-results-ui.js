@@ -32,7 +32,17 @@
 
         // Share section
         if (result.share_token) {
-            const shareSection = renderShareSection(result.share_token, result.share_urls, result);
+            const shareSection = renderUnifiedShareSection({
+                kind: 'result',
+                title: 'Share',
+                urls: {
+                    view: (result.share_urls && result.share_urls.view) ? String(result.share_urls.view) : '',
+                    compare: (result.share_urls && result.share_urls.compare) ? String(result.share_urls.compare) : '',
+                },
+                defaultKey: 'compare',
+                instagramTitle: String(result.quiz_title || 'Quiz Results'),
+                instagramSummary: String(result.textual_summary_short || result.textual_summary || 'My quiz results'),
+            });
             container.appendChild(shareSection);
         }
     }
@@ -79,7 +89,7 @@
      * - bullet lines starting with "- "
      */
     function renderLongSummary(text) {
-        const raw = String(text || '').trim();
+        const raw = normalizeNarrativeText(String(text || '')).trim();
         if (!raw) return `<p>${escapeHtml('Quiz completed successfully.')}</p>`;
 
         const paragraphs = raw.split(/\n\s*\n/);
@@ -115,80 +125,177 @@
     }
 
     /**
-     * Render share section.
+     * Normalize narrative text produced by generators so it reads more human:
+     * - Remove separator-only lines like "---"
+     * - Normalize bullet prefixes (•, ·, "--") to "- "
+     * - Trim stray dash spam
      */
-    function renderShareSection(shareToken, shareUrls, result) {
+    function normalizeNarrativeText(input) {
+        const s = String(input || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const lines = s.split('\n');
+        const out = [];
+
+        for (let line of lines) {
+            line = String(line || '').trimEnd();
+            if (!line.trim()) {
+                out.push('');
+                continue;
+            }
+
+            const t = line.trim();
+
+            // Drop pure separator lines like "---", "— — —", "--", etc.
+            if (/^[-–—]{2,}$/.test(t)) continue;
+            if (/^[-–—](\s+[-–—]){1,}$/.test(t)) continue;
+
+            // Normalize common bullet prefixes into "- "
+            // e.g., "-- item", "- - item", "• item", "· item", "— item"
+            if (/^(?:--+|\-\s*\-+)\s+/.test(t)) {
+                out.push('- ' + t.replace(/^(?:--+|\-\s*\-+)\s+/, ''));
+                continue;
+            }
+            if (/^[•·]\s+/.test(t)) {
+                out.push('- ' + t.replace(/^[•·]\s+/, ''));
+                continue;
+            }
+            if (/^[–—]\s+/.test(t)) {
+                out.push('- ' + t.replace(/^[–—]\s+/, ''));
+                continue;
+            }
+
+            // Fix "- - item" specifically
+            if (/^-\s*-\s+/.test(t)) {
+                out.push('- ' + t.replace(/^-\s*-\s+/, ''));
+                continue;
+            }
+
+            // Keep the line as-is (but trim trailing whitespace)
+            out.push(line);
+        }
+
+        // Collapse 3+ blank lines into max 2
+        return out.join('\n').replace(/\n{3,}/g, '\n\n');
+    }
+
+    /**
+     * Unified share section for results + comparisons (same buttons everywhere).
+     *
+     * Buttons are consistent:
+     * - Instagram Story (mobile only)
+     * - Share (Web Share API fallback to copy)
+     * - Copy link
+     *
+     * If multiple link types exist (e.g., view/compare), user can toggle which link is used.
+     */
+    function renderUnifiedShareSection(opts) {
         const section = document.createElement('div');
         section.className = 'match-me-share-section';
-        
-        const isMobile = isMobileSharingContext();
-        // For Instagram Story we want the compare link (so viewers can take the quiz + see comparison),
-        // not the view-only result link.
-        const compareUrl = shareUrls?.compare || '';
-        const instagramButton = isMobile ? `
-            <button class="btn-share-instagram" data-quiz-title="${escapeHtml(result.quiz_title || 'Quiz Results')}" data-summary="${escapeHtml(result.textual_summary_short || result.textual_summary || 'My quiz results')}" data-url="${escapeHtml(compareUrl)}">
-                Share to Instagram Story
-            </button>
-        ` : '';
-        
-        section.innerHTML = `
-            <h3>Share Your Results</h3>
-            <div class="share-buttons">
-                ${instagramButton}
-                <button class="btn-share-view" data-url="${shareUrls?.view || ''}">
-                    Share View Link
-                </button>
-                <button class="btn-share-compare" data-url="${shareUrls?.compare || ''}">
-                    Share Compare Link
-                </button>
+
+        const kind = opts && opts.kind ? String(opts.kind) : 'result';
+        const title = opts && opts.title ? String(opts.title) : 'Share';
+        const urls = (opts && opts.urls && typeof opts.urls === 'object') ? opts.urls : {};
+        const defaultKey = opts && opts.defaultKey ? String(opts.defaultKey) : Object.keys(urls)[0];
+        const instagramTitle = opts && opts.instagramTitle ? String(opts.instagramTitle) : 'Quiz Results';
+        const instagramSummary = opts && opts.instagramSummary ? String(opts.instagramSummary) : '';
+
+        const keys = Object.keys(urls).filter(k => urls[k]);
+        const hasMultiple = keys.length > 1;
+        let currentKey = keys.includes(defaultKey) ? defaultKey : (keys[0] || '');
+
+        const labelFor = (k) => {
+            if (k === 'compare') return 'Compare link';
+            if (k === 'view') return 'Result link';
+            if (k === 'match') return 'Match link';
+            return 'Link';
+        };
+
+        const currentUrl = () => (currentKey && urls[currentKey]) ? String(urls[currentKey]) : '';
+
+        const selectorHtml = hasMultiple ? `
+            <div class="mm-share-selector" role="group" aria-label="Select link type">
+                ${keys.map(k => `
+                    <button type="button" class="mm-share-type ${k === currentKey ? 'is-active' : ''}" data-mm-share-type="${escapeHtml(k)}">
+                        ${escapeHtml(labelFor(k))}
+                    </button>
+                `).join('')}
             </div>
-            <div class="share-url-display" style="display: none;">
-                <input type="text" readonly class="share-url-input">
-                <button class="btn-copy-url">Copy</button>
+        ` : '';
+
+        section.innerHTML = `
+            <h3>${escapeHtml(title)}</h3>
+            ${selectorHtml}
+            <div class="share-buttons">
+                ${isMobileSharingContext() ? `<button type="button" class="btn-share-instagram">Share to Instagram Story</button>` : ''}
+                <button type="button" class="btn-share-native">Share</button>
+                <button type="button" class="btn-share-copy">Copy link</button>
+            </div>
+            <div class="share-url-display">
+                <input type="text" readonly class="share-url-input" value="${escapeHtml(currentUrl())}">
             </div>
         `;
 
-        // Add event listeners
-        section.querySelectorAll('.btn-share-view, .btn-share-compare').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const url = this.getAttribute('data-url');
-                showShareUrl(section, url);
-            });
-        });
+        const input = section.querySelector('.share-url-input');
+        const updateInput = () => { if (input) input.value = currentUrl(); };
 
-        const copyBtn = section.querySelector('.btn-copy-url');
+        if (hasMultiple) {
+            section.querySelectorAll('[data-mm-share-type]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const k = String(this.getAttribute('data-mm-share-type') || '');
+                    if (!k || !urls[k]) return;
+                    currentKey = k;
+                    section.querySelectorAll('[data-mm-share-type]').forEach(b => b.classList.remove('is-active'));
+                    this.classList.add('is-active');
+                    updateInput();
+                });
+            });
+        }
+
+        const copyBtn = section.querySelector('.btn-share-copy');
         if (copyBtn) {
-            copyBtn.addEventListener('click', function() {
-                const input = section.querySelector('.share-url-input');
-                if (input) {
-                    const url = input.value || '';
-                    const doCopy = async () => {
-                        const ok = window.MatchMeClipboard && typeof window.MatchMeClipboard.writeText === 'function'
-                            ? await window.MatchMeClipboard.writeText(url)
-                            : false;
-                        if (!ok) {
-                            // Last resort: select text for manual copy.
-                            input.focus();
-                            input.select();
-                        }
-                        this.textContent = ok ? 'Copied!' : 'Select + copy';
-                        setTimeout(() => {
-                            this.textContent = 'Copy';
-                        }, 2000);
-                    };
-                    doCopy();
+            copyBtn.addEventListener('click', async function() {
+                const u = currentUrl();
+                if (!u) return;
+                try {
+                    await copyToClipboard(u);
+                    showMessage('Link copied!', 'success');
+                } catch (e) {
+                    if (input) {
+                        input.focus();
+                        input.select();
+                    }
+                    showMessage('Select and copy the link.', 'warning');
                 }
             });
         }
 
-        // Add Instagram Stories sharing handler
+        const shareBtn = section.querySelector('.btn-share-native');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', async function() {
+                const u = currentUrl();
+                if (!u) return;
+                try {
+                    if (navigator.share) {
+                        const shareTitle = kind === 'match' ? 'Comparison Result' : 'Quiz Results';
+                        const text = kind === 'match'
+                            ? (instagramSummary || 'Comparison result')
+                            : (instagramSummary || 'My quiz results');
+                        await navigator.share({ title: shareTitle, text, url: u });
+                    } else {
+                        await copyToClipboard(u);
+                        showMessage('Link copied. Paste it anywhere to share.', 'success');
+                    }
+                } catch (e) {
+                    showMessage('Could not share. Try copying the link instead.', 'warning');
+                }
+            });
+        }
+
         const instagramBtn = section.querySelector('.btn-share-instagram');
         if (instagramBtn) {
             instagramBtn.addEventListener('click', async function() {
-                const title = this.getAttribute('data-quiz-title') || 'Quiz Results';
-                const summary = this.getAttribute('data-summary') || 'My quiz results';
-                const shareUrl = this.getAttribute('data-url') || '';
-                await handleInstagramStoryShare(title, summary, shareUrl);
+                const u = currentUrl();
+                if (!u) return;
+                await handleInstagramStoryShare(instagramTitle, instagramSummary, u);
             });
         }
 
@@ -564,16 +671,7 @@
                 </div>
               </div>
             ` : ''}
-            ${shareUrl ? `
-              <div class="match-me-share-section">
-                <h3>Share comparison</h3>
-                <div class="share-buttons">
-                  ${isMobileSharingContext() ? `<button class="btn-share-instagram" data-quiz-title="Comparison Result" data-summary="${escapeHtml(`${nameB} + ${nameA}: ${matchScore}% match`)}" data-url="${escapeHtml(shareUrl)}">Share to Instagram Story</button>` : ''}
-                  <button class="btn-share-view" data-mm-share="match">Share</button>
-                  <button class="btn-share-compare" data-mm-copy="${escapeHtml(shareUrl)}">Copy link</button>
-                </div>
-              </div>
-            ` : ''}
+            <div class="mm-share-mount"></div>
             ${matchResult.you_result && matchResult.you_result.trait_summary ? `
               <div class="match-me-result-summary">
                 <h2>Your Results</h2>
@@ -588,48 +686,19 @@
         `;
         container.appendChild(matchEl);
 
-        const shareBtn = container.querySelector('[data-mm-share="match"]');
-        if (shareBtn && shareUrl) {
-            shareBtn.addEventListener('click', async () => {
-                try {
-                    if (navigator.share) {
-                        await navigator.share({
-                            title: `Match result: ${matchScore}%`,
-                            text: `${nameB} and ${nameA} match ${matchScore}%`,
-                            url: shareUrl
-                        });
-                    } else {
-                        await copyToClipboard(shareUrl);
-                        showMessage('Link copied. Paste it anywhere to share.', 'success');
-                    }
-                } catch (e) {
-                    showMessage('Could not share. Try copying the link instead.', 'warning');
-                }
-            });
-        }
-
-        const copyBtn = container.querySelector('[data-mm-copy]');
-        if (copyBtn) {
-            copyBtn.addEventListener('click', async () => {
-                const u = copyBtn.getAttribute('data-mm-copy') || '';
-                if (!u) return;
-                try {
-                    await copyToClipboard(u);
-                    showMessage('Link copied!', 'success');
-                } catch (e) {
-                    showMessage('Could not copy link.', 'warning');
-                }
-            });
-        }
-
-        const instagramBtn = container.querySelector('.btn-share-instagram');
-        if (instagramBtn) {
-            instagramBtn.addEventListener('click', async function() {
-                const title = this.getAttribute('data-quiz-title') || 'Comparison Result';
-                const summary = this.getAttribute('data-summary') || `${nameB} + ${nameA}: ${matchScore}% match`;
-                const url = this.getAttribute('data-url') || '';
-                await handleInstagramStoryShare(title, summary, url);
-            });
+        if (shareUrl) {
+            const mount = container.querySelector('.mm-share-mount');
+            if (mount) {
+                const shareSection = renderUnifiedShareSection({
+                    kind: 'match',
+                    title: 'Share',
+                    urls: { match: shareUrl },
+                    defaultKey: 'match',
+                    instagramTitle: 'Comparison Result',
+                    instagramSummary: `${nameB} + ${nameA}: ${matchScore}% match`,
+                });
+                mount.appendChild(shareSection);
+            }
         }
     }
 

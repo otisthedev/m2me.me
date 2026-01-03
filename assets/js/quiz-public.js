@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const DEBUG = Boolean(window.matchMeDebug);
     // --- Configuration & Constants ---
     const SELECTORS = {
         quizContainer: '.cq-quiz-container',
@@ -331,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.previousResultsContainer.style.display = 'block';
             ensureShareUi(elements.previousResultsContainer);
         } else {
-            console.warn('Previous results container not found.');
+            if (DEBUG) console.warn('Previous results container not found.');
             startQuizFlow(); // Fallback to starting quiz if container missing
         }
     }
@@ -429,7 +430,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // This case should ideally be prevented by disabling the button,
             // but added as a fallback.
             showWarningMessage('Please select an answer before proceeding.');
-            console.warn('Next clicked without a selected answer.');
         }
     }
 
@@ -459,15 +459,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     text: pageDescription,
                     url: finalURL
                 });
-                console.log('Content shared successfully');
             } catch (error) {
                 // Handle share cancellation or error - often user cancelling is not an error we need to show
                 if (error.name !== 'AbortError') {
                      console.error('Error sharing:', error);
                      // Fallback to copy if share API fails unexpectedly
                      copyToClipboard(finalURL, 'Sharing failed. Link copied instead!');
-                } else {
-                    console.log('Share cancelled by user.');
                 }
             }
         } else {
@@ -827,7 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const redirectTo = state.resultURL || window.location.href;
             window.location.href = `${window.location.origin}/?google_auth=1&redirect_to=${encodeURIComponent(redirectTo)}`;
         } else {
-            console.warn('Cannot redirect to Google Login: Result URL not available.');
+            if (DEBUG) console.warn('Cannot redirect to Google Login: Result URL not available.');
             showErrorMessage('Could not prepare login redirect. Please try finishing the quiz again.');
         }
     }
@@ -837,7 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const redirectTo = state.resultURL || window.location.href;
             window.location.href = `${window.location.origin}/?facebook_auth=1&redirect_to=${encodeURIComponent(redirectTo)}`;
         } else {
-            console.warn('Cannot redirect to Facebook Login: Result URL not available.');
+            if (DEBUG) console.warn('Cannot redirect to Facebook Login: Result URL not available.');
             showErrorMessage('Could not prepare login redirect. Please try finishing the quiz again.');
         }
     }
@@ -846,11 +843,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function evaluateCondition(rule, scores) {
         // Basic validation
         if (!rule || typeof rule.indicator === 'undefined' || typeof rule.operator === 'undefined' || typeof rule.value === 'undefined') {
-            console.warn('Invalid rule format:', rule);
+            if (DEBUG) console.warn('Invalid rule format:', rule);
             return false;
         }
         if (typeof scores[rule.indicator] === 'undefined') {
-             console.warn(`Indicator ${rule.indicator} not found in scores.`);
+             if (DEBUG) console.warn(`Indicator ${rule.indicator} not found in scores.`);
              return false; // Cannot evaluate if indicator score is missing
         }
 
@@ -860,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check for NaN after conversion
         if (isNaN(indicatorValue) || isNaN(comparisonValue)) {
-             console.warn('Invalid numeric values for comparison:', rule, scores[rule.indicator]);
+             if (DEBUG) console.warn('Invalid numeric values for comparison:', rule, scores[rule.indicator]);
              return false;
         }
 
@@ -873,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case '=':  // Allow '=' as an alias for '=='
                 return indicatorValue === comparisonValue;
             default:
-                console.warn(`Unsupported operator: ${rule.operator}`);
+                if (DEBUG) console.warn(`Unsupported operator: ${rule.operator}`);
                 return false;
         }
     }
@@ -889,7 +886,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check if 'every' or 'some' exists on the rules array
         if (typeof conditionGroup.rules[method] !== 'function') {
-            console.warn(`Invalid operator or rules format in condition group:`, conditionGroup);
+            if (DEBUG) console.warn(`Invalid operator or rules format in condition group:`, conditionGroup);
             return false; // Cannot process if the structure is wrong
         }
 
@@ -1031,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     state.resultURL = data.data.result_url;
                 } else {
                     // Fallback: construct URL client-side if server didn't provide it
-                    console.warn('Server did not provide result_url, falling back to client-side construction');
+                    if (DEBUG) console.warn('Server did not provide result_url, falling back to client-side construction');
                     const currentUrl = window.location.href;
                     const urlParts = currentUrl.split('/');
                     const lastPart = urlParts[urlParts.length - 2];
@@ -1127,14 +1124,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.startBtn) {
             elements.startBtn.addEventListener('click', handleStartQuiz);
         } else {
-            console.warn('Start button not found.');
+            if (DEBUG) console.warn('Start button not found.');
         }
 
         // Next button
         if (elements.nextBtn) {
             elements.nextBtn.addEventListener('click', handleNextQuestion);
         } else {
-            console.warn('Next button not found.');
+            if (DEBUG) console.warn('Next button not found.');
         }
 
         // Retake button (if exists)

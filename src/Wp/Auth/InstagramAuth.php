@@ -77,7 +77,7 @@ final class InstagramAuth
                 'response_type' => 'code',
                 'state' => $state,
             ]);
-            wp_redirect($authUrl);
+            wp_safe_redirect($authUrl);
             exit;
         }
 

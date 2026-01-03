@@ -10,7 +10,7 @@ $mode = ($mode === 'compare') ? 'compare' : (($mode === 'match') ? 'match' : 'vi
 ?>
 
 <main id="main" class="site-main">
-    <div class="mm-share-result container" style="max-width: 720px;">
+    <div class="mm-share-result container mm-page mm-page-720">
         <?php if ($mode === 'match') : ?>
             <h1>Comparison Result</h1>
             <p>Your match breakdown.</p>

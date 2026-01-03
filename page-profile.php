@@ -16,7 +16,7 @@ get_header();
 
 ?>
 
-<main class="mm-profile container" style="max-width: 900px;">
+<main class="mm-profile container mm-page mm-page-900">
     <h1>My Profile</h1>
 
     <?php if (!is_user_logged_in()) : ?>
@@ -33,6 +33,8 @@ get_header();
         $currentFirst = (string) get_user_meta($userId, 'first_name', true);
         $currentLast = (string) get_user_meta($userId, 'last_name', true);
         $currentPic = (string) get_user_meta($userId, 'profile_picture', true);
+        $emailNotifyPref = (string) get_user_meta($userId, 'match_me_email_compare_notify', true);
+        $emailNotifyOn = $emailNotifyPref !== 'off';
 
         $config = Container::config();
         $wpdb = Container::wpdb();
@@ -59,41 +61,41 @@ get_header();
         ?>
 
         <?php if (isset($_GET['updated']) && (string) $_GET['updated'] === '1') : ?>
-            <div class="mm-profile-notice" style="margin: 12px 0; padding: 12px; border: 1px solid var(--color-border,#e5e5e5); border-radius: 10px;">
+            <div class="mm-profile-notice">
                 Profile updated.
             </div>
         <?php endif; ?>
 
-        <section style="margin-top: 1.25rem; margin-bottom: 2rem;">
+        <section class="mm-section mm-mb-lg">
             <h2>Profile details</h2>
 
-            <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom: 12px;">
+            <div class="mm-flex mm-mb-md">
                 <div>
                     <?php echo get_avatar($userId, 64); ?>
                 </div>
-                <div style="color:var(--color-text-secondary,#666); font-size:0.95rem;">
+                <div class="mm-muted">
                     <div><strong><?php echo esc_html($user->display_name ?: $user->user_login); ?></strong></div>
                     <div><?php echo esc_html($user->user_email); ?></div>
                 </div>
             </div>
 
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" style="display:grid; gap:12px;">
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" class="mm-grid">
                 <input type="hidden" name="action" value="match_me_profile_update">
                 <?php wp_nonce_field('match_me_profile_update', 'match_me_profile_nonce'); ?>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                    <label style="display:block;">
-                        <span style="display:block; font-size:0.85rem; color:var(--color-text-secondary,#666); margin-bottom:6px;">First name</span>
-                        <input type="text" name="first_name" value="<?php echo esc_attr($currentFirst); ?>" style="width:100%; min-height:48px; border-radius:10px; border:1px solid var(--color-border,#e5e5e5); padding:0 14px;">
+                <div class="mm-grid-2">
+                    <label class="mm-field">
+                        <span class="mm-field-label">First name</span>
+                        <input class="mm-input" type="text" name="first_name" value="<?php echo esc_attr($currentFirst); ?>">
                     </label>
-                    <label style="display:block;">
-                        <span style="display:block; font-size:0.85rem; color:var(--color-text-secondary,#666); margin-bottom:6px;">Last name</span>
-                        <input type="text" name="last_name" value="<?php echo esc_attr($currentLast); ?>" style="width:100%; min-height:48px; border-radius:10px; border:1px solid var(--color-border,#e5e5e5); padding:0 14px;">
+                    <label class="mm-field">
+                        <span class="mm-field-label">Last name</span>
+                        <input class="mm-input" type="text" name="last_name" value="<?php echo esc_attr($currentLast); ?>">
                     </label>
                 </div>
 
-                <label style="display:block;">
-                    <span style="display:block; font-size:0.85rem; color:var(--color-text-secondary,#666); margin-bottom:6px;">Profile image (upload)</span>
+                <label class="mm-field">
+                    <span class="mm-field-label">Profile image (upload)</span>
                     <div class="mm-file">
                         <input id="mm_profile_picture_file" class="mm-file-input" type="file" name="profile_picture_file" accept="image/*">
                         <label for="mm_profile_picture_file" class="mm-profile-btn mm-profile-btn-outline">Choose file</label>
@@ -101,9 +103,17 @@ get_header();
                     </div>
                 </label>
 
-                <label style="display:block;">
-                    <span style="display:block; font-size:0.85rem; color:var(--color-text-secondary,#666); margin-bottom:6px;">Or profile image URL</span>
-                    <input type="url" name="profile_picture_url" value="<?php echo esc_attr($currentPic); ?>" placeholder="https://..." style="width:100%; min-height:48px; border-radius:10px; border:1px solid var(--color-border,#e5e5e5); padding:0 14px;">
+                <label class="mm-field">
+                    <span class="mm-field-label">Or profile image URL</span>
+                    <input class="mm-input" type="url" name="profile_picture_url" value="<?php echo esc_attr($currentPic); ?>" placeholder="https://...">
+                </label>
+
+                <label class="mm-toggle">
+                    <input type="checkbox" name="email_compare_notify" value="1" <?php checked($emailNotifyOn); ?>>
+                    <span>
+                        <div class="mm-toggle-title">Email notifications</div>
+                        <div class="mm-toggle-sub">Email me when someone compares with my results.</div>
+                    </span>
                 </label>
 
                 <button type="submit" class="mm-profile-btn mm-profile-btn-primary">Save changes</button>
@@ -122,12 +132,12 @@ get_header();
             </script>
         </section>
 
-        <section style="margin-top: 1.5rem;">
+        <section class="mm-section">
             <h2>Latest Results (new quizzes)</h2>
             <?php if ($latestV2 === []) : ?>
                 <p>No results yet.</p>
             <?php else : ?>
-                <ul style="list-style:none; padding:0; margin:0; display:grid; gap:12px;">
+                <ul class="mm-list">
                     <?php foreach ($latestV2 as $row) : ?>
                         <?php
                         $quizSlug = (string) $row['quiz_slug'];
@@ -136,15 +146,15 @@ get_header();
                         $compareUrl = $row['share_token'] !== '' ? home_url('/compare/' . $row['share_token'] . '/') : '';
                         $takenAt = $row['created_at'] !== '' ? date_i18n(get_option('date_format'), strtotime($row['created_at'])) : '';
                         ?>
-                        <li style="border:1px solid var(--color-border, #e5e5e5); border-radius:10px; padding:14px;">
-                            <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                        <li class="mm-list-item">
+                            <div class="mm-row">
                                 <div>
-                                    <div style="font-weight:600;"><?php echo esc_html($title); ?></div>
+                                    <div class="mm-row-title"><?php echo esc_html($title); ?></div>
                                     <?php if ($takenAt !== '') : ?>
-                                        <div style="color:var(--color-text-secondary,#666); font-size:0.9rem;">Latest: <?php echo esc_html($takenAt); ?></div>
+                                        <div class="mm-muted mm-text-sm">Latest: <?php echo esc_html($takenAt); ?></div>
                                     <?php endif; ?>
                                 </div>
-                                <div style="display:flex; gap:10px; align-items:center;">
+                                <div class="mm-row-actions">
                                     <?php if ($viewUrl !== '') : ?>
                                         <a href="<?php echo esc_url($viewUrl); ?>">View</a>
                                     <?php endif; ?>
@@ -162,9 +172,9 @@ get_header();
 
         <?php /* Legacy results removed */ ?>
 
-        <section style="margin-top: 2.5rem; border-top: 1px solid var(--color-border, #e5e5e5); padding-top: 1.5rem;">
+        <section class="mm-section mm-mt-xl mm-divider-top">
             <h2>Delete account</h2>
-            <p style="color:var(--color-text-secondary,#666); max-width: 70ch;">
+            <p class="mm-muted mm-max-70ch">
                 This will permanently delete your account and <strong>everything related to you</strong>, including your profile information,
                 quiz history, results, and comparisons. This action cannot be undone.
             </p>

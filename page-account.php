@@ -12,7 +12,7 @@ $redirectTo = (string) wp_unslash($_SERVER['REQUEST_URI'] ?? '/');
 $redirectTo = wp_validate_redirect(home_url($redirectTo), home_url('/'));
 ?>
 
-<main class="mm-account container" style="max-width: 720px;">
+<main class="mm-account container mm-page mm-page-720">
     <h1>Account</h1>
 
     <?php if (!is_user_logged_in()) : ?>

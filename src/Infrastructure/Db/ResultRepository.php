@@ -88,10 +88,19 @@ final class ResultRepository
         $table = $this->tableName();
         $traitVectorJson = json_encode($traitVector, JSON_THROW_ON_ERROR);
 
+        // Build insert payload carefully: user_id is optional (anonymous results must store NULL).
         $data = [
             'quiz_id' => $quizId,
             'quiz_slug' => $quizSlug,
-            'user_id' => $userId,
+        ];
+        $format = ['%d', '%s'];
+
+        if ($userId !== null) {
+            $data['user_id'] = $userId;
+            $format[] = '%d';
+        }
+
+        $data = array_merge($data, [
             'trait_vector' => $traitVectorJson,
             'textual_summary_short' => $textualSummaryShort,
             'textual_summary_long' => $textualSummaryLong,
@@ -99,9 +108,9 @@ final class ResultRepository
             'share_token' => $shareToken,
             'share_mode' => $shareMode,
             'quiz_version' => $quizVersion,
-        ];
+        ]);
 
-        $format = ['%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s'];
+        $format = array_merge($format, ['%s', '%s', '%s', '%s', '%s', '%s', '%s']);
 
         $result = $this->wpdb->insert($table, $data, $format);
 
@@ -211,6 +220,110 @@ final class ResultRepository
                 'share_mode' => (string) ($row['share_mode'] ?? ''),
                 'created_at' => (string) ($row['created_at'] ?? ''),
             ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Latest result per quiz for a given user including trait_vector (grouped by quiz_slug).
+     *
+     * @return array<int, array{quiz_slug:string, result_id:int, trait_vector:string, created_at:string}>
+     */
+    public function latestVectorsByUserGroupedByQuizSlug(int $userId): array
+    {
+        $table = $this->tableName();
+
+        $sql = "
+            SELECT r.quiz_slug, r.result_id, r.trait_vector, r.created_at
+            FROM $table r
+            INNER JOIN (
+                SELECT quiz_slug, MAX(created_at) AS max_created
+                FROM $table
+                WHERE user_id = %d
+                GROUP BY quiz_slug
+            ) latest
+              ON latest.quiz_slug = r.quiz_slug AND latest.max_created = r.created_at
+            WHERE r.user_id = %d
+            ORDER BY r.created_at DESC
+        ";
+
+        $rows = $this->wpdb->get_results($this->wpdb->prepare($sql, $userId, $userId), ARRAY_A);
+        if (!is_array($rows)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row) || empty($row['quiz_slug']) || empty($row['result_id'])) {
+                continue;
+            }
+            $out[] = [
+                'quiz_slug' => (string) $row['quiz_slug'],
+                'result_id' => (int) $row['result_id'],
+                'trait_vector' => (string) ($row['trait_vector'] ?? '{}'),
+                'created_at' => (string) ($row['created_at'] ?? ''),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Latest vectors for many users (grouped by user_id and quiz_slug).
+     *
+     * Returns: [user_id => [quiz_slug => trait_vector_json]]
+     *
+     * @param array<int, int> $userIds
+     * @return array<int, array<string, string>>
+     */
+    public function latestVectorsByUsersGroupedByQuizSlug(array $userIds): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $userIds)));
+        $ids = array_values(array_filter($ids, fn($v) => $v > 0));
+        if ($ids === []) {
+            return [];
+        }
+
+        // Avoid huge IN lists.
+        if (count($ids) > 200) {
+            $ids = array_slice($ids, 0, 200);
+        }
+
+        $table = $this->tableName();
+
+        $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+
+        // MySQL-compatible: group by (user_id, quiz_slug) then join.
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $sql = "
+            SELECT r.user_id, r.quiz_slug, r.trait_vector
+            FROM $table r
+            INNER JOIN (
+                SELECT user_id, quiz_slug, MAX(created_at) AS max_created
+                FROM $table
+                WHERE user_id IN ($placeholders)
+                GROUP BY user_id, quiz_slug
+            ) latest
+              ON latest.user_id = r.user_id AND latest.quiz_slug = r.quiz_slug AND latest.max_created = r.created_at
+            WHERE r.user_id IN ($placeholders)
+        ";
+
+        $params = array_merge($ids, $ids);
+        $rows = $this->wpdb->get_results($this->wpdb->prepare($sql, ...$params), ARRAY_A);
+        if (!is_array($rows)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) continue;
+            $uid = isset($row['user_id']) ? (int) $row['user_id'] : 0;
+            $slug = isset($row['quiz_slug']) ? (string) $row['quiz_slug'] : '';
+            $vec = isset($row['trait_vector']) ? (string) $row['trait_vector'] : '{}';
+            if ($uid <= 0 || $slug === '') continue;
+            if (!isset($out[$uid])) $out[$uid] = [];
+            $out[$uid][$slug] = $vec;
         }
 
         return $out;

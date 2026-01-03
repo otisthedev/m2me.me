@@ -57,7 +57,7 @@ final class GoogleAuth
                 . '&scope=' . $scope
                 . '&access_type=online'
                 . '&state=' . rawurlencode($state);
-            wp_redirect($authUrl);
+            wp_safe_redirect($authUrl);
             exit;
         }
 

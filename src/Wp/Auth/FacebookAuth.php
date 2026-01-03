@@ -69,7 +69,7 @@ final class FacebookAuth
                 'response_type' => 'code',
                 'state' => $state,
             ]);
-            wp_redirect($url);
+            wp_safe_redirect($url);
             exit;
         }
 

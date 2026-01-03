@@ -19,6 +19,8 @@ final class AuthMenu
 
         add_action('init', [$this, 'ensureAccountPageOnce']);
         add_action('init', [$this, 'ensureProfilePageOnce']);
+        add_action('init', [$this, 'ensureComparisonsPageOnce']);
+        add_action('init', [$this, 'ensureMatchesPageOnce']);
 
         add_action('admin_post_nopriv_match_me_register', [$this, 'handleRegister']);
         add_action('admin_post_match_me_register', [$this, 'handleRegister']);
@@ -44,9 +46,13 @@ final class AuthMenu
         $redirectTo = wp_validate_redirect($currentUrl, home_url('/'));
 
         if (is_user_logged_in()) {
+            $comparisonsUrl = home_url('/comparisons/');
+            $matchesUrl = home_url('/matches/');
             $accountUrl = home_url('/profile/');
             $logoutUrl = wp_logout_url($redirectTo);
 
+            $items .= $this->menuItem($matchesUrl, 'Matches', 'mm-menu-matches', '');
+            $items .= $this->menuItem($comparisonsUrl, 'Comparisons', 'mm-menu-comparisons', '');
             $items .= $this->menuItem($accountUrl, 'My Profile', 'mm-menu-account', '');
             $items .= $this->menuItem($logoutUrl, 'Logout', 'mm-menu-logout', '');
             return $items;
@@ -176,6 +182,80 @@ final class AuthMenu
         }
 
         update_option('match_me_profile_page_id', (int) $pageId, true);
+    }
+
+    public function ensureComparisonsPageOnce(): void
+    {
+        $opt = get_option('match_me_comparisons_page_id');
+        if (is_numeric($opt) && (int) $opt > 0) {
+            $p = get_post((int) $opt);
+            if ($p instanceof \WP_Post && $p->post_status !== 'trash') {
+                return;
+            }
+        }
+
+        $slug = 'comparisons';
+        $existing = get_page_by_path($slug);
+        if ($existing instanceof \WP_Post) {
+            update_option('match_me_comparisons_page_id', (int) $existing->ID, true);
+            return;
+        }
+
+        $pageId = wp_insert_post([
+            'post_title' => 'Comparisons',
+            'post_name' => $slug,
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_content' => '',
+        ], true);
+
+        if (is_wp_error($pageId)) {
+            return;
+        }
+
+        $templateFile = (string) get_template_directory() . '/page-comparisons.php';
+        if (is_file($templateFile)) {
+            update_post_meta((int) $pageId, '_wp_page_template', 'page-comparisons.php');
+        }
+
+        update_option('match_me_comparisons_page_id', (int) $pageId, true);
+    }
+
+    public function ensureMatchesPageOnce(): void
+    {
+        $opt = get_option('match_me_matches_page_id');
+        if (is_numeric($opt) && (int) $opt > 0) {
+            $p = get_post((int) $opt);
+            if ($p instanceof \WP_Post && $p->post_status !== 'trash') {
+                return;
+            }
+        }
+
+        $slug = 'matches';
+        $existing = get_page_by_path($slug);
+        if ($existing instanceof \WP_Post) {
+            update_option('match_me_matches_page_id', (int) $existing->ID, true);
+            return;
+        }
+
+        $pageId = wp_insert_post([
+            'post_title' => 'Matches',
+            'post_name' => $slug,
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_content' => '',
+        ], true);
+
+        if (is_wp_error($pageId)) {
+            return;
+        }
+
+        $templateFile = (string) get_template_directory() . '/page-matches.php';
+        if (is_file($templateFile)) {
+            update_post_meta((int) $pageId, '_wp_page_template', 'page-matches.php');
+        }
+
+        update_option('match_me_matches_page_id', (int) $pageId, true);
     }
 
     public function renderModal(): void
@@ -350,15 +430,15 @@ final class AuthMenu
         $redirectTo = wp_validate_redirect($redirectTo, home_url('/'));
 
         if (!is_email($email)) {
-            wp_redirect(add_query_arg(['register' => '1', 'error' => 'invalid_email', 'redirect_to' => $redirectTo], home_url('/')));
+            wp_safe_redirect(add_query_arg(['register' => '1', 'error' => 'invalid_email', 'redirect_to' => $redirectTo], home_url('/')));
             exit;
         }
         if (strlen($password) < 8) {
-            wp_redirect(add_query_arg(['register' => '1', 'error' => 'weak_password', 'redirect_to' => $redirectTo], home_url('/')));
+            wp_safe_redirect(add_query_arg(['register' => '1', 'error' => 'weak_password', 'redirect_to' => $redirectTo], home_url('/')));
             exit;
         }
         if (email_exists($email)) {
-            wp_redirect(add_query_arg(['login' => '1', 'error' => 'email_exists', 'redirect_to' => $redirectTo], home_url('/')));
+            wp_safe_redirect(add_query_arg(['login' => '1', 'error' => 'email_exists', 'redirect_to' => $redirectTo], home_url('/')));
             exit;
         }
 
@@ -381,7 +461,7 @@ final class AuthMenu
         ]);
 
         if (is_wp_error($userId)) {
-            wp_redirect(add_query_arg(['register' => '1', 'error' => 'register_failed', 'redirect_to' => $redirectTo], home_url('/')));
+            wp_safe_redirect(add_query_arg(['register' => '1', 'error' => 'register_failed', 'redirect_to' => $redirectTo], home_url('/')));
             exit;
         }
 
@@ -395,7 +475,7 @@ final class AuthMenu
     public function handleProfileUpdate(): void
     {
         if (!is_user_logged_in()) {
-            wp_redirect(add_query_arg(['login' => '1', 'redirect_to' => home_url('/profile/')], home_url('/')));
+            wp_safe_redirect(add_query_arg(['login' => '1', 'redirect_to' => home_url('/profile/')], home_url('/')));
             exit;
         }
 
@@ -409,6 +489,7 @@ final class AuthMenu
         $firstName = isset($_POST['first_name']) ? sanitize_text_field((string) $_POST['first_name']) : '';
         $lastName = isset($_POST['last_name']) ? sanitize_text_field((string) $_POST['last_name']) : '';
         $imageUrl = isset($_POST['profile_picture_url']) ? esc_url_raw((string) $_POST['profile_picture_url']) : '';
+        $emailNotify = isset($_POST['email_compare_notify']) ? 'on' : 'off';
 
         // Optional file upload
         $uploadedUrl = '';
@@ -444,6 +525,7 @@ final class AuthMenu
         // Persist user fields
         update_user_meta($userId, 'first_name', $firstName);
         update_user_meta($userId, 'last_name', $lastName);
+        update_user_meta($userId, 'match_me_email_compare_notify', $emailNotify);
 
         $displayName = trim($firstName . ' ' . $lastName);
         if ($displayName !== '') {
@@ -457,14 +539,14 @@ final class AuthMenu
             update_user_meta($userId, 'profile_picture', $imageUrl);
         }
 
-        wp_redirect(add_query_arg(['updated' => '1'], home_url('/profile/')));
+        wp_safe_redirect(add_query_arg(['updated' => '1'], home_url('/profile/')));
         exit;
     }
 
     public function handleDeleteAccount(): void
     {
         if (!is_user_logged_in()) {
-            wp_redirect(add_query_arg(['login' => '1', 'redirect_to' => home_url('/profile/')], home_url('/')));
+            wp_safe_redirect(add_query_arg(['login' => '1', 'redirect_to' => home_url('/profile/')], home_url('/')));
             exit;
         }
 
@@ -505,7 +587,7 @@ final class AuthMenu
 
         wp_delete_user($userId);
 
-        wp_redirect(add_query_arg(['account_deleted' => '1'], home_url('/')));
+        wp_safe_redirect(add_query_arg(['account_deleted' => '1'], home_url('/')));
         exit;
     }
 }
