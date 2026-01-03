@@ -5,16 +5,21 @@ namespace MatchMe\Wp;
 
 use MatchMe\Config\ThemeConfig;
 use MatchMe\Infrastructure\Db\ComparisonRepository;
+use MatchMe\Infrastructure\Db\Migrations\AddPerformanceIndexes;
 use MatchMe\Infrastructure\Db\Migrations\CreateQuizTables;
+use MatchMe\Infrastructure\Db\QuizRepository;
 use MatchMe\Infrastructure\Db\QuizResultRepository;
 use MatchMe\Infrastructure\Db\QuizResultsTable;
 use MatchMe\Infrastructure\Db\ResultRepository;
 use MatchMe\Infrastructure\Quiz\QuizJsonRepository;
+use MatchMe\Infrastructure\Retention\RetentionPolicy;
 use MatchMe\Quiz\MatchingService;
 use MatchMe\Quiz\QuizCalculator;
 use MatchMe\Quiz\ShareTokenGenerator;
 use MatchMe\Wp\Ajax\SaveQuizResultsController;
+use MatchMe\Wp\Api\GdprApiController;
 use MatchMe\Wp\Api\QuizApiController;
+use MatchMe\Wp\RetentionScheduler;
 
 final class Theme
 {
@@ -41,6 +46,14 @@ final class Theme
             flush_rewrite_rules();
         }
 
+        // Add performance indexes (runs once per index version).
+        $indexVersion = (string) get_option('match_me_index_version', '');
+        $targetIndexVersion = 'indexes-2026-01-08';
+        if ($indexVersion !== $targetIndexVersion) {
+            (new AddPerformanceIndexes($wpdb))->run();
+            update_option('match_me_index_version', $targetIndexVersion, true);
+        }
+
         $resultsTable = new QuizResultsTable($wpdb);
         $repo = new QuizResultRepository($wpdb, $resultsTable);
         $activation = new Activation($config, $resultsTable);
@@ -49,15 +62,17 @@ final class Theme
         $theme->registerHooks();
 
         (new SaveQuizResultsController($repo))->register();
-        (new QuizFeatureSet($config, $repo, new QuizJsonRepository($config)))->register();
 
         // Register new API endpoints
         $quizRepo = new QuizJsonRepository($config);
         $calculator = new QuizCalculator();
         $resultRepo = new ResultRepository($wpdb);
         $comparisonRepo = new ComparisonRepository($wpdb);
+        $quizDbRepo = new QuizRepository($wpdb);
         $matchingService = new MatchingService($calculator, $resultRepo);
         $tokenGenerator = new ShareTokenGenerator();
+
+        (new QuizFeatureSet($config, $repo, new QuizJsonRepository($config), $resultRepo))->register();
 
         (new QuizApiController(
             $quizRepo,
@@ -65,9 +80,21 @@ final class Theme
             $matchingService,
             $resultRepo,
             $comparisonRepo,
+            $quizDbRepo,
             $tokenGenerator,
             $config
         ))->register();
+
+        // Register GDPR compliance endpoints
+        (new GdprApiController(
+            $resultRepo,
+            $comparisonRepo,
+            $repo
+        ))->register();
+
+        // Register retention policy scheduler
+        $retentionPolicy = new RetentionPolicy($resultRepo, $comparisonRepo, $wpdb);
+        (new RetentionScheduler($retentionPolicy))->register();
     }
 
     public function registerHooks(): void

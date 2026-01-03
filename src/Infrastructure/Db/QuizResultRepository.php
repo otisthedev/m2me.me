@@ -63,7 +63,7 @@ final class QuizResultRepository
         $tableName = $this->table->name();
         $row = $this->wpdb->get_row(
             $this->wpdb->prepare(
-                "SELECT attempt_id, user_id, quiz_id, scores, content, created_at FROM $tableName WHERE user_id = %d AND quiz_id = %s ORDER BY attempt_id DESC LIMIT 1",
+                "SELECT attempt_id, user_id, quiz_id, scores, content, created_at FROM $tableName WHERE user_id = %d AND quiz_id = %s ORDER BY created_at DESC LIMIT 1",
                 $userId,
                 $quizId
             ),
@@ -74,61 +74,96 @@ final class QuizResultRepository
     }
 
     /**
-     * @return array<int,array{quiz_id:string,latest_attempt:int}>
+     * Get latest attempt for each quiz for a user.
+     *
+     * @return array<string, array<string,mixed>>
      */
     public function latestAttemptsByUserGroupedByQuiz(int $userId): array
     {
         $tableName = $this->table->name();
         $rows = $this->wpdb->get_results(
             $this->wpdb->prepare(
-                "SELECT quiz_id, MAX(attempt_id) as latest_attempt FROM $tableName WHERE user_id = %d GROUP BY quiz_id",
+                "SELECT quiz_id, MAX(created_at) AS latest_created, 
+                        SUBSTRING_INDEX(GROUP_CONCAT(attempt_id ORDER BY created_at DESC), ',', 1) AS latest_attempt
+                 FROM $tableName 
+                 WHERE user_id = %d 
+                 GROUP BY quiz_id",
                 $userId
             ),
             ARRAY_A
         );
 
-        $out = [];
+        $result = [];
         foreach ($rows as $row) {
-            if (!is_array($row) || !isset($row['quiz_id'], $row['latest_attempt'])) {
-                continue;
-            }
-            $out[] = [
-                'quiz_id' => (string) $row['quiz_id'],
-                'latest_attempt' => (int) $row['latest_attempt'],
+            $quizId = (string) $row['quiz_id'];
+            $attemptId = (int) $row['latest_attempt'];
+            $result[$quizId] = [
+                'quiz_id' => $quizId,
+                'latest_attempt' => $attemptId,
+                'created_at' => (string) $row['latest_created'],
             ];
         }
-        return $out;
+
+        return $result;
     }
 
     /**
-     * @param array<int,int> $attemptIds
+     * Reassign anonymous quiz attempts to a user.
+     * Updates user_id for attempts that were created with user_id = 9999 (anonymous placeholder).
+     *
+     * @param array<int> $attemptIds Array of attempt IDs to reassign
+     * @param int $userId Target user ID
+     * @return int Number of reassigned attempts
      */
     public function reassignAttemptsToUser(array $attemptIds, int $userId): int
     {
-        $tableName = $this->table->name();
-        $updatedCount = 0;
-
-        foreach ($attemptIds as $attemptId) {
-            $attemptId = (int) $attemptId;
-            if ($attemptId <= 0) {
-                continue;
-            }
-
-            $updated = $this->wpdb->update(
-                $tableName,
-                ['user_id' => $userId],
-                ['attempt_id' => $attemptId],
-                ['%d'],
-                ['%d']
-            );
-
-            if ($updated !== false && $updated > 0) {
-                $updatedCount++;
-            }
+        if (empty($attemptIds)) {
+            return 0;
         }
 
-        return $updatedCount;
+        $tableName = $this->table->name();
+        $placeholders = implode(',', array_fill(0, count($attemptIds), '%d'));
+        $params = array_merge([$userId], $attemptIds);
+        array_unshift($params, null); // For prepare format string
+
+        // Only update attempts with user_id = 9999 (anonymous placeholder)
+        $sql = "UPDATE $tableName SET user_id = %d WHERE attempt_id IN ($placeholders) AND user_id = 9999";
+        
+        // Build format array: %d for userId, then %d for each attempt ID
+        $format = array_merge(['%d'], array_fill(0, count($attemptIds), '%d'));
+        $prepared = $this->wpdb->prepare($sql, $userId, ...$attemptIds);
+        
+        $updated = $this->wpdb->query($prepared);
+        return $updated !== false ? (int) $updated : 0;
+    }
+
+    /**
+     * Find all quiz results for a user (for GDPR export).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function findByUser(int $userId): array
+    {
+        $tableName = $this->table->name();
+        $rows = $this->wpdb->get_results(
+            $this->wpdb->prepare(
+                "SELECT attempt_id, user_id, quiz_id, scores, content, created_at FROM $tableName WHERE user_id = %d ORDER BY created_at DESC",
+                $userId
+            ),
+            ARRAY_A
+        );
+        return is_array($rows) ? $rows : [];
+    }
+
+    /**
+     * Delete all quiz results for a user (for GDPR deletion).
+     *
+     * @return int Number of deleted rows
+     */
+    public function deleteByUser(int $userId): int
+    {
+        $tableName = $this->table->name();
+        $deleted = $this->wpdb->delete($tableName, ['user_id' => $userId], ['%d']);
+        return $deleted !== false ? (int) $deleted : 0;
     }
 }
-
-

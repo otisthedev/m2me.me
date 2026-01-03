@@ -215,6 +215,139 @@ get_header();
         <?php /* Legacy results removed */ ?>
 
         <section class="mm-section mm-mt-xl mm-divider-top">
+            <h2>Privacy & Data (GDPR)</h2>
+            
+            <div class="mm-gdpr-actions">
+                <div class="mm-gdpr-action">
+                    <h3>Export your data</h3>
+                    <p class="mm-muted mm-max-70ch">
+                        Download all your data in JSON format, including your profile, quiz results, and comparisons. 
+                        This is your right under GDPR (Article 20 - Right to Data Portability).
+                    </p>
+                    <button type="button" class="mm-profile-btn mm-profile-btn-outline" id="mm-export-data-btn">
+                        Export my data
+                    </button>
+                    <div id="mm-export-status" class="mm-gdpr-status" role="status" aria-live="polite"></div>
+                </div>
+
+                <div class="mm-gdpr-action mm-mt-md">
+                    <h3>Delete your data</h3>
+                    <p class="mm-muted mm-max-70ch">
+                        Request deletion of all your data. This will permanently delete your quiz results, comparisons, 
+                        and profile information. This action cannot be undone. This is your right under GDPR (Article 17 - Right to Erasure).
+                    </p>
+                    <button type="button" class="mm-profile-btn mm-profile-btn-outline mm-profile-btn-danger" id="mm-delete-data-btn">
+                        Delete my data
+                    </button>
+                    <div id="mm-delete-status" class="mm-gdpr-status" role="status" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <script>
+                (function() {
+                    const API_BASE = '<?php echo esc_js(rest_url('match-me/v1')); ?>';
+                    const nonce = '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>';
+
+                    // Export data
+                    const exportBtn = document.getElementById('mm-export-data-btn');
+                    const exportStatus = document.getElementById('mm-export-status');
+                    if (exportBtn && exportStatus) {
+                        exportBtn.addEventListener('click', async function() {
+                            exportBtn.disabled = true;
+                            exportStatus.textContent = 'Exporting your data...';
+                            exportStatus.className = 'mm-gdpr-status mm-gdpr-status-info';
+
+                            try {
+                                const response = await fetch(API_BASE + '/gdpr/export', {
+                                    method: 'GET',
+                                    headers: {
+                                        'X-WP-Nonce': nonce
+                                    }
+                                });
+
+                                if (!response.ok) {
+                                    const error = await response.json();
+                                    throw new Error(error.message || 'Export failed');
+                                }
+
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'match-me-data-export-' + new Date().toISOString().split('T')[0] + '.json';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                window.URL.revokeObjectURL(url);
+
+                                exportStatus.textContent = 'Data exported successfully!';
+                                exportStatus.className = 'mm-gdpr-status mm-gdpr-status-success';
+                            } catch (error) {
+                                exportStatus.textContent = 'Error: ' + (error.message || 'Failed to export data');
+                                exportStatus.className = 'mm-gdpr-status mm-gdpr-status-error';
+                            } finally {
+                                exportBtn.disabled = false;
+                            }
+                        });
+                    }
+
+                    // Delete data
+                    const deleteBtn = document.getElementById('mm-delete-data-btn');
+                    const deleteStatus = document.getElementById('mm-delete-status');
+                    if (deleteBtn && deleteStatus) {
+                        deleteBtn.addEventListener('click', async function() {
+                            const first = window.confirm(
+                                'Delete your data?\n\nThis will permanently delete your quiz results, comparisons, and profile information. This cannot be undone.'
+                            );
+                            if (!first) return;
+
+                            const typed = window.prompt('Type DELETE to confirm data deletion:');
+                            if (typed !== 'DELETE') {
+                                window.alert('Data deletion cancelled.');
+                                return;
+                            }
+
+                            const second = window.confirm('Final confirmation: permanently delete all your data now?');
+                            if (!second) return;
+
+                            deleteBtn.disabled = true;
+                            deleteStatus.textContent = 'Deleting your data...';
+                            deleteStatus.className = 'mm-gdpr-status mm-gdpr-status-info';
+
+                            try {
+                                const response = await fetch(API_BASE + '/gdpr/delete', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-WP-Nonce': nonce
+                                    },
+                                    body: JSON.stringify({ confirm: true })
+                                });
+
+                                if (!response.ok) {
+                                    const error = await response.json();
+                                    throw new Error(error.message || 'Deletion failed');
+                                }
+
+                                const result = await response.json();
+                                deleteStatus.textContent = 'Your data has been deleted successfully. Redirecting...';
+                                deleteStatus.className = 'mm-gdpr-status mm-gdpr-status-success';
+                                
+                                setTimeout(function() {
+                                    window.location.href = '<?php echo esc_js(wp_logout_url(home_url('/'))); ?>';
+                                }, 2000);
+                            } catch (error) {
+                                deleteStatus.textContent = 'Error: ' + (error.message || 'Failed to delete data');
+                                deleteStatus.className = 'mm-gdpr-status mm-gdpr-status-error';
+                                deleteBtn.disabled = false;
+                            }
+                        });
+                    }
+                })();
+            </script>
+        </section>
+
+        <section class="mm-section mm-mt-xl mm-divider-top">
             <h2>Delete account</h2>
             <p class="mm-muted mm-max-70ch">
                 This will permanently delete your account and <strong>everything related to you</strong>, including your profile information,

@@ -14,12 +14,80 @@ final class QuizCalculator
      * @param array<int, array{question_id: string, option_id: string, value?: int|float}> $answers
      * @param array<string, mixed> $quizConfig Quiz configuration with questions and trait definitions
      * @return array<string, float> Normalized trait vector [0..1] per trait
+     * @throws \InvalidArgumentException If answers are invalid or incomplete
      */
     public function calculateTraitVector(array $answers, array $quizConfig): array
     {
+        // Validate answers before calculation
+        $this->validateAnswers($answers, $quizConfig);
+        
         $rawScores = $this->accumulateRawScores($answers, $quizConfig);
         $ranges = $this->calculateTraitRanges($quizConfig);
         return $this->normalizeVector($rawScores, $ranges);
+    }
+
+    /**
+     * Validate that all questions are answered with valid option IDs.
+     *
+     * @param array<int, array{question_id: string, option_id: string, value?: int|float}> $answers
+     * @param array<string, mixed> $quizConfig
+     * @throws \InvalidArgumentException If validation fails
+     */
+    public function validateAnswers(array $answers, array $quizConfig): void
+    {
+        $questions = $quizConfig['questions'] ?? [];
+        if (empty($questions)) {
+            throw new \InvalidArgumentException('Quiz configuration has no questions');
+        }
+
+        $answeredQuestionIds = [];
+        $questionIds = [];
+
+        // Build set of valid question IDs and option IDs
+        $validOptions = [];
+        foreach ($questions as $question) {
+            $questionId = (string) ($question['id'] ?? '');
+            if ($questionId === '') {
+                continue;
+            }
+            $questionIds[] = $questionId;
+            
+            $traitMap = $question['trait_map'] ?? [];
+            if (is_array($traitMap)) {
+                $validOptions[$questionId] = array_keys($traitMap);
+            }
+        }
+
+        // Check each answer
+        foreach ($answers as $answer) {
+            $questionId = (string) ($answer['question_id'] ?? '');
+            $optionId = (string) ($answer['option_id'] ?? '');
+
+            if ($questionId === '' || $optionId === '') {
+                throw new \InvalidArgumentException('Answer missing question_id or option_id');
+            }
+
+            if (!in_array($questionId, $questionIds, true)) {
+                throw new \InvalidArgumentException("Invalid question_id: $questionId");
+            }
+
+            if (!isset($validOptions[$questionId]) || !in_array($optionId, $validOptions[$questionId], true)) {
+                throw new \InvalidArgumentException("Invalid option_id '$optionId' for question '$questionId'");
+            }
+
+            if (in_array($questionId, $answeredQuestionIds, true)) {
+                throw new \InvalidArgumentException("Duplicate answer for question: $questionId");
+            }
+
+            $answeredQuestionIds[] = $questionId;
+        }
+
+        // Check that all questions are answered
+        $missingQuestions = array_diff($questionIds, $answeredQuestionIds);
+        if (!empty($missingQuestions)) {
+            $missingList = implode(', ', $missingQuestions);
+            throw new \InvalidArgumentException("Missing answers for questions: $missingList");
+        }
     }
 
     /**
@@ -118,16 +186,15 @@ final class QuizCalculator
 
                 foreach ($contributions as $trait => $value) {
                     $weighted = $weight * (float) $value;
-                    // Always consider 0 as minimum since you can get 0 by not selecting this option
-                    $qMin[$trait] = array_key_exists($trait, $qMin) ? min($qMin[$trait], $weighted, 0.0) : min($weighted, 0.0);
+                    // Minimum is the actual minimum from all options (user must select one option)
+                    $qMin[$trait] = array_key_exists($trait, $qMin) ? min($qMin[$trait], $weighted) : $weighted;
                     $qMax[$trait] = array_key_exists($trait, $qMax) ? max($qMax[$trait], $weighted) : $weighted;
                 }
             }
 
             $traits = array_unique(array_merge(array_keys($qMin), array_keys($qMax)));
             foreach ($traits as $trait) {
-                // qMin already includes 0.0 in its calculation, so it accounts for not selecting options with this trait
-                // It can be negative if the trait has negative values in some options
+                // Minimum is the actual minimum from all options (can be negative if quiz design allows)
                 $min = $qMin[$trait] ?? 0.0;
                 $max = $qMax[$trait] ?? 0.0;
                 if (!isset($ranges[$trait])) {
@@ -161,8 +228,10 @@ final class QuizCalculator
             $max = $range['max'];
 
             if ($max <= $min) {
-                // No range, set to 0.5 (middle)
-                $normalized[$trait] = 0.5;
+                // Zero-range trait: all options give same value (quiz design issue)
+                // Use the actual value normalized to [0,1] by treating it as the midpoint
+                // This preserves the actual trait value while handling edge case gracefully
+                $normalized[$trait] = $min === $max && $min !== 0.0 ? 1.0 : 0.5;
                 continue;
             }
 

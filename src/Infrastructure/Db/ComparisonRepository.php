@@ -341,6 +341,107 @@ final class ComparisonRepository
 
         return is_string($token) ? $token : '';
     }
+
+    /**
+     * Find existing comparison between two results (either direction).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findExistingComparison(int $resultA, int $resultB): ?array
+    {
+        $table = $this->tableName();
+        
+        $row = $this->wpdb->get_row(
+            $this->wpdb->prepare(
+                "SELECT id, result_a, result_b, share_token, match_score, created_at 
+                 FROM $table 
+                 WHERE (result_a = %d AND result_b = %d) OR (result_a = %d AND result_b = %d)
+                 ORDER BY created_at DESC
+                 LIMIT 1",
+                $resultA,
+                $resultB,
+                $resultB,
+                $resultA
+            ),
+            ARRAY_A
+        );
+
+        return is_array($row) ? $row : null;
+    }
+
+    /**
+     * Find all comparisons involving a user (for GDPR export).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function findByUser(int $userId): array
+    {
+        $c = $this->tableName();
+        $r = $this->wpdb->prefix . 'match_me_results';
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $sql = "
+            SELECT
+              c.id,
+              c.result_a,
+              c.result_b,
+              c.share_token,
+              c.match_score,
+              c.breakdown,
+              c.comparison_summary_short,
+              c.comparison_summary_long,
+              c.comparison_summary_quiz_version,
+              c.algorithm_used,
+              c.created_at
+            FROM {$c} c
+            INNER JOIN {$r} ra ON ra.result_id = c.result_a
+            INNER JOIN {$r} rb ON rb.result_id = c.result_b
+            WHERE ra.user_id = %d OR rb.user_id = %d
+            ORDER BY c.created_at DESC
+        ";
+
+        $rows = $this->wpdb->get_results(
+            $this->wpdb->prepare($sql, $userId, $userId),
+            ARRAY_A
+        );
+
+        return is_array($rows) ? $rows : [];
+    }
+
+    /**
+     * Delete all comparisons involving a user (for GDPR deletion).
+     * Note: This deletes comparisons where the user's results are involved.
+     *
+     * @return int Number of deleted comparisons
+     */
+    public function deleteByUser(int $userId): int
+    {
+        $c = $this->tableName();
+        $r = $this->wpdb->prefix . 'match_me_results';
+
+        // Get all result IDs for this user
+        $resultIds = $this->wpdb->get_col(
+            $this->wpdb->prepare(
+                "SELECT result_id FROM {$r} WHERE user_id = %d",
+                $userId
+            )
+        );
+
+        if (empty($resultIds)) {
+            return 0;
+        }
+
+        // Delete comparisons where result_a or result_b is in the user's results
+        $placeholders = implode(',', array_fill(0, count($resultIds), '%d'));
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $sql = "DELETE FROM {$c} WHERE result_a IN ($placeholders) OR result_b IN ($placeholders)";
+
+        $deleted = $this->wpdb->query(
+            $this->wpdb->prepare($sql, ...array_merge($resultIds, $resultIds))
+        );
+
+        return $deleted !== false ? (int) $deleted : 0;
+    }
 }
 
 

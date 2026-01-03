@@ -118,6 +118,7 @@ final class GoogleAuth
         $firstName = $parts[0] ?? '';
         $lastName = $parts[1] ?? '';
 
+        // Account linking: Check if user with this email already exists
         $user = email_exists($email) ? get_user_by('email', $email) : null;
         if (!$user) {
             $username = sanitize_user((string) strtok($email, '@'));
@@ -133,14 +134,17 @@ final class GoogleAuth
             update_user_meta((int) $userId, 'first_name', $firstName);
             update_user_meta((int) $userId, 'last_name', $lastName);
             update_user_meta((int) $userId, 'profile_picture', $picture);
+            update_user_meta((int) $userId, 'google_user_id', (string) ($userInfo['id'] ?? ''));
             if ($name !== '') {
                 wp_update_user(['ID' => (int) $userId, 'display_name' => $name]);
             }
 
             $user = get_user_by('id', (int) $userId);
         } else {
-            // Backfill profile fields on existing users if missing.
+            // Link Google account to existing user
             $uid = (int) $user->ID;
+            update_user_meta($uid, 'google_user_id', (string) ($userInfo['id'] ?? ''));
+            // Backfill profile fields on existing users if missing.
             if ($firstName !== '' && get_user_meta($uid, 'first_name', true) === '') {
                 update_user_meta($uid, 'first_name', $firstName);
             }

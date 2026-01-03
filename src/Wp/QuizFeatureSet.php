@@ -5,6 +5,7 @@ namespace MatchMe\Wp;
 
 use MatchMe\Config\ThemeConfig;
 use MatchMe\Infrastructure\Db\QuizResultRepository;
+use MatchMe\Infrastructure\Db\ResultRepository;
 use MatchMe\Infrastructure\Quiz\QuizJsonRepository;
 use MatchMe\Wp\Auth\GoogleAuth;
 use MatchMe\Wp\Auth\FacebookAuth;
@@ -23,6 +24,7 @@ final class QuizFeatureSet
         private ThemeConfig $config,
         private QuizResultRepository $results,
         private QuizJsonRepository $quizzes,
+        private ?ResultRepository $newResultRepo = null,
     ) {
     }
 
@@ -39,7 +41,13 @@ final class QuizFeatureSet
         (new ShareMeta())->register();
         (new ShareImage())->register();
 
-        $assigner = new TempResultsAssigner($this->results);
+        // Get new repository for TempResultsAssigner (use injected or create new)
+        $newRepo = $this->newResultRepo;
+        if ($newRepo === null) {
+            global $wpdb;
+            $newRepo = new \MatchMe\Infrastructure\Db\ResultRepository($wpdb);
+        }
+        $assigner = new TempResultsAssigner($this->results, $newRepo);
         (new GoogleAuth($this->config, $assigner))->register();
         (new FacebookAuth($this->config, $assigner))->register();
         (new InstagramAuth($this->config, $assigner))->register();

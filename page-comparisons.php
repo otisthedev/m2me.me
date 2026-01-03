@@ -36,6 +36,51 @@ $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
         $quizRepo = new QuizJsonRepository($cfg);
         $quizTitleCache = [];
         $rows = $repo->latestByUser($userId, 24);
+        
+        // Bulk fetch user data to avoid N+1 queries
+        $otherUserIds = [];
+        foreach ($rows as $row) {
+            $userA = isset($row['user_a']) ? (int) $row['user_a'] : 0;
+            $userB = isset($row['user_b']) ? (int) $row['user_b'] : 0;
+            $otherId = ($userA === $userId) ? $userB : $userA;
+            if ($otherId > 0) {
+                $otherUserIds[] = $otherId;
+            }
+        }
+        $otherUserIds = array_unique($otherUserIds);
+        
+        // Bulk fetch users
+        $otherUsers = [];
+        if (!empty($otherUserIds)) {
+            $users = get_users(['include' => $otherUserIds, 'number' => count($otherUserIds)]);
+            foreach ($users as $u) {
+                if ($u instanceof \WP_User) {
+                    $otherUsers[$u->ID] = $u;
+                }
+            }
+            
+            // Bulk fetch user meta (first_name, profile_picture)
+            $userMetaData = [];
+            if (!empty($otherUserIds)) {
+                $placeholders = implode(',', array_fill(0, count($otherUserIds), '%d'));
+                $metaQuery = $wpdb->prepare(
+                    "SELECT user_id, meta_key, meta_value FROM {$wpdb->usermeta} 
+                     WHERE user_id IN ($placeholders) 
+                     AND meta_key IN ('first_name', 'profile_picture')",
+                    ...$otherUserIds
+                );
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                $metaRows = $wpdb->get_results($metaQuery, ARRAY_A);
+                foreach ($metaRows as $metaRow) {
+                    $uid = (int) $metaRow['user_id'];
+                    $key = $metaRow['meta_key'];
+                    if (!isset($userMetaData[$uid])) {
+                        $userMetaData[$uid] = [];
+                    }
+                    $userMetaData[$uid][$key] = $metaRow['meta_value'];
+                }
+            }
+        }
         ?>
 
         <?php if ($rows === []) : ?>
@@ -63,11 +108,14 @@ $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
 
                     $otherName = 'Someone';
                     $otherAvatar = '';
-                    if ($otherId > 0) {
-                        $u = get_user_by('id', $otherId);
-                        if ($u instanceof \WP_User) {
-                            $first = (string) get_user_meta($otherId, 'first_name', true);
-                            $otherName = $first !== '' ? $first : (string) ($u->display_name ?: $otherName);
+                    if ($otherId > 0 && isset($otherUsers[$otherId])) {
+                        $u = $otherUsers[$otherId];
+                        $first = isset($userMetaData[$otherId]['first_name']) ? (string) $userMetaData[$otherId]['first_name'] : '';
+                        $otherName = $first !== '' ? $first : (string) ($u->display_name ?: $otherName);
+                        $profilePic = isset($userMetaData[$otherId]['profile_picture']) ? (string) $userMetaData[$otherId]['profile_picture'] : '';
+                        if ($profilePic !== '' && filter_var($profilePic, FILTER_VALIDATE_URL)) {
+                            $otherAvatar = $profilePic;
+                        } else {
                             $otherAvatar = (string) get_avatar_url($otherId, ['size' => 128]);
                         }
                     }

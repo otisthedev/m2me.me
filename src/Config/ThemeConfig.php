@@ -56,10 +56,10 @@ final class ThemeConfig
         // Check if option exists to avoid defaulting when value is '0'
         $optionExists = get_option('match_me_require_login_for_results') !== false;
         if (!$optionExists) {
-            return true; // Default to true if option doesn't exist
+            return false; // Default to false to allow anonymous users (changed from true)
         }
         
-        $value = get_option('match_me_require_login_for_results', '1');
+        $value = get_option('match_me_require_login_for_results', '0');
         // Handle both string ('1'/'0') and boolean values for backward compatibility
         if (is_bool($value)) {
             return $value;

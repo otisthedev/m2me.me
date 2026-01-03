@@ -5,6 +5,7 @@ namespace MatchMe\Wp\Api;
 
 use MatchMe\Config\ThemeConfig;
 use MatchMe\Infrastructure\Db\ComparisonRepository;
+use MatchMe\Infrastructure\Db\QuizRepository;
 use MatchMe\Infrastructure\Db\ResultRepository;
 use MatchMe\Infrastructure\Quiz\QuizJsonRepository;
 use MatchMe\Quiz\MatchingService;
@@ -29,6 +30,7 @@ final class QuizApiController
         private MatchingService $matchingService,
         private ResultRepository $resultRepository,
         private ComparisonRepository $comparisonRepository,
+        private QuizRepository $quizDbRepository,
         private ShareTokenGenerator $tokenGenerator,
         private ThemeConfig $config
     ) {
@@ -287,6 +289,17 @@ final class QuizApiController
                 (string) $quizVersion
             );
 
+            // Store anonymous result ID in session for later assignment
+            if ($userId === null) {
+                if (!session_id()) {
+                    session_start();
+                }
+                if (!isset($_SESSION['match_me_temp_results'])) {
+                    $_SESSION['match_me_temp_results'] = [];
+                }
+                $_SESSION['match_me_temp_results'][] = $resultId;
+            }
+
             // Generate share URLs
             $shareUrls = [
                 // Frontend URLs (human-friendly).
@@ -309,11 +322,23 @@ final class QuizApiController
             ], 200);
 
         } catch (\InvalidArgumentException $e) {
-            return new \WP_Error('invalid_request', $e->getMessage(), ['status' => 400]);
+            return new \WP_Error(
+                'invalid_request',
+                $e->getMessage() ?: 'Invalid request. Please check your input and try again.',
+                ['status' => 400, 'error_code' => 'VALIDATION_ERROR']
+            );
         } catch (\RuntimeException $e) {
-            return new \WP_Error('server_error', $e->getMessage(), ['status' => 500]);
+            return new \WP_Error(
+                'server_error',
+                'An error occurred while processing your request. Please try again later.',
+                ['status' => 500, 'error_code' => 'SERVER_ERROR', 'details' => $e->getMessage()]
+            );
         } catch (\Throwable $e) {
-            return new \WP_Error('server_error', 'An unexpected error occurred', ['status' => 500]);
+            return new \WP_Error(
+                'server_error',
+                'An unexpected error occurred. Please try again later.',
+                ['status' => 500, 'error_code' => 'UNEXPECTED_ERROR']
+            );
         }
     }
 
@@ -328,12 +353,20 @@ final class QuizApiController
             $result = $this->resultRepository->findByShareToken($shareToken);
 
             if ($result === null) {
-                return new \WP_Error('not_found', 'Result not found or token invalid', ['status' => 404]);
+                return new \WP_Error(
+                    'not_found',
+                    'The quiz result you are looking for could not be found. The link may be incorrect or the result may have been deleted.',
+                    ['status' => 404, 'error_code' => 'RESULT_NOT_FOUND']
+                );
             }
 
             // Check if revoked
             if (!empty($result['revoked_at'])) {
-                return new \WP_Error('forbidden', 'Token has been revoked', ['status' => 403]);
+                return new \WP_Error(
+                    'forbidden',
+                    'This result is no longer available. The share link has been revoked by the owner.',
+                    ['status' => 403, 'error_code' => 'TOKEN_REVOKED']
+                );
             }
 
             // Check share mode
@@ -342,7 +375,11 @@ final class QuizApiController
                 $userId = (int) get_current_user_id();
                 $resultUserId = (int) ($result['user_id'] ?? 0);
                 if ($userId === 0 || $userId !== $resultUserId) {
-                    return new \WP_Error('forbidden', 'This result is private', ['status' => 403]);
+                    return new \WP_Error(
+                        'forbidden',
+                        'This result is private and can only be viewed by its owner. Please log in with the account that created this result.',
+                        ['status' => 403, 'error_code' => 'RESULT_PRIVATE']
+                    );
                 }
             }
 
@@ -436,7 +473,11 @@ final class QuizApiController
             ], 200);
 
         } catch (\Throwable $e) {
-            return new \WP_Error('server_error', 'An unexpected error occurred', ['status' => 500]);
+            return new \WP_Error(
+                'server_error',
+                'An unexpected error occurred while retrieving the quiz result. Please try again later.',
+                ['status' => 500, 'error_code' => 'UNEXPECTED_ERROR']
+            );
         }
     }
 
@@ -449,24 +490,51 @@ final class QuizApiController
         $body = $request->get_json_params();
 
         // Rate limiting
-        if (!$this->checkRateLimit()) {
-            return new \WP_Error('rate_limit', 'Too many requests. Please try again later.', [
-                'status' => 429,
-                'retry_after' => self::RATE_LIMIT_WINDOW,
-            ]);
+        $rateLimitResult = $this->checkRateLimit();
+        if (!$rateLimitResult['allowed']) {
+            $remaining = $rateLimitResult['remaining'] ?? 0;
+            $resetAt = $rateLimitResult['reset_at'] ?? 0;
+            $limit = $rateLimitResult['limit'] ?? self::RATE_LIMIT_MAX;
+            $resetIn = $resetAt > time() ? $resetAt - time() : 0;
+            $resetInMinutes = max(1, (int) ceil($resetIn / 60));
+            
+            return new \WP_Error(
+                'rate_limit',
+                sprintf(
+                    'You have reached the comparison limit (%d comparisons per hour). Please wait %d minute(s) before trying again.',
+                    $limit,
+                    $resetInMinutes
+                ),
+                [
+                    'status' => 429,
+                    'retry_after' => $resetIn,
+                    'limit' => $limit,
+                    'remaining' => $remaining,
+                    'reset_at' => $resetAt,
+                    'error_code' => 'RATE_LIMIT_EXCEEDED'
+                ]
+            );
         }
 
         try {
             // Get first result
             $resultA = $this->resultRepository->findByShareToken($shareToken);
             if ($resultA === null) {
-                return new \WP_Error('not_found', 'Result not found', ['status' => 404]);
+                return new \WP_Error(
+                    'not_found',
+                    'The quiz result you are trying to compare with could not be found. The link may be incorrect.',
+                    ['status' => 404, 'error_code' => 'RESULT_A_NOT_FOUND']
+                );
             }
 
             // Check share mode allows comparison
             $shareMode = $resultA['share_mode'] ?? 'private';
             if ($shareMode !== 'share_match') {
-                return new \WP_Error('forbidden', 'This result does not allow comparison', ['status' => 403]);
+                return new \WP_Error(
+                    'forbidden',
+                    'This result does not allow comparisons. The owner has restricted sharing options.',
+                    ['status' => 403, 'error_code' => 'COMPARISON_NOT_ALLOWED']
+                );
             }
 
             $resultIdA = (int) $resultA['result_id'];
@@ -477,7 +545,11 @@ final class QuizApiController
                 $resultIdB = (int) $body['result_id'];
                 $resultB = $this->resultRepository->findById($resultIdB);
                 if ($resultB === null) {
-                    return new \WP_Error('not_found', 'Second result not found', ['status' => 404]);
+                    return new \WP_Error(
+                        'not_found',
+                        'The second quiz result could not be found. It may have been deleted.',
+                        ['status' => 404, 'error_code' => 'RESULT_B_NOT_FOUND']
+                    );
                 }
                 $traitVectorB = json_decode($resultB['trait_vector'] ?? '{}', true);
                 if (!is_array($traitVectorB)) {
@@ -513,7 +585,50 @@ final class QuizApiController
                     (string) $quizVersion
                 );
             } else {
-                return new \WP_Error('invalid_request', 'Either result_id or answers+quiz_id required', ['status' => 400]);
+                return new \WP_Error(
+                    'invalid_request',
+                    'To compare results, please provide either an existing result_id or submit new quiz answers with quiz_id.',
+                    ['status' => 400, 'error_code' => 'MISSING_COMPARISON_DATA']
+                );
+            }
+
+            // Validate quiz version compatibility
+            $quizVersionA = (string) ($resultA['quiz_version'] ?? '');
+            $quizVersionB = isset($body['result_id']) ? (string) ($resultB['quiz_version'] ?? '') : '';
+            if (isset($body['answers'])) {
+                // Get version from quiz config for new result
+                try {
+                    $quizConfig = $this->quizRepository->load($body['quiz_id']);
+                    $quizVersionB = (string) ($quizConfig['meta']['version'] ?? '');
+                } catch (\Throwable) {
+                    // Will be handled below
+                }
+            }
+            
+            if ($quizVersionB !== '' && $quizVersionA !== '' && $quizVersionA !== $quizVersionB) {
+                return new \WP_Error(
+                    'version_mismatch',
+                    'Cannot compare results from different quiz versions. Please retake the quiz with the latest version.',
+                    ['status' => 400, 'quiz_version_a' => $quizVersionA, 'quiz_version_b' => $quizVersionB]
+                );
+            }
+
+            // Check for duplicate comparison
+            $existingComparison = $this->comparisonRepository->findExistingComparison($resultIdA, $resultIdB);
+            if ($existingComparison !== null) {
+                // Return existing comparison instead of creating duplicate
+                $existingToken = (string) ($existingComparison['share_token'] ?? '');
+                if ($existingToken !== '') {
+                    return new \WP_REST_Response([
+                        'comparison_id' => (int) ($existingComparison['id'] ?? 0),
+                        'share_token' => $existingToken,
+                        'match_score' => (float) ($existingComparison['match_score'] ?? 0.0),
+                        'share_url' => home_url('/match/' . $existingToken . '/'),
+                        'api_url' => rest_url(self::NAMESPACE . '/comparison/' . $existingToken),
+                        'is_existing' => true,
+                        'message' => 'Comparison already exists',
+                    ], 200);
+                }
             }
 
             // Get algorithm
@@ -829,7 +944,11 @@ final class QuizApiController
             $success = $this->resultRepository->revokeToken($resultId);
 
             if (!$success) {
-                return new \WP_Error('not_found', 'Result not found', ['status' => 404]);
+                return new \WP_Error(
+                    'not_found',
+                    'The quiz result could not be found. It may have been deleted.',
+                    ['status' => 404, 'error_code' => 'RESULT_NOT_FOUND']
+                );
             }
 
             return new \WP_REST_Response([
@@ -838,26 +957,50 @@ final class QuizApiController
             ], 200);
 
         } catch (\Throwable $e) {
-            return new \WP_Error('server_error', 'An unexpected error occurred', ['status' => 500]);
+            return new \WP_Error(
+                'server_error',
+                'An unexpected error occurred while revoking the share link. Please try again later.',
+                ['status' => 500, 'error_code' => 'UNEXPECTED_ERROR']
+            );
         }
     }
 
     /**
-     * Check rate limit for compare endpoint.
+     * Check rate limit for comparisons (user-based if logged in, IP-based if anonymous).
+     *
+     * @return array{allowed: bool, remaining: int, reset_at: int}
      */
-    private function checkRateLimit(): bool
+    private function checkRateLimit(): array
     {
+        $userId = (int) get_current_user_id();
         $ip = $this->getClientIp();
         $hour = (int) (time() / self::RATE_LIMIT_WINDOW);
-        $key = self::RATE_LIMIT_KEY_PREFIX . $ip . '_' . $hour;
+        $resetAt = ($hour + 1) * self::RATE_LIMIT_WINDOW;
 
-        $count = (int) get_transient($key);
-        if ($count >= self::RATE_LIMIT_MAX) {
-            return false;
+        // Use user ID if logged in, otherwise use IP
+        if ($userId > 0) {
+            $key = self::RATE_LIMIT_KEY_PREFIX . 'user_' . $userId . '_' . $hour;
+            // Higher limit for authenticated users (2x)
+            $limit = self::RATE_LIMIT_MAX * 2;
+        } else {
+            $key = self::RATE_LIMIT_KEY_PREFIX . 'ip_' . $ip . '_' . $hour;
+            $limit = self::RATE_LIMIT_MAX;
         }
 
-        set_transient($key, $count + 1, self::RATE_LIMIT_WINDOW);
-        return true;
+        $count = (int) get_transient($key);
+        $remaining = max(0, $limit - $count - 1);
+        $allowed = $count < $limit;
+
+        if ($allowed) {
+            set_transient($key, $count + 1, self::RATE_LIMIT_WINDOW);
+        }
+
+        return [
+            'allowed' => $allowed,
+            'remaining' => $remaining,
+            'reset_at' => $resetAt,
+            'limit' => $limit,
+        ];
     }
 
     /**
@@ -1079,13 +1222,15 @@ final class QuizApiController
 
     /**
      * Get or create quiz ID in database.
-     * For now, returns a placeholder - in production, this would look up/create in quizzes table.
+     * Looks up or creates the quiz in the match_me_quizzes table.
      */
     private function getOrCreateQuizId(string $quizSlug, array $quizConfig): int
     {
-        // TODO: Implement proper quiz lookup/creation
-        // For now, return a hash-based ID
-        return abs(crc32($quizSlug));
+        $title = (string) ($quizConfig['meta']['title'] ?? $quizSlug);
+        $version = (string) ($quizConfig['meta']['version'] ?? '1.0');
+        $meta = $quizConfig['meta'] ?? [];
+
+        return $this->quizDbRepository->getOrCreate($quizSlug, $title, $version, $meta);
     }
 
     /**

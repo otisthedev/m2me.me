@@ -124,8 +124,10 @@ final class FacebookAuth
         $pictureUrl = isset($userInfo['picture']['data']['url']) ? esc_url_raw((string) $userInfo['picture']['data']['url']) : '';
         $fbUserId = isset($userInfo['id']) ? sanitize_text_field((string) $userInfo['id']) : '';
 
+        // Account linking: Check if user with this email already exists
         $user = get_user_by('email', $email);
         if ($user) {
+            // Link Facebook account to existing user
             $userId = (int) $user->ID;
             update_user_meta($userId, 'facebook_user_id', $fbUserId);
             update_user_meta($userId, 'facebook_profile_picture', $pictureUrl);

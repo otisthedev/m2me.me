@@ -116,6 +116,37 @@ function mm_overall_match_from_maps(
         $otherIds = array_values(array_unique(array_map(fn($p) => (int) ($p['other_user_id'] ?? 0), $people)));
         $otherIds = array_values(array_filter($otherIds, fn($v) => $v > 0));
         $bulkVectors = $resRepo->latestVectorsByUsersGroupedByQuizSlug($otherIds);
+        
+        // Bulk fetch users and user meta to avoid N+1 queries
+        $otherUsers = [];
+        $userMetaData = [];
+        if (!empty($otherIds)) {
+            $users = get_users(['include' => $otherIds, 'number' => count($otherIds)]);
+            foreach ($users as $u) {
+                if ($u instanceof \WP_User) {
+                    $otherUsers[$u->ID] = $u;
+                }
+            }
+            
+            // Bulk fetch user meta (first_name, profile_picture)
+            $placeholders = implode(',', array_fill(0, count($otherIds), '%d'));
+            $metaQuery = $wpdb->prepare(
+                "SELECT user_id, meta_key, meta_value FROM {$wpdb->usermeta} 
+                 WHERE user_id IN ($placeholders) 
+                 AND meta_key IN ('first_name', 'profile_picture')",
+                ...$otherIds
+            );
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $metaRows = $wpdb->get_results($metaQuery, ARRAY_A);
+            foreach ($metaRows as $metaRow) {
+                $uid = (int) $metaRow['user_id'];
+                $key = $metaRow['meta_key'];
+                if (!isset($userMetaData[$uid])) {
+                    $userMetaData[$uid] = [];
+                }
+                $userMetaData[$uid][$key] = $metaRow['meta_value'];
+            }
+        }
 
         $with = isset($_GET['with']) ? (int) $_GET['with'] : 0;
         $allowedIds = array_map(fn($r) => (int) $r['other_user_id'], $people);
@@ -125,12 +156,17 @@ function mm_overall_match_from_maps(
         foreach ($people as $p) {
             $oid = (int) $p['other_user_id'];
             if ($oid <= 0) continue;
-            $u = get_user_by('id', $oid);
-            if (!$u instanceof \WP_User) continue;
+            if (!isset($otherUsers[$oid])) continue;
+            $u = $otherUsers[$oid];
 
-            $first = (string) get_user_meta($oid, 'first_name', true);
+            $first = isset($userMetaData[$oid]['first_name']) ? (string) $userMetaData[$oid]['first_name'] : '';
             $name = $first !== '' ? $first : (string) ($u->display_name ?: 'Someone');
-            $avatar = (string) get_avatar_url($oid, ['size' => 128]);
+            $profilePic = isset($userMetaData[$oid]['profile_picture']) ? (string) $userMetaData[$oid]['profile_picture'] : '';
+            if ($profilePic !== '' && filter_var($profilePic, FILTER_VALIDATE_URL)) {
+                $avatar = $profilePic;
+            } else {
+                $avatar = (string) get_avatar_url($oid, ['size' => 128]);
+            }
 
             $theirMap = is_array($bulkVectors[$oid] ?? null) ? (array) $bulkVectors[$oid] : [];
 

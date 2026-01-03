@@ -354,5 +354,76 @@ final class ResultRepository
 
         return $out;
     }
+
+    /**
+     * Reassign anonymous results (user_id = NULL) to a user.
+     *
+     * @param array<int> $resultIds Result IDs to reassign
+     * @param int $userId User ID to assign results to
+     * @return int Number of results reassigned
+     */
+    public function reassignResultsToUser(array $resultIds, int $userId): int
+    {
+        if (empty($resultIds) || $userId <= 0) {
+            return 0;
+        }
+
+        $table = $this->tableName();
+        $placeholders = implode(',', array_fill(0, count($resultIds), '%d'));
+        
+        // Only reassign results that are currently anonymous (user_id IS NULL)
+        $sql = $this->wpdb->prepare(
+            "UPDATE $table 
+             SET user_id = %d 
+             WHERE result_id IN ($placeholders) 
+             AND user_id IS NULL",
+            array_merge([$userId], $resultIds)
+        );
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $updated = $this->wpdb->query($sql);
+
+        return $updated !== false ? (int) $updated : 0;
+    }
+
+    /**
+     * Find all results for a user (for GDPR export).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function findByUser(int $userId): array
+    {
+        $table = $this->tableName();
+        $results = $this->wpdb->get_results(
+            $this->wpdb->prepare(
+                "SELECT result_id, quiz_id, quiz_slug, user_id, trait_vector, textual_summary_short, textual_summary_long, textual_summary_quiz_version, share_token, share_mode, quiz_version, created_at, revoked_at 
+                 FROM $table 
+                 WHERE user_id = %d 
+                 ORDER BY created_at DESC",
+                $userId
+            ),
+            ARRAY_A
+        );
+
+        return is_array($results) ? $results : [];
+    }
+
+    /**
+     * Delete all results for a user (for GDPR deletion).
+     *
+     * @return int Number of deleted results
+     */
+    public function deleteByUser(int $userId): int
+    {
+        $table = $this->tableName();
+        $deleted = $this->wpdb->query(
+            $this->wpdb->prepare(
+                "DELETE FROM $table WHERE user_id = %d",
+                $userId
+            )
+        );
+
+        return $deleted !== false ? (int) $deleted : 0;
+    }
 }
 
