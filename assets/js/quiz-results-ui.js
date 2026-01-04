@@ -529,7 +529,7 @@
 
         // Logo (only branding)
         const themeUrl = (window.matchMeTheme && window.matchMeTheme.themeUrl) ? String(window.matchMeTheme.themeUrl) : '';
-        const logoUrl = themeUrl ? `${themeUrl.replace(/\\/$/, '')}/assets/img/M2me.me-white.svg` : '';
+        const logoUrl = themeUrl ? `${themeUrl.replace(/\/+$/, '')}/assets/img/M2me.me-white.svg` : '';
         if (logoUrl) {
             await loadImageContain(ctx, logoUrl, padX, height - 164, 240, 70);
         }

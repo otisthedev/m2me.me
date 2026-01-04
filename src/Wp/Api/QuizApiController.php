@@ -273,7 +273,7 @@ final class QuizApiController
             // Generate deterministic short + long narrative
             $traitLabels = $this->extractTraitLabels($quizConfig);
             $traitDescriptions = $this->extractTraitDescriptions($quizConfig);
-            [$summaryShort, $summaryLong] = $this->generateTextualSummaries($traitVector, $traitLabels, $traitDescriptions, (string) ($quizConfig['meta']['aspect'] ?? ''));
+            [$summaryShort, $summaryLong] = $this->generateTextualSummaries($traitVector, $traitLabels, $traitDescriptions, (string) ($quizConfig['meta']['aspect'] ?? ''), $quizConfig);
 
             // Store result
             $resultId = $this->resultRepository->insert(
@@ -420,7 +420,16 @@ final class QuizApiController
             }
 
             if ($shouldRegenerate) {
-                [$genShort, $genLong] = $this->generateTextualSummaries($traitVector, $traitLabels, $traitDescriptions, (string) $quizAspect);
+                // Load quiz config if not already loaded
+                $quizConfigForRegen = $quizConfig ?? [];
+                if (empty($quizConfigForRegen) && !empty($quizSlug)) {
+                    try {
+                        $quizConfigForRegen = $this->quizRepository->load($quizSlug);
+                    } catch (\Throwable) {
+                        $quizConfigForRegen = [];
+                    }
+                }
+                [$genShort, $genLong] = $this->generateTextualSummaries($traitVector, $traitLabels, $traitDescriptions, (string) $quizAspect, $quizConfigForRegen);
                 $storedShort = $storedShort !== '' ? $storedShort : $genShort;
                 $storedLong = $storedLong !== '' ? $storedLong : $genLong;
                 $this->resultRepository->updateSummaries(
@@ -570,7 +579,7 @@ final class QuizApiController
 
                 $traitLabelsB = $this->extractTraitLabels($quizConfig);
                 $traitDescriptionsB = $this->extractTraitDescriptions($quizConfig);
-                [$summaryShortB, $summaryLongB] = $this->generateTextualSummaries($traitVectorB, $traitLabelsB, $traitDescriptionsB, (string) ($quizConfig['meta']['aspect'] ?? ''));
+                [$summaryShortB, $summaryLongB] = $this->generateTextualSummaries($traitVectorB, $traitLabelsB, $traitDescriptionsB, (string) ($quizConfig['meta']['aspect'] ?? ''), $quizConfig);
 
                 $resultIdB = $this->resultRepository->insert(
                     $dbQuizId,
@@ -705,6 +714,7 @@ final class QuizApiController
             $quizAspect = '';
             $quizVersionA = '';
             $cmpMinWords = 450;
+            $quizConfigForCompare = [];
             try {
                 $quizSlugA = (string) ($resultA['quiz_slug'] ?? '');
                 if ($quizSlugA !== '') {
@@ -730,7 +740,8 @@ final class QuizApiController
                 $cmpNameA,
                 $quizTitle,
                 $quizAspect,
-                $cmpMinWords
+                $cmpMinWords,
+                $quizConfigForCompare ?? []
             );
 
             // Store comparison
@@ -1079,18 +1090,324 @@ final class QuizApiController
     }
 
     /**
+     * Get trait level based on score.
+     *
+     * @param float $score
+     * @return string 'high', 'mid', or 'low'
+     */
+    private function getTraitLevel(float $score): string
+    {
+        if ($score >= 0.70) {
+            return 'high';
+        }
+        if ($score >= 0.45) {
+            return 'mid';
+        }
+        return 'low';
+    }
+
+    /**
+     * Calculate profile dominance (difference between top and third trait).
+     *
+     * @param array<string, float> $traitVector
+     * @return float
+     */
+    private function calculateDominance(array $traitVector): float
+    {
+        if (empty($traitVector)) {
+            return 0.0;
+        }
+        arsort($traitVector);
+        $keys = array_keys($traitVector);
+        $top1 = $keys[0] ?? null;
+        $top3 = $keys[2] ?? null;
+        if ($top1 === null) {
+            return 0.0;
+        }
+        $score1 = (float) ($traitVector[$top1] ?? 0.0);
+        $score3 = $top3 !== null ? (float) ($traitVector[$top3] ?? 0.0) : ($keys[1] !== null ? (float) ($traitVector[$keys[1]] ?? 0.0) : 0.0);
+        return $score1 - $score3;
+    }
+
+    /**
+     * Select variation index based on score confidence.
+     *
+     * @param float $score
+     * @param int $variationCount
+     * @return int
+     */
+    private function selectVariationIndex(float $score, int $variationCount): int
+    {
+        if ($variationCount <= 0) {
+            return 0;
+        }
+        // Use score to influence selection (higher scores = more confident variations)
+        // For now, use random selection for variety
+        return mt_rand(0, $variationCount - 1);
+    }
+
+    /**
+     * Select trait copy with context awareness.
+     *
+     * @param string $traitId
+     * @param float $score
+     * @param array $traitCopy
+     * @param array $context
+     * @return string
+     */
+    private function selectTraitCopy(string $traitId, float $score, array $traitCopy, array $context = []): string
+    {
+        if (!isset($traitCopy[$traitId]) || !is_array($traitCopy[$traitId])) {
+            return '';
+        }
+
+        $level = $this->getTraitLevel($score);
+        $variations = $traitCopy[$traitId][$level] ?? [];
+
+        if (!is_array($variations) || empty($variations)) {
+            // Fallback to generic description
+            return '';
+        }
+
+        // Check for context modifiers
+        if (isset($traitCopy[$traitId]['context_modifiers']) && is_array($traitCopy[$traitId]['context_modifiers'])) {
+            foreach ($context as $otherTrait => $otherScore) {
+                $modifierKey = $otherScore >= 0.70 ? "with_high_{$otherTrait}" : "with_low_{$otherTrait}";
+                if (isset($traitCopy[$traitId]['context_modifiers'][$modifierKey])) {
+                    $modifier = $traitCopy[$traitId]['context_modifiers'][$modifierKey];
+                    return is_string($modifier) ? $modifier : '';
+                }
+            }
+        }
+
+        // Select variation based on score confidence
+        $variationCount = count($variations);
+        if ($variationCount === 0) {
+            return '';
+        }
+        $index = $this->selectVariationIndex($score, $variationCount);
+        return is_string($variations[$index] ?? null) ? $variations[$index] : '';
+    }
+
+    /**
+     * Evaluate rule conditions for pair rules.
+     *
+     * @param array $when
+     * @param array<string, float> $traitVector
+     * @param array $conditions
+     * @return bool
+     */
+    private function evaluateRuleConditions(array $when, array $traitVector, array $conditions = []): bool
+    {
+        foreach ($when as $condition) {
+            if (strpos($condition, ':') !== false) {
+                [$trait, $level] = explode(':', $condition, 2);
+                $score = $traitVector[$trait] ?? 0.0;
+                $expectedLevel = $this->getTraitLevel($score);
+                if ($expectedLevel !== $level && $level !== 'any') {
+                    return false;
+                }
+            } elseif ($condition === 'profile_type:balanced') {
+                $dominance = $this->calculateDominance($traitVector);
+                if ($dominance > 0.10) {
+                    return false;
+                }
+            } elseif ($condition === 'profile_type:decisive') {
+                $dominance = $this->calculateDominance($traitVector);
+                if ($dominance < 0.18) {
+                    return false;
+                }
+            } elseif ($condition === 'all_traits:high') {
+                foreach ($traitVector as $score) {
+                    if ($score < 0.70) {
+                        return false;
+                    }
+                }
+            } elseif ($condition === 'all_traits:low') {
+                foreach ($traitVector as $score) {
+                    if ($score >= 0.45) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        // Check additional conditions
+        if (isset($conditions['min_dominance'])) {
+            $dominance = $this->calculateDominance($traitVector);
+            if ($dominance < (float) $conditions['min_dominance']) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Match pair rules based on trait vector.
+     *
+     * @param array<string, float> $traitVector
+     * @param array $pairRules
+     * @return array
+     */
+    private function matchPairRules(array $traitVector, array $pairRules): array
+    {
+        $matchedRules = [];
+
+        if (!is_array($pairRules) || empty($pairRules)) {
+            return $matchedRules;
+        }
+
+        foreach ($pairRules as $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+            
+            $when = $rule['when'] ?? [];
+            if (!is_array($when) || empty($when)) {
+                continue;
+            }
+            
+            if ($this->evaluateRuleConditions($when, $traitVector, $rule['conditions'] ?? [])) {
+                $matchedRules[] = $rule;
+            }
+        }
+
+        // Sort by priority (higher priority first)
+        usort($matchedRules, fn($a, $b) => ($b['priority'] ?? 0) <=> ($a['priority'] ?? 0));
+
+        return $matchedRules;
+    }
+
+    /**
+     * Get confidence modifier based on score.
+     *
+     * @param float $score
+     * @return string
+     */
+    private function getConfidenceModifier(float $score): string
+    {
+        if ($score >= 0.75) {
+            return 'strongly';
+        }
+        if ($score >= 0.60) {
+            return 'tend to';
+        }
+        if ($score >= 0.45) {
+            return 'often';
+        }
+        return 'may';
+    }
+
+    /**
+     * Apply aspect-specific language to sentence.
+     *
+     * @param string $sentence
+     * @param string $aspect
+     * @return string
+     */
+    private function applyAspectLanguage(string $sentence, string $aspect): string
+    {
+        // For now, return as-is. Can be enhanced with aspect-specific replacements.
+        return $sentence;
+    }
+
+    /**
+     * Build dynamic sentence from template.
+     *
+     * @param string $template
+     * @param array<string, float> $traitVector
+     * @param array<string, string> $traitLabels
+     * @param string $aspect
+     * @return string
+     */
+    private function buildDynamicSentence(string $template, array $traitVector, array $traitLabels, string $aspect): string
+    {
+        $sentence = $template;
+
+        // Replace placeholders with context-aware content
+        foreach ($traitVector as $trait => $score) {
+            $confidence = $this->getConfidenceModifier($score);
+            $sentence = str_replace("{{{$trait}_confidence}}", $confidence, $sentence);
+        }
+
+        // Aspect-specific language
+        $sentence = $this->applyAspectLanguage($sentence, $aspect);
+
+        return $sentence;
+    }
+
+    /**
+     * Find trait gap scenario for a specific trait pair.
+     *
+     * @param string $trait1
+     * @param array $topGaps Array of gap data
+     * @param float $gapSize
+     * @param array $traitPairCopy
+     * @return array|null
+     */
+    private function findTraitGapScenario(string $trait1, array $topGaps, float $gapSize, array $traitPairCopy): ?array
+    {
+        foreach ($traitPairCopy as $scenario) {
+            if (!is_array($scenario)) {
+                continue;
+            }
+            
+            $whenGap = $scenario['when_gap'] ?? [];
+            $requiredGapSize = $scenario['gap_size'] ?? 'any';
+            
+            if (!is_array($whenGap) || empty($whenGap)) {
+                continue;
+            }
+            
+            // Check if trait1 is in the gap pair (when_gap contains trait pairs like ["directness", "empathy"])
+            if (in_array($trait1, $whenGap, true)) {
+                // Check gap size match
+                $gapSizeMatches = false;
+                if ($requiredGapSize === 'any') {
+                    $gapSizeMatches = true;
+                } elseif ($requiredGapSize === 'large' && $gapSize >= 0.40) {
+                    $gapSizeMatches = true;
+                } elseif ($requiredGapSize === 'medium' && $gapSize >= 0.25 && $gapSize < 0.40) {
+                    $gapSizeMatches = true;
+                } elseif ($requiredGapSize === 'small' && $gapSize < 0.25) {
+                    $gapSizeMatches = true;
+                }
+                
+                if ($gapSizeMatches) {
+                    return $scenario;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
      * Generate deterministic short + long result narratives.
      *
      * @param array<string, float> $traitVector
      * @param array<string, string> $traitLabels
      * @param array<string, string> $traitDescriptions
+     * @param string $aspect
+     * @param array $quizConfig
      * @return array{0:string,1:string} [short, long]
      */
-    private function generateTextualSummaries(array $traitVector, array $traitLabels, array $traitDescriptions, string $aspect): array
+    private function generateTextualSummaries(array $traitVector, array $traitLabels, array $traitDescriptions, string $aspect, array $quizConfig = []): array
     {
         if ($traitVector === []) {
             return ['Quiz completed successfully.', "We couldn't generate a detailed overview because trait data is missing."];
         }
+
+        // Extract narrative block if available
+        $narrative = $quizConfig['narrative'] ?? null;
+        $traitCopy = is_array($narrative) && isset($narrative['trait_copy']) ? $narrative['trait_copy'] : [];
+        $pairRules = is_array($narrative) && isset($narrative['pair_rules']) ? $narrative['pair_rules'] : [];
+        $sectionTemplates = is_array($narrative) && isset($narrative['section_templates']) ? $narrative['section_templates'] : [];
+        $aspectLanguage = is_array($narrative) && isset($narrative['aspect_specific_language']) ? $narrative['aspect_specific_language'] : [];
+        $minWords = (is_array($narrative) && isset($narrative['min_words']) && is_numeric($narrative['min_words'])) 
+            ? max(350, (int) $narrative['min_words']) 
+            : 350;
 
         // Normalize / clamp.
         $clean = [];
@@ -1142,44 +1459,177 @@ final class QuizApiController
         $support = $label($top3);
         $low = $label($bottom1);
 
+        // Check for pair rules first
+        $matchedRules = !empty($pairRules) ? $this->matchPairRules($clean, $pairRules) : [];
+        $overviewRule = null;
+        foreach ($matchedRules as $rule) {
+            if (($rule['section'] ?? '') === 'overview' || !isset($rule['section'])) {
+                $overviewRule = $rule;
+                break;
+            }
+        }
+
         // Short summary (1–2 sentences) for UI headers, share text, meta, etc.
-        if ($profileType === 'balanced') {
-            $short = "Your results show a balanced profile with a slight tilt toward {$primary} and {$secondary}.";
-        } elseif ($profileType === 'decisive') {
-            $short = "Your results strongly highlight {$primary}, supported by {$secondary}.";
+        // Use pair rule copy if available, otherwise use generic
+        if ($overviewRule && !empty($overviewRule['copy'])) {
+            $short = is_array($overviewRule['copy']) ? ($overviewRule['copy'][0] ?? '') : (string) $overviewRule['copy'];
+            if ($short === '') {
+                // Fallback to generic
+                if ($profileType === 'balanced') {
+                    $short = "Your results show a balanced profile with a slight tilt toward {$primary} and {$secondary}.";
+                } elseif ($profileType === 'decisive') {
+                    $short = "Your results strongly highlight {$primary}, supported by {$secondary}.";
+                } else {
+                    $short = "Your profile leans toward {$primary} and {$secondary}, with {$support} as a supporting trait.";
+                }
+            }
         } else {
-            $short = "Your profile leans toward {$primary} and {$secondary}, with {$support} as a supporting trait.";
+            // Generic fallback
+            if ($profileType === 'balanced') {
+                $short = "Your results show a balanced profile with a slight tilt toward {$primary} and {$secondary}.";
+            } elseif ($profileType === 'decisive') {
+                $short = "Your results strongly highlight {$primary}, supported by {$secondary}.";
+            } else {
+                $short = "Your profile leans toward {$primary} and {$secondary}, with {$support} as a supporting trait.";
+            }
         }
 
         // Long overview: plain text with simple section headings + bullets (UI will format).
         $overview = [];
         $overview[] = "Overview";
-        $overview[] = "Your strongest signals are in {$primary} and {$secondary}. " .
-            ($support !== '' ? "A supporting theme is {$support}. " : '') .
-            ($profileType === 'decisive'
-                ? "This is a more \"decisive\" pattern, meaning a few traits clearly stand out."
-                : ($profileType === 'balanced'
-                    ? "This is a more \"balanced\" pattern, meaning you likely adapt depending on context."
-                    : "This looks \"context-flexible\": you have clear preferences, but you can still shift when needed."));
-        $overview[] = "These percentages aren’t good or bad—they’re simply a snapshot of what you tend to default to in decisions, collaboration, and under pressure.";
+        
+        // Use pair rule copy for overview if available
+        if ($overviewRule && !empty($overviewRule['copy'])) {
+            $ruleCopy = is_array($overviewRule['copy']) ? ($overviewRule['copy'][0] ?? '') : (string) $overviewRule['copy'];
+            if ($ruleCopy !== '') {
+                $overview[] = $ruleCopy;
+            } else {
+                // Fallback to generic
+                $overview[] = "Your strongest signals are in {$primary} and {$secondary}. " .
+                    ($support !== '' ? "A supporting theme is {$support}. " : '') .
+                    ($profileType === 'decisive'
+                        ? "This is a more \"decisive\" pattern, meaning a few traits clearly stand out."
+                        : ($profileType === 'balanced'
+                            ? "This is a more \"balanced\" pattern, meaning you likely adapt depending on context."
+                            : "This looks \"context-flexible\": you have clear preferences, but you can still shift when needed."));
+            }
+        } else {
+            // Try to use trait copy if available
+            $primaryCopy = '';
+            $secondaryCopy = '';
+            if (!empty($traitCopy) && $top1 !== null) {
+                $primaryCopy = $this->selectTraitCopy($top1, $clean[$top1], $traitCopy, [$top2 => $clean[$top2] ?? 0.0]);
+            }
+            if (!empty($traitCopy) && $top2 !== null) {
+                $secondaryCopy = $this->selectTraitCopy($top2, $clean[$top2], $traitCopy, [$top1 => $clean[$top1] ?? 0.0]);
+            }
+            
+            if ($primaryCopy !== '' && $secondaryCopy !== '') {
+                $overview[] = $primaryCopy . ' ' . $secondaryCopy;
+            } else {
+                // Generic fallback
+                $overview[] = "Your strongest signals are in {$primary} and {$secondary}. " .
+                    ($support !== '' ? "A supporting theme is {$support}. " : '') .
+                    ($profileType === 'decisive'
+                        ? "This is a more \"decisive\" pattern, meaning a few traits clearly stand out."
+                        : ($profileType === 'balanced'
+                            ? "This is a more \"balanced\" pattern, meaning you likely adapt depending on context."
+                            : "This looks \"context-flexible\": you have clear preferences, but you can still shift when needed."));
+            }
+        }
+        
+        $overview[] = "These percentages aren't good or bad. They're simply a snapshot of what you tend to default to in decisions, collaboration, and under pressure.";
         $overview[] = "This is informational and not a diagnosis.";
 
         $strengths = [];
         $strengths[] = "Strengths";
-        $strengths[] = "- You can rely on your {$primary} side to create momentum when something needs a push forward.";
-        $strengths[] = "- Your {$secondary} side helps you stay consistent and follow through, especially when things get busy.";
-        $strengths[] = "- With {$support} as a supporting trait, you can round out your approach instead of using only one style.";
+        
+        // Check for pair rules for strengths section
+        $strengthsRules = [];
+        foreach ($matchedRules as $rule) {
+            if (($rule['section'] ?? '') === 'strengths') {
+                $strengthsRules[] = $rule;
+            }
+        }
+        
+        // Use pair rule copy if available
+        if (!empty($strengthsRules)) {
+            $strengthRule = $strengthsRules[0];
+            $strengthCopy = is_array($strengthRule['copy']) ? ($strengthRule['copy'][0] ?? '') : (string) $strengthRule['copy'];
+            if ($strengthCopy !== '') {
+                $strengths[] = "- " . $strengthCopy;
+            }
+        }
+        
+        // Use trait copy if available
+        if (empty($strengthsRules)) {
+            $primaryCopy = '';
+            $secondaryCopy = '';
+            if (!empty($traitCopy) && $top1 !== null) {
+                $primaryCopy = $this->selectTraitCopy($top1, $clean[$top1], $traitCopy, [$top2 => $clean[$top2] ?? 0.0]);
+            }
+            if (!empty($traitCopy) && $top2 !== null) {
+                $secondaryCopy = $this->selectTraitCopy($top2, $clean[$top2], $traitCopy, [$top1 => $clean[$top1] ?? 0.0]);
+            }
+            
+            if ($primaryCopy !== '' || $secondaryCopy !== '') {
+                if ($primaryCopy !== '') {
+                    $strengths[] = "- " . $primaryCopy;
+                }
+                if ($secondaryCopy !== '') {
+                    $strengths[] = "- " . $secondaryCopy;
+                }
+            } else {
+                // Generic fallback
+                $strengths[] = "- You can rely on your {$primary} side to create momentum when something needs a push forward.";
+                $strengths[] = "- Your {$secondary} side helps you stay consistent and follow through, especially when things get busy.";
+                if ($support !== '') {
+                    $strengths[] = "- With {$support} as a supporting trait, you can round out your approach instead of using only one style.";
+                }
+            }
+        } else {
+            // Add generic strengths if we only have one rule
+            if (count($strengthsRules) === 1) {
+                $strengths[] = "- You can rely on your {$primary} side to create momentum when something needs a push forward.";
+                $strengths[] = "- Your {$secondary} side helps you stay consistent and follow through, especially when things get busy.";
+            }
+        }
+        
         $d1 = $desc($top1);
         $d2 = $desc($top2);
-        if ($d1 !== '' || $d2 !== '') {
-            $strengths[] = "- In plain language: " . trim(($d1 !== '' ? "{$primary} — {$d1} " : '') . ($d2 !== '' ? "{$secondary} — {$d2}" : ''));
+        if (($d1 !== '' || $d2 !== '') && empty($strengthsRules)) {
+            $strengths[] = "- In plain language: " . trim(($d1 !== '' ? "{$primary}: {$d1} " : '') . ($d2 !== '' ? "{$secondary}: {$d2}" : ''));
         }
 
         $edges = [];
         $edges[] = "Growth edges";
-        $edges[] = "- When you overuse {$primary}, you might move too fast for others or skip alignment.";
-        $edges[] = "- When {$secondary} runs high, you may prefer certainty—so ambiguity can feel uncomfortable.";
-        $edges[] = "- With lower {$low}, you might not naturally prioritize that style unless you choose it intentionally.";
+        
+        // Check for pair rules for growth_edges section
+        $edgesRules = [];
+        foreach ($matchedRules as $rule) {
+            if (($rule['section'] ?? '') === 'growth_edges') {
+                $edgesRules[] = $rule;
+            }
+        }
+        
+        // Use pair rule copy if available
+        if (!empty($edgesRules)) {
+            foreach ($edgesRules as $edgeRule) {
+                $edgeCopy = is_array($edgeRule['copy']) ? ($edgeRule['copy'][0] ?? '') : (string) $edgeRule['copy'];
+                if ($edgeCopy !== '') {
+                    $edges[] = "- " . $edgeCopy;
+                }
+            }
+        }
+        
+        // Add generic growth edges if no rules or to supplement
+        if (empty($edgesRules) || count($edgesRules) < 2) {
+            $edges[] = "- When you overuse {$primary}, you might move too fast for others or skip alignment.";
+            $edges[] = "- When {$secondary} runs high, you may prefer certainty, so ambiguity can feel uncomfortable.";
+            if ($low !== '') {
+                $edges[] = "- With lower {$low}, you might not naturally prioritize that style unless you choose it intentionally.";
+            }
+        }
 
         $stress = [];
         $stress[] = "Under stress";
@@ -1218,7 +1668,7 @@ final class QuizApiController
         ));
 
         // Ensure we hit the "long enough" target (doc suggests 350–600+ words).
-        $minWords = 350;
+        // $minWords already set from narrative block or default above
         $words = preg_split('/\s+/', trim(preg_replace('/[^A-Za-z0-9]+/u', ' ', $long) ?? ''), -1, PREG_SPLIT_NO_EMPTY);
         $wordCount = is_array($words) ? count($words) : 0;
         if ($wordCount < $minWords) {
@@ -1340,7 +1790,8 @@ final class QuizApiController
                                 $nameA,
                                 $quizTitleLive,
                                 $quizAspectLive,
-                                $cmpMinWordsLive
+                                $cmpMinWordsLive,
+                                $quizConfig ?? []
                             );
 
                             $this->comparisonRepository->updateComparison(
@@ -1444,7 +1895,8 @@ final class QuizApiController
                     $nameA,
                     $quizTitle,
                     $quizAspect,
-                    $cmpMinWords
+                    $cmpMinWords,
+                    $quizConfig ?? []
                 );
                 $storedShort = $genShort;
                 $storedLong = $genLong;
@@ -1498,8 +1950,27 @@ final class QuizApiController
         string $nameThem,
         string $quizTitle,
         string $aspect,
-        int $minWords = 450
+        int $minWords = 450,
+        array $quizConfig = []
     ): array {
+        // Extract comparison narrative block if available
+        $comparisonNarrative = $quizConfig['comparison_narrative'] ?? null;
+        $traitPairCopy = is_array($comparisonNarrative) && isset($comparisonNarrative['trait_pair_copy']) 
+            ? $comparisonNarrative['trait_pair_copy'] 
+            : [];
+        $matchInterpretations = is_array($comparisonNarrative) && isset($comparisonNarrative['match_score_interpretations']) 
+            ? $comparisonNarrative['match_score_interpretations'] 
+            : [];
+        $communicationTips = is_array($comparisonNarrative) && isset($comparisonNarrative['communication_tips']) 
+            ? $comparisonNarrative['communication_tips'] 
+            : [];
+        $aspectAdvice = is_array($comparisonNarrative) && isset($comparisonNarrative['aspect_specific_advice']) 
+            ? $comparisonNarrative['aspect_specific_advice'] 
+            : [];
+        $minWords = (is_array($comparisonNarrative) && isset($comparisonNarrative['min_words']) && is_numeric($comparisonNarrative['min_words'])) 
+            ? max(250, (int) $comparisonNarrative['min_words']) 
+            : max(250, $minWords);
+
         $score = max(0.0, min(100.0, (float) $matchScore));
         $band = ($score >= 80.0) ? 'high' : (($score >= 55.0) ? 'medium' : 'low');
 
@@ -1579,23 +2050,49 @@ final class QuizApiController
         } else {
             foreach ($topGaps as $t) {
                 $gapPct = (int) round((float) ($t['gap'] ?? 0) * 100);
-                $lines[] = "- {$t['label']} (gap ~{$gapPct}%): One of you likely defaults to this more strongly; when rushed, this can look like mismatched pace, priorities, or expectations.";
+                
+                // Try to find trait gap scenario
+                $gapScenario = null;
+                if (!empty($traitPairCopy) && isset($t['id']) && is_string($t['id'])) {
+                    $gapScenario = $this->findTraitGapScenario($t['id'], $topGaps, (float) ($t['gap'] ?? 0), $traitPairCopy);
+                }
+                
+                if ($gapScenario && !empty($gapScenario['copy'])) {
+                    $gapCopy = is_array($gapScenario['copy']) ? ($gapScenario['copy'][0] ?? '') : (string) $gapScenario['copy'];
+                    if ($gapCopy !== '') {
+                        $lines[] = "- {$t['label']} (gap ~{$gapPct}%): " . $gapCopy;
+                    } else {
+                        $lines[] = "- {$t['label']} (gap ~{$gapPct}%): One of you likely defaults to this more strongly. When rushed, this can look like mismatched pace, priorities, or expectations.";
+                    }
+                } else {
+                    $lines[] = "- {$t['label']} (gap ~{$gapPct}%): One of you likely defaults to this more strongly. When rushed, this can look like mismatched pace, priorities, or expectations.";
+                }
             }
         }
 
         $lines[] = "";
         $lines[] = ($aspect === 'personality') ? "Communication tips" : "Coordination tips";
-        if ($band === 'high') {
-            $lines[] = "- Try saying: “I want to move fast, and I also want you to feel fully on my side—are we aligned?”";
-            $lines[] = "- Try saying: “What would ‘good enough’ look like for today so we don’t over-optimize?”";
-        } elseif ($band === 'medium') {
-            $lines[] = "- Try saying: “Can we pick a simple plan for today, and keep it flexible if new info shows up?”";
-            $lines[] = "- Try saying: “What do you need before you feel ready to commit—more info, more time, or more reassurance?”";
+        
+        // Use aspect-specific communication tips if available
+        $tips = $communicationTips[$band] ?? [];
+        if (!empty($tips) && is_array($tips)) {
+            foreach ($tips as $tip) {
+                $lines[] = "- " . $tip;
+            }
         } else {
-            $lines[] = "- Try saying: “Help me understand what matters most to you here—speed, certainty, or connection?”";
-            $lines[] = "- Try saying: “Can we slow down for 2 minutes so we don’t misread each other?”";
+            // Fallback to generic tips
+            if ($band === 'high') {
+                $lines[] = "- Try saying: \"I want to move fast, and I also want you to feel fully on my side. Are we aligned?\"";
+                $lines[] = "- Try saying: \"What would 'good enough' look like for today so we don't over-optimize?\"";
+            } elseif ($band === 'medium') {
+                $lines[] = "- Try saying: \"Can we pick a simple plan for today, and keep it flexible if new info shows up?\"";
+                $lines[] = "- Try saying: \"What do you need before you feel ready to commit? More info, more time, or more reassurance?\"";
+            } else {
+                $lines[] = "- Try saying: \"Help me understand what matters most to you here. Speed, certainty, or connection?\"";
+                $lines[] = "- Try saying: \"Can we slow down for 2 minutes so we don't misread each other?\"";
+            }
         }
-        $lines[] = "When conflict appears: validate first (“I get why that matters to you”), then propose one small experiment (“Can we try X for 7 days?”).";
+        $lines[] = "When conflict appears: validate first (\"I get why that matters to you\"), then propose one small experiment (\"Can we try X for 7 days?\").";
 
         $lines[] = "";
         $lines[] = "Do more / Do less";
@@ -1616,7 +2113,7 @@ final class QuizApiController
         $long = implode("\n", $lines);
 
         // Ensure it's long enough (comparison doc suggests ~450+ words).
-        $minWords = max(250, $minWords);
+        // $minWords already set from narrative block or default above
         $words = preg_split('/\s+/', trim(preg_replace('/[^A-Za-z0-9]+/u', ' ', $long) ?? ''), -1, PREG_SPLIT_NO_EMPTY);
         $wordCount = is_array($words) ? count($words) : 0;
         if ($wordCount < $minWords) {

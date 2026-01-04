@@ -217,27 +217,103 @@
       }
       if (els.screen) els.screen.style.display = 'none';
 
+      // Safety check: Verify MatchMeQuiz is available
+      if (!window.MatchMeQuiz) {
+        root.classList.remove('mmq-loading');
+        const msg = 'Quiz system not initialized. Please refresh the page.';
+        setError(msg);
+        console.error('MatchMeQuiz is not defined. Check if quiz-ajax-client.js loaded correctly.');
+        if (els.screen) els.screen.style.display = 'block';
+        if (els.results) els.results.style.display = 'none';
+        return;
+      }
+
+      // Safety check: Verify MatchMeQuizUI is available
+      if (!window.MatchMeQuizUI) {
+        root.classList.remove('mmq-loading');
+        const msg = 'Results display not available. Please refresh the page.';
+        setError(msg);
+        console.error('MatchMeQuizUI is not defined. Check if quiz-results-ui.js loaded correctly.');
+        if (els.screen) els.screen.style.display = 'block';
+        if (els.results) els.results.style.display = 'none';
+        return;
+      }
+
       const payloadAnswers = answers.filter(Boolean);
       if (compareToken) {
+        // Safety check: Verify compareResults method exists
+        if (typeof window.MatchMeQuiz.compareResults !== 'function') {
+          root.classList.remove('mmq-loading');
+          const msg = 'Comparison feature not available. Please refresh the page.';
+          setError(msg);
+          console.error('MatchMeQuiz.compareResults is not a function.');
+          if (els.screen) els.screen.style.display = 'block';
+          if (els.results) els.results.style.display = 'none';
+          return;
+        }
+
         const matchResult = await window.MatchMeQuiz.compareResults(compareToken, {
           answers: payloadAnswers,
           quiz_id: quizId,
         });
+        
+        // Safety check: Verify renderMatchResult method exists
         if (els.results) {
+          if (typeof window.MatchMeQuizUI.renderMatchResult !== 'function') {
+            root.classList.remove('mmq-loading');
+            const msg = 'Results display not available. Please refresh the page.';
+            setError(msg);
+            console.error('MatchMeQuizUI.renderMatchResult is not a function. Check if quiz-results-ui.js loaded correctly.');
+            if (els.screen) els.screen.style.display = 'block';
+            els.results.style.display = 'none';
+            return;
+          }
           window.MatchMeQuizUI.renderMatchResult(matchResult, els.results);
         }
       } else {
+        // Safety check: Verify submitQuiz method exists
+        if (typeof window.MatchMeQuiz.submitQuiz !== 'function') {
+          root.classList.remove('mmq-loading');
+          const msg = 'Quiz submission not available. Please refresh the page.';
+          setError(msg);
+          console.error('MatchMeQuiz.submitQuiz is not a function.');
+          if (els.screen) els.screen.style.display = 'block';
+          if (els.results) els.results.style.display = 'none';
+          return;
+        }
+
         const submitRes = await window.MatchMeQuiz.submitQuiz(quizId, payloadAnswers, {
           share_mode: 'share_match',
           anonymous_meta: {},
         });
+
+        // Safety check: Verify getResult method exists
+        if (typeof window.MatchMeQuiz.getResult !== 'function') {
+          root.classList.remove('mmq-loading');
+          const msg = 'Results retrieval not available. Please refresh the page.';
+          setError(msg);
+          console.error('MatchMeQuiz.getResult is not a function.');
+          if (els.screen) els.screen.style.display = 'block';
+          if (els.results) els.results.style.display = 'none';
+          return;
+        }
 
         // Fetch view representation for textual summary + permissions.
         const result = await window.MatchMeQuiz.getResult(submitRes.share_token);
         result.share_token = submitRes.share_token;
         result.share_urls = submitRes.share_urls;
 
+        // Safety check: Verify renderResult method exists
         if (els.results) {
+          if (typeof window.MatchMeQuizUI.renderResult !== 'function') {
+            root.classList.remove('mmq-loading');
+            const msg = 'Results display not available. Please refresh the page.';
+            setError(msg);
+            console.error('MatchMeQuizUI.renderResult is not a function. Check if quiz-results-ui.js loaded correctly.');
+            if (els.screen) els.screen.style.display = 'block';
+            els.results.style.display = 'none';
+            return;
+          }
           window.MatchMeQuizUI.renderResult(result, els.results);
         }
       }
