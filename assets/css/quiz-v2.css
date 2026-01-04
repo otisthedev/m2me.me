@@ -15,7 +15,7 @@
 
 .mmq-fullheight {
   /* Fill the viewport under the sticky header */
-  max-height: calc(100svh - var(--header-height) - 16px);
+  /* max-height: calc(100svh - var(--header-height) - 16px); */
   display: flex;
   flex-direction: column;
 }

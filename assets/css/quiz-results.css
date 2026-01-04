@@ -154,6 +154,11 @@
   opacity: 0.9;
   transform: translateY(-1px);
 }
+.btn-share-instagram:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    background: linear-gradient(130deg, #833AB4 0%, #FD1D1D 37%, #FCAF45 100%);
+}
 
 .btn-share-view:active,
 .btn-share-compare:active,
