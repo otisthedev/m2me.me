@@ -47,7 +47,8 @@
 
 .result-summary-text .mm-result-bullets {
   margin: 0 0 var(--spacing-md);
-  padding-left: 1.1rem;
+  padding-left: 0;
+  list-style: none;
 }
 
 .result-summary-text .mm-result-bullets li {
