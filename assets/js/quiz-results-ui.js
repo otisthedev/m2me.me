@@ -20,7 +20,6 @@
         const summaryEl = document.createElement('div');
         summaryEl.className = 'match-me-result-summary';
         summaryEl.innerHTML = `
-            <h2>Your Results</h2>
             <div class="result-summary-text">
                 ${renderLongSummary(longSummary || shortSummary)}
             </div>
