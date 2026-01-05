@@ -566,7 +566,12 @@
 
         return await new Promise((resolve, reject) => {
             canvas.toBlob((blob) => {
-                if (!blob) return reject(new Error('Failed to generate image'));
+                if (!blob) {
+                    const locale = (window.matchMeTheme && window.matchMeTheme.locale) || 'en';
+                    const isRussian = locale.indexOf('ru') === 0;
+                    const errorMsg = isRussian ? 'Не удалось создать изображение' : 'Failed to generate image';
+                    return reject(new Error(errorMsg));
+                }
                 resolve(blob);
             }, 'image/png', 1);
         });
@@ -741,7 +746,10 @@
             blob = await renderInstagramStoryPngBlobV2(data);
         } catch (e) {
             console.error('Failed to render story image:', e);
-            showMessage('Could not generate the story image. Please try again.', 'error');
+            const locale = (window.matchMeTheme && window.matchMeTheme.locale) || 'en';
+            const isRussian = locale.indexOf('ru') === 0;
+            const errorMsg = isRussian ? 'Не удалось создать изображение для истории. Попробуйте снова.' : 'Could not generate the story image. Please try again.';
+            showMessage(errorMsg, 'error');
             return;
         }
 

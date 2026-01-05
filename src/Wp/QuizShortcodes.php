@@ -34,14 +34,17 @@ final class QuizShortcodes
     {
         $quizId = isset($atts['id']) ? (string) $atts['id'] : '';
         $quizId = sanitize_file_name($quizId);
+        $locale = (string) get_locale();
+        $isRussian = strpos($locale, 'ru') === 0;
+        $quizNotFound = $isRussian ? 'Квиз не найден' : 'Quiz not found';
         if ($quizId === '') {
-            return '<p>Quiz not found</p>';
+            return '<p>' . esc_html($quizNotFound) . '</p>';
         }
 
         try {
             $quizData = $this->quizzes->load($quizId);
         } catch (\Throwable) {
-            return '<p>Quiz not found</p>';
+            return '<p>' . esc_html($quizNotFound) . '</p>';
         }
 
         // Detect format: if any question has options_json, use new format (v2)
@@ -173,14 +176,17 @@ final class QuizShortcodes
     {
         $quizId = isset($atts['id']) ? (string) $atts['id'] : '';
         $quizId = sanitize_file_name($quizId);
+        $locale = (string) get_locale();
+        $isRussian = strpos($locale, 'ru') === 0;
+        $quizNotFound = $isRussian ? 'Квиз не найден' : 'Quiz not found';
         if ($quizId === '') {
-            return '<p>Quiz not found</p>';
+            return '<p>' . esc_html($quizNotFound) . '</p>';
         }
 
         try {
             $quizData = $this->quizzes->load($quizId);
         } catch (\Throwable) {
-            return '<p>Quiz not found</p>';
+            return '<p>' . esc_html($quizNotFound) . '</p>';
         }
 
         $this->enqueueQuizRuntimeV2($quizData, [
@@ -447,7 +453,11 @@ final class QuizShortcodes
             $out .= '<h2 class="entry-title ast-blog-single-element" itemprop="headline"><a href="' . esc_url($link) . '" rel="bookmark">' . esc_html((string) $title) . '</a></h2>';
             // Intentionally omit entry meta for minimalist design.
             $out .= '<div class="ast-excerpt-container ast-blog-single-element">';
-            $out .= $attemptId ? '<a class="start-quiz" href="' . esc_url($link) . '">View Result</a>' : '<a class="start-quiz" href="' . esc_url($link) . '">View</a>';
+            $locale = (string) get_locale();
+            $isRussian = strpos($locale, 'ru') === 0;
+            $viewResult = $isRussian ? 'Посмотреть результат' : 'View Result';
+            $view = $isRussian ? 'Посмотреть' : 'View';
+            $out .= $attemptId ? '<a class="start-quiz" href="' . esc_url($link) . '">' . esc_html($viewResult) . '</a>' : '<a class="start-quiz" href="' . esc_url($link) . '">' . esc_html($view) . '</a>';
             $out .= '</div>';
             // Intentionally omit "Read More" for minimalist design.
             $out .= '<div class="entry-content clear" itemprop="text"></div>';

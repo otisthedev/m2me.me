@@ -94,9 +94,11 @@ final class ShareMeta
 
         $resultRepo = new ResultRepository($wpdb);
 
+        $locale = (string) get_locale();
+        $isRussian = strpos($locale, 'ru') === 0;
         $row = null;
-        $quizTitle = 'Quiz Results';
-        $ownerName = 'Someone';
+        $quizTitle = $isRussian ? 'Результаты квиза' : 'Quiz Results';
+        $ownerName = $isRussian ? 'Кто-то' : 'Someone';
         $image = $this->fallbackShareImage();
 
         if ($mode === 'match') {
