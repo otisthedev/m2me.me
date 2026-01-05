@@ -502,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const linkShare = document.createElement('button');
             linkShare.type = 'button';
             linkShare.className = 'share-btn cq-share-link';
-            linkShare.textContent = 'Share';
+            linkShare.textContent = 'Share Link';
             actions.appendChild(linkShare);
         }
 

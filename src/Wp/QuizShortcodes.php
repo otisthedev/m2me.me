@@ -120,8 +120,14 @@ final class QuizShortcodes
                 </button>
                 <div class="share-btn">
                     <?php
+                    $locale = (string) get_locale();
+                    $isRussian = strpos($locale, 'ru') === 0;
                     $ownerId = $hasPrevious ? (int) ($previous['user_id'] ?? 0) : 0;
-                    echo (is_user_logged_in() && (int) get_current_user_id() === $ownerId) ? 'Share Results' : 'Share Quiz';
+                    if ($isRussian) {
+                        echo (is_user_logged_in() && (int) get_current_user_id() === $ownerId) ? 'Поделиться результатом' : 'Поделиться квизом';
+                    } else {
+                        echo (is_user_logged_in() && (int) get_current_user_id() === $ownerId) ? 'Share Result' : 'Share Quiz';
+                    }
                     ?>
                 </div>
             </div>
@@ -310,6 +316,26 @@ final class QuizShortcodes
         wp_enqueue_script('match-me-quiz-ajax-client', get_template_directory_uri() . '/assets/js/quiz-ajax-client.js', [], $ajaxClientVer, true);
         wp_enqueue_script('match-me-quiz-results-ui', get_template_directory_uri() . '/assets/js/quiz-results-ui.js', ['match-me-clipboard'], $resultsUiVer, true);
         wp_enqueue_script('match-me-quiz-public-v2', get_template_directory_uri() . '/assets/js/quiz-public-v2.js', ['match-me-clipboard', 'match-me-quiz-ajax-client', 'match-me-quiz-results-ui'], $runnerVer, true);
+
+        // Localize strings for JavaScript
+        $locale = (string) get_locale();
+        $isRussian = strpos($locale, 'ru') === 0;
+        wp_localize_script('match-me-quiz-results-ui', 'matchMeI18n', [
+            'share' => $isRussian ? 'Поделиться' : 'Share',
+            'result' => $isRussian ? 'Результат' : 'Result',
+            'noTraitData' => $isRussian ? 'Данные о чертах недоступны.' : 'No trait data available.',
+            'quizCompleted' => $isRussian ? 'Квиз успешно завершен.' : 'Quiz completed successfully.',
+            'view' => $isRussian ? 'Посмотреть' : 'View',
+            'compare' => $isRussian ? 'Сравнить' : 'Compare',
+            'shareAsImage' => $isRussian ? 'Поделиться изображением' : 'Share as image',
+            'shareComparisonLink' => $isRussian ? 'Сравнись со мной' : 'Compare With Me',
+            'shareResultLink' => $isRussian ? 'Поделиться ссылкой' : 'Share Link',
+            'linkCopied' => $isRussian ? 'Ссылка скопирована. Вставьте её куда угодно.' : 'Link copied. Paste it anywhere to share.',
+            'couldNotShare' => $isRussian ? 'Не удалось поделиться. Попробуйте снова.' : 'Could not share. Please try again.',
+            'comparisonResult' => $isRussian ? 'Результат сравнения' : 'Comparison Result',
+            'quizResults' => $isRussian ? 'Результаты квиза' : 'Quiz Results',
+            'myQuizResults' => $isRussian ? 'Мои результаты квиза' : 'My quiz results',
+        ]);
 
         $inline = 'window.matchMeQuizData=' . wp_json_encode($quizData) . ';'
             . 'window.matchMeQuizVars=' . wp_json_encode($vars) . ';';

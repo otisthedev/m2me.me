@@ -21,7 +21,17 @@ final class QuizJsonRepository
             throw new \InvalidArgumentException('Quiz ID is required.');
         }
 
-        $file = $this->config->quizDirectory() . $quizId . '.json';
+        // Detect current language from Polylang
+        $lang = $this->getCurrentLanguage();
+        $langSuffix = ($lang === 'ru') ? '-ru' : '';
+        
+        // Try language-specific file first, fallback to default
+        $file = $this->config->quizDirectory() . $quizId . $langSuffix . '.json';
+        if (!is_file($file)) {
+            // Fallback to default (English) file
+            $file = $this->config->quizDirectory() . $quizId . '.json';
+        }
+        
         if (!is_file($file)) {
             throw new \RuntimeException('Quiz not found.');
         }
@@ -40,6 +50,18 @@ final class QuizJsonRepository
 
         /** @var array<string,mixed> $data */
         return $data;
+    }
+
+    /**
+     * Get current language code from Polylang, fallback to 'en'
+     */
+    private function getCurrentLanguage(): string
+    {
+        if (function_exists('pll_current_language')) {
+            $lang = pll_current_language();
+            return is_string($lang) && $lang !== '' ? $lang : 'en';
+        }
+        return 'en';
     }
 
     /**

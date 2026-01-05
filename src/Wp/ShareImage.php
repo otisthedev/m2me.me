@@ -308,26 +308,31 @@ SVG;
 
     private function resultOgSvg(int $w, int $h, string $quizTitle, string $name, string $avatar, string $initial, string $top, string $pctText, string $logo): string
     {
-        // 1200x630
+        // 1200x630 - Enhanced design
         $avatarBlock = $avatar !== ''
             ? '<image href="' . $avatar . '" x="508" y="240" width="184" height="184" preserveAspectRatio="xMidYMid slice" clip-path="url(#clipAvatar)"/>'
-            : '<text x="600" y="360" text-anchor="middle" font-size="78" font-weight="900" fill="#F6F5F2">' . $initial . '</text>';
+            : '<text x="600" y="360" text-anchor="middle" font-size="82" font-weight="900" fill="#F6F5F2">' . $initial . '</text>';
 
         return <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" width="$w" height="$h" viewBox="0 0 $w $h">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#1E2A44"/>
+      <stop offset="0.35" stop-color="#2A3A5A"/>
       <stop offset="0.55" stop-color="#6FAFB3"/>
+      <stop offset="0.75" stop-color="#7FA9AD"/>
       <stop offset="1" stop-color="#8FAEA3"/>
     </linearGradient>
-    <radialGradient id="glow" cx="55%" cy="25%" r="75%">
-      <stop offset="0" stop-color="#F6F5F2" stop-opacity="0.20"/>
-      <stop offset="0.6" stop-color="#F6F5F2" stop-opacity="0.06"/>
+    <radialGradient id="glow" cx="55%" cy="25%" r="80%">
+      <stop offset="0" stop-color="#F6F5F2" stop-opacity="0.24"/>
+      <stop offset="0.5" stop-color="#F6F5F2" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#F6F5F2" stop-opacity="0"/>
     </radialGradient>
+    <filter id="blurBg" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0B1220" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#0B1220" flood-opacity="0.32"/>
     </filter>
     <clipPath id="clipAvatar">
       <circle cx="600" cy="332" r="92"/>
@@ -336,49 +341,57 @@ SVG;
 
   <rect width="$w" height="$h" fill="url(#bg)"/>
   <rect width="$w" height="$h" fill="url(#glow)"/>
+  <!-- Enhanced background blobs -->
+  <g filter="url(#blurBg)" opacity="0.65">
+    <circle cx="200" cy="180" r="200" fill="rgba(246,245,242,0.20)"/>
+    <circle cx="1000" cy="280" r="220" fill="rgba(111,175,179,0.26)"/>
+    <circle cx="800" cy="480" r="240" fill="rgba(143,174,163,0.22)"/>
+  </g>
 
-  <text x="72" y="92" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="20" font-weight="900" letter-spacing="2.2" fill="rgba(246,245,242,0.92)">QUIZ RESULTS</text>
-  <text x="72" y="140" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="46" font-weight="900" letter-spacing="-0.02em" fill="#F6F5F2">$quizTitle</text>
+  <text x="72" y="88" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="20" font-weight="900" letter-spacing="2.4" fill="rgba(246,245,242,0.96)">QUIZ RESULTS</text>
+  <text x="72" y="138" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="50" font-weight="950" letter-spacing="-0.02em" fill="#F6F5F2">$quizTitle</text>
 
-  <text x="72" y="206" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="28" font-weight="650" fill="rgba(246,245,242,0.92)">Result</text>
-  <text x="72" y="258" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="58" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$top — $pctText</text>
+  <text x="72" y="210" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="30" font-weight="850" fill="rgba(246,245,242,0.95)">Result</text>
+  <text x="72" y="268" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="62" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$top — $pctText</text>
 
   <g filter="url(#shadow)">
-    <circle cx="600" cy="332" r="118" fill="rgba(246,245,242,0.14)" stroke="rgba(246,245,242,0.30)" stroke-width="2"/>
-    <circle cx="600" cy="332" r="104" fill="rgba(246,245,242,0.10)"/>
+    <circle cx="600" cy="332" r="122" fill="rgba(246,245,242,0.16)" stroke="rgba(246,245,242,0.32)" stroke-width="2.5"/>
+    <circle cx="600" cy="332" r="108" fill="rgba(30,42,68,0.28)"/>
     <circle cx="600" cy="332" r="92" fill="rgba(30,42,68,0.24)"/>
     $avatarBlock
-    <g>
-      <rect x="420" y="446" width="360" height="72" rx="36" fill="rgba(246,245,242,0.92)"/>
-      <text x="600" y="492" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="28" font-weight="950" fill="#1E2A44">$name • $pctText</text>
+    <g filter="url(#shadow)">
+      <rect x="420" y="446" width="360" height="76" rx="38" fill="rgba(246,245,242,0.95)" stroke="rgba(30,42,68,0.10)" stroke-width="1.5"/>
+      <text x="600" y="494" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="30" font-weight="950" fill="#1E2A44">$name • $pctText</text>
     </g>
   </g>
 
-  <image href="$logo" x="72" y="552" width="180" height="52" preserveAspectRatio="xMinYMid meet" opacity="0.96"/>
+  <image href="$logo" x="72" y="552" width="190" height="54" preserveAspectRatio="xMinYMid meet" opacity="0.98"/>
 </svg>
 SVG;
     }
 
     private function resultStorySvg(int $w, int $h, string $quizTitle, string $name, string $avatar, string $initial, string $top, string $pctText, string $logo): string
     {
-        // 1080x1920 (story) - modern "glass" card
+        // 1080x1920 (story) - Enhanced modern "glass" card
         $avatarBlock = $avatar !== ''
             ? '<image href="' . $avatar . '" x="380" y="872" width="320" height="320" preserveAspectRatio="xMidYMid slice" clip-path="url(#clipAvatar)"/>'
-            : '<text x="540" y="1060" text-anchor="middle" font-size="120" font-weight="900" fill="#F6F5F2">' . $initial . '</text>';
+            : '<text x="540" y="1060" text-anchor="middle" font-size="128" font-weight="900" fill="#F6F5F2">' . $initial . '</text>';
 
         return <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" width="$w" height="$h" viewBox="0 0 $w $h">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#1E2A44"/>
+      <stop offset="0.35" stop-color="#2A3A5A"/>
       <stop offset="0.55" stop-color="#6FAFB3"/>
+      <stop offset="0.75" stop-color="#7FA9AD"/>
       <stop offset="1" stop-color="#8FAEA3"/>
     </linearGradient>
-    <filter id="blur70" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="70"/>
+    <filter id="blur80" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="80"/>
     </filter>
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0B1220" flood-opacity="0.30"/>
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#0B1220" flood-opacity="0.34"/>
     </filter>
     <clipPath id="clipAvatar">
       <circle cx="540" cy="1032" r="160"/>
@@ -386,39 +399,42 @@ SVG;
   </defs>
 
   <rect width="$w" height="$h" fill="url(#bg)"/>
-  <!-- blurred blobs -->
-  <g filter="url(#blur70)" opacity="0.6">
-    <circle cx="220" cy="260" r="280" fill="rgba(246,245,242,0.20)"/>
-    <circle cx="880" cy="360" r="300" fill="rgba(111,175,179,0.26)"/>
-    <circle cx="720" cy="1120" r="380" fill="rgba(143,174,163,0.22)"/>
+  <!-- Enhanced blurred blobs -->
+  <g filter="url(#blur80)" opacity="0.68">
+    <circle cx="180" cy="240" r="320" fill="rgba(246,245,242,0.24)"/>
+    <circle cx="900" cy="340" r="340" fill="rgba(111,175,179,0.30)"/>
+    <circle cx="680" cy="1100" r="400" fill="rgba(143,174,163,0.26)"/>
+    <circle cx="500" cy="1600" r="280" fill="rgba(111,175,179,0.20)"/>
   </g>
 
-  <!-- pill -->
+  <!-- Enhanced pill -->
   <g>
-    <rect x="80" y="104" width="250" height="56" rx="28" fill="rgba(246,245,242,0.16)" stroke="rgba(246,245,242,0.26)"/>
-    <text x="105" y="141" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="24" font-weight="900" fill="rgba(246,245,242,0.92)">QUIZ RESULTS</text>
+    <rect x="80" y="110" width="260" height="58" rx="29" fill="rgba(246,245,242,0.20)" stroke="rgba(246,245,242,0.32)" stroke-width="1.5"/>
+    <text x="108" y="147" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="24" font-weight="900" fill="rgba(246,245,242,0.96)">QUIZ RESULTS</text>
   </g>
-  <text x="80" y="258" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="62" font-weight="950" letter-spacing="-0.02em" fill="#F6F5F2">$quizTitle</text>
+  <text x="80" y="268" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="68" font-weight="950" letter-spacing="-0.02em" fill="#F6F5F2">$quizTitle</text>
 
-  <!-- Glass card -->
+  <!-- Enhanced glass card -->
   <g filter="url(#shadow)">
-    <rect x="70" y="520" width="940" height="980" rx="46" fill="rgba(246,245,242,0.10)" stroke="rgba(246,245,242,0.20)"/>
+    <rect x="70" y="540" width="940" height="960" rx="50" fill="rgba(246,245,242,0.12)" stroke="rgba(246,245,242,0.24)" stroke-width="1.5"/>
+    <rect x="72" y="542" width="936" height="956" rx="48" fill="rgba(246,245,242,0.04)"/>
   </g>
-  <text x="114" y="604" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="28" font-weight="850" fill="rgba(246,245,242,0.86)">Result</text>
-  <text x="114" y="716" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="110" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$pctText</text>
-  <text x="114" y="792" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="44" font-weight="900" fill="rgba(246,245,242,0.92)">$top</text>
+  <text x="114" y="620" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="30" font-weight="850" fill="rgba(246,245,242,0.92)">Result</text>
+  <text x="114" y="736" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="120" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$pctText</text>
+  <text x="114" y="812" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="48" font-weight="900" fill="rgba(246,245,242,0.95)">$top</text>
 
-  <g>
-    <circle cx="540" cy="1032" r="178" fill="rgba(246,245,242,0.12)" stroke="rgba(246,245,242,0.26)" stroke-width="2"/>
-    <circle cx="540" cy="1032" r="166" fill="rgba(30,42,68,0.22)"/>
+  <g filter="url(#shadow)">
+    <circle cx="540" cy="1032" r="182" fill="rgba(246,245,242,0.14)" stroke="rgba(246,245,242,0.30)" stroke-width="2.5"/>
+    <circle cx="540" cy="1032" r="170" fill="rgba(30,42,68,0.26)"/>
+    <circle cx="540" cy="1032" r="160" fill="rgba(30,42,68,0.22)"/>
     $avatarBlock
   </g>
   <g filter="url(#shadow)">
-    <rect x="240" y="1388" width="600" height="84" rx="42" fill="rgba(246,245,242,0.92)"/>
-    <text x="540" y="1442" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="32" font-weight="950" fill="#1E2A44">$name</text>
+    <rect x="240" y="1388" width="600" height="88" rx="44" fill="rgba(246,245,242,0.95)" stroke="rgba(30,42,68,0.12)" stroke-width="1.5"/>
+    <text x="540" y="1446" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="34" font-weight="950" fill="#1E2A44">$name</text>
   </g>
 
-  <image href="$logo" x="84" y="1766" width="210" height="60" preserveAspectRatio="xMinYMid meet" opacity="0.96"/>
+  <image href="$logo" x="84" y="1766" width="220" height="62" preserveAspectRatio="xMinYMid meet" opacity="0.98"/>
 </svg>
 SVG;
     }
@@ -427,26 +443,31 @@ SVG;
     {
         $bAvatarBlock = $bAvatar !== ''
             ? '<image href="' . $bAvatar . '" x="600" y="226" width="170" height="170" preserveAspectRatio="xMidYMid slice" clip-path="url(#clipB)"/>'
-            : '<text x="685" y="328" text-anchor="middle" font-size="62" font-weight="900" fill="#F6F5F2">' . $bInitial . '</text>';
+            : '<text x="685" y="328" text-anchor="middle" font-size="66" font-weight="900" fill="#F6F5F2">' . $bInitial . '</text>';
         $aAvatarBlock = $aAvatar !== ''
             ? '<image href="' . $aAvatar . '" x="430" y="226" width="170" height="170" preserveAspectRatio="xMidYMid slice" clip-path="url(#clipA)"/>'
-            : '<text x="515" y="328" text-anchor="middle" font-size="62" font-weight="900" fill="#F6F5F2">' . $aInitial . '</text>';
+            : '<text x="515" y="328" text-anchor="middle" font-size="66" font-weight="900" fill="#F6F5F2">' . $aInitial . '</text>';
 
         return <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" width="$w" height="$h" viewBox="0 0 $w $h">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#1E2A44"/>
+      <stop offset="0.35" stop-color="#2A3A5A"/>
       <stop offset="0.45" stop-color="#6FAFB3"/>
+      <stop offset="0.75" stop-color="#7FA9AD"/>
       <stop offset="1" stop-color="#8FAEA3"/>
     </linearGradient>
-    <radialGradient id="glow" cx="52%" cy="25%" r="75%">
-      <stop offset="0" stop-color="#F6F5F2" stop-opacity="0.20"/>
-      <stop offset="0.6" stop-color="#F6F5F2" stop-opacity="0.06"/>
+    <radialGradient id="glow" cx="52%" cy="25%" r="80%">
+      <stop offset="0" stop-color="#F6F5F2" stop-opacity="0.24"/>
+      <stop offset="0.5" stop-color="#F6F5F2" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#F6F5F2" stop-opacity="0"/>
     </radialGradient>
+    <filter id="blurBg" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0B1220" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#0B1220" flood-opacity="0.32"/>
     </filter>
     <clipPath id="clipA"><circle cx="515" cy="311" r="85"/></clipPath>
     <clipPath id="clipB"><circle cx="685" cy="311" r="85"/></clipPath>
@@ -454,31 +475,39 @@ SVG;
 
   <rect width="$w" height="$h" fill="url(#bg)"/>
   <rect width="$w" height="$h" fill="url(#glow)"/>
+  <!-- Enhanced background blobs -->
+  <g filter="url(#blurBg)" opacity="0.65">
+    <circle cx="200" cy="180" r="200" fill="rgba(246,245,242,0.20)"/>
+    <circle cx="1000" cy="280" r="220" fill="rgba(111,175,179,0.26)"/>
+    <circle cx="800" cy="480" r="240" fill="rgba(143,174,163,0.22)"/>
+  </g>
 
-  <text x="72" y="92" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="20" font-weight="900" letter-spacing="2.2" fill="rgba(246,245,242,0.92)">QUIZ RESULTS</text>
-  <text x="72" y="140" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="46" font-weight="900" letter-spacing="-0.02em" fill="#F6F5F2">Comparison</text>
-  <text x="72" y="206" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="28" font-weight="650" fill="rgba(246,245,242,0.92)">$quizTitle</text>
+  <text x="72" y="88" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="20" font-weight="900" letter-spacing="2.4" fill="rgba(246,245,242,0.96)">QUIZ RESULTS</text>
+  <text x="72" y="138" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="50" font-weight="950" letter-spacing="-0.02em" fill="#F6F5F2">Comparison</text>
+  <text x="72" y="210" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="30" font-weight="850" fill="rgba(246,245,242,0.95)">$quizTitle</text>
 
-  <text x="72" y="286" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="30" font-weight="650" fill="rgba(246,245,242,0.92)">Match</text>
-  <text x="72" y="352" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="78" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$pctText</text>
+  <text x="72" y="290" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="32" font-weight="850" fill="rgba(246,245,242,0.95)">Match</text>
+  <text x="72" y="362" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="82" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$pctText</text>
 
   <g filter="url(#shadow)">
-    <circle cx="515" cy="311" r="98" fill="rgba(246,245,242,0.14)" stroke="rgba(246,245,242,0.30)" stroke-width="2"/>
+    <circle cx="515" cy="311" r="102" fill="rgba(246,245,242,0.16)" stroke="rgba(246,245,242,0.32)" stroke-width="2.5"/>
+    <circle cx="515" cy="311" r="88" fill="rgba(30,42,68,0.28)"/>
     <circle cx="515" cy="311" r="85" fill="rgba(30,42,68,0.24)"/>
     $aAvatarBlock
-    <circle cx="685" cy="311" r="98" fill="rgba(246,245,242,0.14)" stroke="rgba(246,245,242,0.30)" stroke-width="2"/>
+    <circle cx="685" cy="311" r="102" fill="rgba(246,245,242,0.16)" stroke="rgba(246,245,242,0.32)" stroke-width="2.5"/>
+    <circle cx="685" cy="311" r="88" fill="rgba(30,42,68,0.28)"/>
     <circle cx="685" cy="311" r="85" fill="rgba(30,42,68,0.24)"/>
     $bAvatarBlock
-    <rect x="570" y="292" width="60" height="38" rx="19" fill="rgba(246,245,242,0.16)" stroke="rgba(246,245,242,0.22)" stroke-width="1"/>
-    <text x="600" y="319" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="18" font-weight="950" fill="#F6F5F2">+</text>
+    <rect x="570" y="292" width="60" height="38" rx="19" fill="rgba(246,245,242,0.18)" stroke="rgba(246,245,242,0.26)" stroke-width="1.5"/>
+    <text x="600" y="319" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="20" font-weight="950" fill="#F6F5F2">+</text>
 
-    <g>
-      <rect x="430" y="430" width="340" height="66" rx="33" fill="rgba(246,245,242,0.92)"/>
-      <text x="600" y="472" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="22" font-weight="950" fill="#1E2A44">$bName + $aName</text>
+    <g filter="url(#shadow)">
+      <rect x="430" y="430" width="340" height="70" rx="35" fill="rgba(246,245,242,0.95)" stroke="rgba(30,42,68,0.10)" stroke-width="1.5"/>
+      <text x="600" y="475" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="24" font-weight="950" fill="#1E2A44">$bName + $aName</text>
     </g>
   </g>
 
-  <image href="$logo" x="72" y="552" width="180" height="52" preserveAspectRatio="xMinYMid meet" opacity="0.96"/>
+  <image href="$logo" x="72" y="552" width="190" height="54" preserveAspectRatio="xMinYMid meet" opacity="0.98"/>
 </svg>
 SVG;
     }
@@ -487,68 +516,74 @@ SVG;
     {
         $bAvatarBlock = $bAvatar !== ''
             ? '<image href="' . $bAvatar . '" x="605" y="872" width="300" height="300" preserveAspectRatio="xMidYMid slice" clip-path="url(#clipB)"/>'
-            : '<text x="755" y="1050" text-anchor="middle" font-size="110" font-weight="900" fill="#F6F5F2">' . $bInitial . '</text>';
+            : '<text x="755" y="1050" text-anchor="middle" font-size="118" font-weight="900" fill="#F6F5F2">' . $bInitial . '</text>';
         $aAvatarBlock = $aAvatar !== ''
             ? '<image href="' . $aAvatar . '" x="175" y="872" width="300" height="300" preserveAspectRatio="xMidYMid slice" clip-path="url(#clipA)"/>'
-            : '<text x="325" y="1050" text-anchor="middle" font-size="110" font-weight="900" fill="#F6F5F2">' . $aInitial . '</text>';
+            : '<text x="325" y="1050" text-anchor="middle" font-size="118" font-weight="900" fill="#F6F5F2">' . $aInitial . '</text>';
 
         return <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" width="$w" height="$h" viewBox="0 0 $w $h">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#1E2A44"/>
+      <stop offset="0.35" stop-color="#2A3A5A"/>
       <stop offset="0.45" stop-color="#6FAFB3"/>
+      <stop offset="0.75" stop-color="#7FA9AD"/>
       <stop offset="1" stop-color="#8FAEA3"/>
     </linearGradient>
-    <filter id="blur70" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="70"/>
+    <filter id="blur80" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="80"/>
     </filter>
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0B1220" flood-opacity="0.30"/>
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#0B1220" flood-opacity="0.34"/>
     </filter>
     <clipPath id="clipA"><circle cx="325" cy="1022" r="150"/></clipPath>
     <clipPath id="clipB"><circle cx="755" cy="1022" r="150"/></clipPath>
   </defs>
 
   <rect width="$w" height="$h" fill="url(#bg)"/>
-  <g filter="url(#blur70)" opacity="0.6">
-    <circle cx="220" cy="260" r="280" fill="rgba(246,245,242,0.20)"/>
-    <circle cx="880" cy="360" r="300" fill="rgba(111,175,179,0.26)"/>
-    <circle cx="720" cy="1120" r="380" fill="rgba(143,174,163,0.22)"/>
+  <g filter="url(#blur80)" opacity="0.68">
+    <circle cx="180" cy="240" r="320" fill="rgba(246,245,242,0.24)"/>
+    <circle cx="900" cy="340" r="340" fill="rgba(111,175,179,0.30)"/>
+    <circle cx="680" cy="1100" r="400" fill="rgba(143,174,163,0.26)"/>
+    <circle cx="500" cy="1600" r="280" fill="rgba(111,175,179,0.20)"/>
   </g>
 
   <g>
-    <rect x="80" y="104" width="250" height="56" rx="28" fill="rgba(246,245,242,0.16)" stroke="rgba(246,245,242,0.26)"/>
-    <text x="105" y="141" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="24" font-weight="900" fill="rgba(246,245,242,0.92)">QUIZ RESULTS</text>
+    <rect x="80" y="110" width="260" height="58" rx="29" fill="rgba(246,245,242,0.20)" stroke="rgba(246,245,242,0.32)" stroke-width="1.5"/>
+    <text x="108" y="147" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="24" font-weight="900" fill="rgba(246,245,242,0.96)">QUIZ RESULTS</text>
   </g>
-  <text x="80" y="258" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="62" font-weight="950" letter-spacing="-0.02em" fill="#F6F5F2">Comparison</text>
-  <text x="80" y="336" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="34" font-weight="750" fill="rgba(246,245,242,0.92)">$quizTitle</text>
+  <text x="80" y="268" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="68" font-weight="950" letter-spacing="-0.02em" fill="#F6F5F2">Comparison</text>
+  <text x="80" y="346" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="36" font-weight="800" fill="rgba(246,245,242,0.95)">$quizTitle</text>
 
   <g filter="url(#shadow)">
-    <rect x="70" y="520" width="940" height="980" rx="46" fill="rgba(246,245,242,0.10)" stroke="rgba(246,245,242,0.20)"/>
+    <rect x="70" y="540" width="940" height="960" rx="50" fill="rgba(246,245,242,0.12)" stroke="rgba(246,245,242,0.24)" stroke-width="1.5"/>
+    <rect x="72" y="542" width="936" height="956" rx="48" fill="rgba(246,245,242,0.04)"/>
   </g>
-  <text x="114" y="604" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="28" font-weight="850" fill="rgba(246,245,242,0.86)">Match</text>
-  <text x="114" y="716" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="110" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$pctText</text>
+  <text x="114" y="620" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="30" font-weight="850" fill="rgba(246,245,242,0.92)">Match</text>
+  <text x="114" y="736" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="120" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$pctText</text>
 
-  <g>
-    <circle cx="325" cy="1022" r="178" fill="rgba(246,245,242,0.12)" stroke="rgba(246,245,242,0.26)" stroke-width="2"/>
-    <circle cx="325" cy="1022" r="166" fill="rgba(30,42,68,0.22)"/>
+  <g filter="url(#shadow)">
+    <circle cx="325" cy="1022" r="182" fill="rgba(246,245,242,0.14)" stroke="rgba(246,245,242,0.30)" stroke-width="2.5"/>
+    <circle cx="325" cy="1022" r="170" fill="rgba(30,42,68,0.26)"/>
+    <circle cx="325" cy="1022" r="150" fill="rgba(30,42,68,0.22)"/>
     $aAvatarBlock
-    <circle cx="755" cy="1022" r="178" fill="rgba(246,245,242,0.12)" stroke="rgba(246,245,242,0.26)" stroke-width="2"/>
-    <circle cx="755" cy="1022" r="166" fill="rgba(30,42,68,0.22)"/>
+    <circle cx="755" cy="1022" r="182" fill="rgba(246,245,242,0.14)" stroke="rgba(246,245,242,0.30)" stroke-width="2.5"/>
+    <circle cx="755" cy="1022" r="170" fill="rgba(30,42,68,0.26)"/>
+    <circle cx="755" cy="1022" r="150" fill="rgba(30,42,68,0.22)"/>
     $bAvatarBlock
     <g>
-      <rect x="500" y="992" width="80" height="60" rx="30" fill="rgba(246,245,242,0.18)" stroke="rgba(246,245,242,0.26)"/>
-      <text x="540" y="1032" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="26" font-weight="950" fill="#F6F5F2">+</text>
+      <rect x="500" y="992" width="80" height="60" rx="30" fill="rgba(246,245,242,0.18)" stroke="rgba(246,245,242,0.26)" stroke-width="1.5"/>
+      <text x="540" y="1032" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="28" font-weight="950" fill="#F6F5F2">+</text>
     </g>
   </g>
 
   <g filter="url(#shadow)">
-    <rect x="180" y="1388" width="720" height="84" rx="42" fill="rgba(246,245,242,0.92)"/>
-    <text x="540" y="1442" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="30" font-weight="950" fill="#1E2A44">$bName + $aName</text>
+    <rect x="180" y="1388" width="720" height="88" rx="44" fill="rgba(246,245,242,0.95)" stroke="rgba(30,42,68,0.12)" stroke-width="1.5"/>
+    <text x="540" y="1446" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="32" font-weight="950" fill="#1E2A44">$bName + $aName</text>
   </g>
 
-  <image href="$logo" x="84" y="1766" width="210" height="60" preserveAspectRatio="xMinYMid meet" opacity="0.96"/>
+  <image href="$logo" x="84" y="1766" width="220" height="62" preserveAspectRatio="xMinYMid meet" opacity="0.98"/>
 </svg>
 SVG;
     }

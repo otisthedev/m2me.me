@@ -248,7 +248,7 @@ final class QuizApiController
             // Validate answers
             $answers = $body['answers'] ?? [];
             if (!is_array($answers) || empty($answers)) {
-                return new \WP_Error('invalid_answers', 'Answers array is required', ['status' => 400]);
+                return new \WP_Error('invalid_answers', __('Answers array is required', 'match-me'), ['status' => 400]);
             }
 
             // Calculate trait vector
@@ -324,19 +324,19 @@ final class QuizApiController
         } catch (\InvalidArgumentException $e) {
             return new \WP_Error(
                 'invalid_request',
-                $e->getMessage() ?: 'Invalid request. Please check your input and try again.',
+                $e->getMessage() ?: __('Invalid request. Please check your input and try again.', 'match-me'),
                 ['status' => 400, 'error_code' => 'VALIDATION_ERROR']
             );
         } catch (\RuntimeException $e) {
             return new \WP_Error(
                 'server_error',
-                'An error occurred while processing your request. Please try again later.',
+                __('An error occurred while processing your request. Please try again later.', 'match-me'),
                 ['status' => 500, 'error_code' => 'SERVER_ERROR', 'details' => $e->getMessage()]
             );
         } catch (\Throwable $e) {
             return new \WP_Error(
                 'server_error',
-                'An unexpected error occurred. Please try again later.',
+                __('An unexpected error occurred. Please try again later.', 'match-me'),
                 ['status' => 500, 'error_code' => 'UNEXPECTED_ERROR']
             );
         }
@@ -355,7 +355,7 @@ final class QuizApiController
             if ($result === null) {
                 return new \WP_Error(
                     'not_found',
-                    'The quiz result you are looking for could not be found. The link may be incorrect or the result may have been deleted.',
+                    __('The quiz result you are looking for could not be found. The link may be incorrect or the result may have been deleted.', 'match-me'),
                     ['status' => 404, 'error_code' => 'RESULT_NOT_FOUND']
                 );
             }
@@ -364,7 +364,7 @@ final class QuizApiController
             if (!empty($result['revoked_at'])) {
                 return new \WP_Error(
                     'forbidden',
-                    'This result is no longer available. The share link has been revoked by the owner.',
+                    __('This result is no longer available. The share link has been revoked by the owner.', 'match-me'),
                     ['status' => 403, 'error_code' => 'TOKEN_REVOKED']
                 );
             }
@@ -377,7 +377,7 @@ final class QuizApiController
                 if ($userId === 0 || $userId !== $resultUserId) {
                     return new \WP_Error(
                         'forbidden',
-                        'This result is private and can only be viewed by its owner. Please log in with the account that created this result.',
+                        __('This result is private and can only be viewed by its owner. Please log in with the account that created this result.', 'match-me'),
                         ['status' => 403, 'error_code' => 'RESULT_PRIVATE']
                     );
                 }
@@ -531,7 +531,7 @@ final class QuizApiController
             if ($resultA === null) {
                 return new \WP_Error(
                     'not_found',
-                    'The quiz result you are trying to compare with could not be found. The link may be incorrect.',
+                    __('The quiz result you are trying to compare with could not be found. The link may be incorrect.', 'match-me'),
                     ['status' => 404, 'error_code' => 'RESULT_A_NOT_FOUND']
                 );
             }
@@ -541,7 +541,7 @@ final class QuizApiController
             if ($shareMode !== 'share_match') {
                 return new \WP_Error(
                     'forbidden',
-                    'This result does not allow comparisons. The owner has restricted sharing options.',
+                    __('This result does not allow comparisons. The owner has restricted sharing options.', 'match-me'),
                     ['status' => 403, 'error_code' => 'COMPARISON_NOT_ALLOWED']
                 );
             }
@@ -556,7 +556,7 @@ final class QuizApiController
                 if ($resultB === null) {
                     return new \WP_Error(
                         'not_found',
-                        'The second quiz result could not be found. It may have been deleted.',
+                        __('The second quiz result could not be found. It may have been deleted.', 'match-me'),
                         ['status' => 404, 'error_code' => 'RESULT_B_NOT_FOUND']
                     );
                 }
@@ -596,7 +596,7 @@ final class QuizApiController
             } else {
                 return new \WP_Error(
                     'invalid_request',
-                    'To compare results, please provide either an existing result_id or submit new quiz answers with quiz_id.',
+                    __('To compare results, please provide either an existing result_id or submit new quiz answers with quiz_id.', 'match-me'),
                     ['status' => 400, 'error_code' => 'MISSING_COMPARISON_DATA']
                 );
             }
@@ -612,7 +612,7 @@ final class QuizApiController
             if ($quizSlugB !== '' && $quizSlugA !== '' && $quizSlugA !== $quizSlugB) {
                 return new \WP_Error(
                     'quiz_mismatch',
-                    'Cannot compare results from different quizzes. Both results must be from the same quiz.',
+                    __('Cannot compare results from different quizzes. Both results must be from the same quiz.', 'match-me'),
                     ['status' => 400, 'quiz_slug_a' => $quizSlugA, 'quiz_slug_b' => $quizSlugB]
                 );
             }
@@ -633,7 +633,7 @@ final class QuizApiController
             if ($quizVersionB !== '' && $quizVersionA !== '' && $quizVersionA !== $quizVersionB) {
                 return new \WP_Error(
                     'version_mismatch',
-                    'Cannot compare results from different quiz versions. Please retake the quiz with the latest version.',
+                    __('Cannot compare results from different quiz versions. Please retake the quiz with the latest version.', 'match-me'),
                     ['status' => 400, 'quiz_version_a' => $quizVersionA, 'quiz_version_b' => $quizVersionB]
                 );
             }
@@ -849,7 +849,7 @@ final class QuizApiController
         $viewerAvatar = (string) ($viewer['viewer_avatar_url'] ?? '');
         $matchPct = (int) round(max(0.0, min(100.0, $matchScore)));
 
-        $subject = sprintf('%s compared with you — %d%% match', $viewerName, $matchPct);
+        $subject = sprintf(__('%s compared with you — %d%% match', 'match-me'), $viewerName, $matchPct);
         if ($siteName !== '') {
             $subject .= ' • ' . $siteName;
         }
@@ -888,7 +888,7 @@ final class QuizApiController
         $matchUrl = esc_url((string) ($data['match_url'] ?? home_url('/')));
         $quizTitle = esc_html((string) ($data['quiz_title'] ?? 'Quiz'));
 
-        $preheader = esc_html($viewerName . ' did a comparison with you. See your match and the full breakdown.');
+        $preheader = esc_html(sprintf(__('%s did a comparison with you. See your match and the full breakdown.', 'match-me'), $viewerName));
 
         $brand = '#1E2A44';
         $bg = '#F6F5F2';
@@ -1405,6 +1405,10 @@ final class QuizApiController
         $pairRules = is_array($narrative) && isset($narrative['pair_rules']) ? $narrative['pair_rules'] : [];
         $sectionTemplates = is_array($narrative) && isset($narrative['section_templates']) ? $narrative['section_templates'] : [];
         $aspectLanguage = is_array($narrative) && isset($narrative['aspect_specific_language']) ? $narrative['aspect_specific_language'] : [];
+        $headlineInsights = is_array($narrative) && isset($narrative['headline_insights']) ? $narrative['headline_insights'] : [];
+        $actionableTips = is_array($narrative) && isset($narrative['actionable_tips']) ? $narrative['actionable_tips'] : [];
+        $exactPhrases = is_array($narrative) && isset($narrative['exact_phrases']) ? $narrative['exact_phrases'] : [];
+        $cta = is_array($narrative) && isset($narrative['cta']) ? (string) $narrative['cta'] : '';
         $minWords = (is_array($narrative) && isset($narrative['min_words']) && is_numeric($narrative['min_words'])) 
             ? max(350, (int) $narrative['min_words']) 
             : 350;
@@ -1470,27 +1474,25 @@ final class QuizApiController
         }
 
         // Short summary (1–2 sentences) for UI headers, share text, meta, etc.
-        // Use pair rule copy if available, otherwise use generic
-        if ($overviewRule && !empty($overviewRule['copy'])) {
+        // Use headline insights if available, then pair rules, then generic
+        $short = '';
+        if (!empty($headlineInsights) && isset($headlineInsights[$profileType])) {
+            $headlineTemplate = (string) $headlineInsights[$profileType];
+            $short = str_replace(['{primary_trait}', '{secondary_trait}'], [$primary, $secondary], $headlineTemplate);
+        }
+        
+        if ($short === '' && $overviewRule && !empty($overviewRule['copy'])) {
             $short = is_array($overviewRule['copy']) ? ($overviewRule['copy'][0] ?? '') : (string) $overviewRule['copy'];
-            if ($short === '') {
-                // Fallback to generic
-                if ($profileType === 'balanced') {
-                    $short = "Your results show a balanced profile with a slight tilt toward {$primary} and {$secondary}.";
-                } elseif ($profileType === 'decisive') {
-                    $short = "Your results strongly highlight {$primary}, supported by {$secondary}.";
-                } else {
-                    $short = "Your profile leans toward {$primary} and {$secondary}, with {$support} as a supporting trait.";
-                }
-            }
-        } else {
-            // Generic fallback
+        }
+        
+        if ($short === '') {
+            // Generic fallback with emotional anchoring
             if ($profileType === 'balanced') {
-                $short = "Your results show a balanced profile with a slight tilt toward {$primary} and {$secondary}.";
+                $short = "Your results show a balanced pattern, which means you tend to adapt your approach based on what each situation calls for.";
             } elseif ($profileType === 'decisive') {
-                $short = "Your results strongly highlight {$primary}, supported by {$secondary}.";
+                $short = "Your results strongly highlight {$primary}, which means this trait shapes many of your decisions and how you show up.";
             } else {
-                $short = "Your profile leans toward {$primary} and {$secondary}, with {$support} as a supporting trait.";
+                $short = "Your profile leans toward {$primary} and {$secondary}, which means you have clear preferences but can shift when circumstances change.";
             }
         }
 
@@ -1498,14 +1500,21 @@ final class QuizApiController
         $overview = [];
         $overview[] = "Overview";
         
+        // Get primary and secondary descriptions for micro-definitions
+        $primaryDesc = $desc($top1);
+        $secondaryDesc = $desc($top2);
+        $lowDesc = $desc($bottom1);
+        
         // Use pair rule copy for overview if available
         if ($overviewRule && !empty($overviewRule['copy'])) {
             $ruleCopy = is_array($overviewRule['copy']) ? ($overviewRule['copy'][0] ?? '') : (string) $overviewRule['copy'];
             if ($ruleCopy !== '') {
                 $overview[] = $ruleCopy;
             } else {
-                // Fallback to generic
-                $overview[] = "Your strongest signals are in {$primary} and {$secondary}. " .
+                // Fallback to generic with full explanation once
+                $primaryFull = $primary . ($primaryDesc !== '' ? " ({$primaryDesc})" : '');
+                $secondaryFull = $secondary . ($secondaryDesc !== '' ? " ({$secondaryDesc})" : '');
+                $overview[] = "Your strongest signals are in {$primaryFull} and {$secondaryFull}. " .
                     ($support !== '' ? "A supporting theme is {$support}. " : '') .
                     ($profileType === 'decisive'
                         ? "This is a more \"decisive\" pattern, meaning a few traits clearly stand out."
@@ -1527,8 +1536,10 @@ final class QuizApiController
             if ($primaryCopy !== '' && $secondaryCopy !== '') {
                 $overview[] = $primaryCopy . ' ' . $secondaryCopy;
             } else {
-                // Generic fallback
-                $overview[] = "Your strongest signals are in {$primary} and {$secondary}. " .
+                // Generic fallback with full explanation once, then use short labels
+                $primaryFull = $primary . ($primaryDesc !== '' ? " ({$primaryDesc})" : '');
+                $secondaryFull = $secondary . ($secondaryDesc !== '' ? " ({$secondaryDesc})" : '');
+                $overview[] = "Your strongest signals are in {$primaryFull} and {$secondaryFull}. " .
                     ($support !== '' ? "A supporting theme is {$support}. " : '') .
                     ($profileType === 'decisive'
                         ? "This is a more \"decisive\" pattern, meaning a few traits clearly stand out."
@@ -1540,6 +1551,15 @@ final class QuizApiController
         
         $overview[] = "These percentages aren't good or bad. They're simply a snapshot of what you tend to default to in decisions, collaboration, and under pressure.";
         $overview[] = "This is informational and not a diagnosis.";
+        
+        // Add real-world examples section
+        $examples = [];
+        $examples[] = "Real-world examples";
+        if ($top1 !== null) {
+            $examples[] = "- Work: Your {$primary} may show up as {specific work example}. For instance, when choosing projects, you might prioritize options that align with this trait.";
+            $examples[] = "- Decisions: In decision-making, {$primary} often means you tend to {specific decision behavior}. You may {specific example} when facing important choices.";
+            $examples[] = "- Teamwork: In collaboration, {$primary} helps you {specific teamwork benefit}. You might {specific teamwork behavior} when working with others.";
+        }
 
         $strengths = [];
         $strengths[] = "Strengths";
@@ -1626,7 +1646,9 @@ final class QuizApiController
         if (empty($edgesRules) || count($edgesRules) < 2) {
             $edges[] = "- When you overuse {$primary}, you might move too fast for others or skip alignment.";
             $edges[] = "- When {$secondary} runs high, you may prefer certainty, so ambiguity can feel uncomfortable.";
-            if ($low !== '') {
+            if ($low !== '' && $lowDesc !== '') {
+                $edges[] = "- With lower {$low} ({$lowDesc}), you might not naturally prioritize that style unless you choose it intentionally.";
+            } elseif ($low !== '') {
                 $edges[] = "- With lower {$low}, you might not naturally prioritize that style unless you choose it intentionally.";
             }
         }
@@ -1648,13 +1670,56 @@ final class QuizApiController
         $rel[] = "If conflict appears, try to separate intent from impact: you can stay direct while also checking how it lands on the other person.";
 
         $next = [];
-        $next[] = "Next steps";
-        $next[] = "- Before offering a solution, ask: “What outcome matters most here?”";
-        $next[] = "- If you feel urgency, say it out loud: “I’m feeling urgency—can we decide on one next step?”";
-        $next[] = "- Practice balance: pick one small moment today to deliberately act from a lower trait (like {$low}) and notice what changes.";
+        $next[] = "Actionable tips";
+        
+        // Use actionable tips from narrative if available
+        if (!empty($actionableTips) && is_array($actionableTips)) {
+            foreach ($actionableTips as $tip) {
+                if (is_array($tip) && isset($tip['trigger']) && isset($tip['action']) && isset($tip['outcome'])) {
+                    $trigger = (string) ($tip['trigger'] ?? '');
+                    $action = (string) ($tip['action'] ?? '');
+                    $outcome = (string) ($tip['outcome'] ?? '');
+                    if ($trigger !== '' && $action !== '' && $outcome !== '') {
+                        $next[] = "- Trigger: {$trigger}";
+                        $next[] = "  Action: {$action}";
+                        $next[] = "  Outcome: {$outcome}";
+                    }
+                }
+            }
+        }
+        
+        // Add generic actionable tips if narrative doesn't have enough
+        if (count($next) <= 1) {
+            $next[] = "- Trigger: When you're stuck between options";
+            $next[] = "  Action: Pause for 2 minutes and ask: 'What outcome matters most here?' Write it down, then make one decision today.";
+            $next[] = "  Outcome: You'll gain clarity and make progress instead of staying stuck.";
+            $next[] = "";
+            $next[] = "- Trigger: When you feel urgency but others are moving slowly";
+            $next[] = "  Action: Say it out loud: 'I'm feeling urgency about this. Can we decide on one next step in the next 24 hours?'";
+            $next[] = "  Outcome: You'll express your need while giving others a clear timeframe.";
+            $next[] = "";
+            $next[] = "- Trigger: When you want to expand your range";
+            $next[] = "  Action: Pick one small moment today to deliberately act from a lower trait (like {$low}) and notice what changes.";
+            $next[] = "  Outcome: You'll see new possibilities you might have missed by always using your default approach.";
+        }
+        
+        // Add exact phrases section if available
+        if (!empty($exactPhrases) && is_array($exactPhrases)) {
+            $next[] = "";
+            $next[] = "Exact phrases to try";
+            foreach ($exactPhrases as $phrase) {
+                $phraseStr = is_array($phrase) ? ($phrase[0] ?? '') : (string) $phrase;
+                if ($phraseStr !== '') {
+                    $next[] = "- " . str_replace(['{primary_trait}', '{secondary_trait}', '{low_trait}'], [$primary, $secondary, $low], $phraseStr);
+                }
+            }
+        }
 
-        $long = implode("\n", array_merge(
+        // Build long summary with all sections
+        $sections = array_merge(
             $overview,
+            [''],
+            $examples,
             [''],
             $strengths,
             [''],
@@ -1665,7 +1730,19 @@ final class QuizApiController
             $rel,
             [''],
             $next
-        ));
+        );
+        
+        // Add soft CTA at the end if available
+        if ($cta !== '') {
+            $sections[] = '';
+            $sections[] = $cta;
+        } elseif (empty($cta)) {
+            // Generic CTA
+            $sections[] = '';
+            $sections[] = "Share your results to see how you compare with others, or explore another assessment to deepen your self-understanding.";
+        }
+        
+        $long = implode("\n", $sections);
 
         // Ensure we hit the "long enough" target (doc suggests 350–600+ words).
         // $minWords already set from narrative block or default above
@@ -1675,11 +1752,13 @@ final class QuizApiController
             $extra = [];
             $extra[] = "How to use this";
             $extra[] = "Treat your top traits as your default tools, not your identity. When something feels stuck, ask yourself: am I overusing my strongest tool, or avoiding a tool that would help right now?";
-            $extra[] = "A simple way to get value from these results is to notice patterns for one week: when do you feel most like {$primary}, and when does {$secondary} show up? The goal is awareness first—change comes after you can name what’s happening.";
+            $extra[] = "A simple way to get value from these results is to notice patterns for one week: when do you feel most like {$primary}, and when does {$secondary} show up? The goal is awareness first—change comes after you can name what's happening.";
             $extra[] = "Practical prompts";
             $extra[] = "- What situations bring out the best of {$primary} in you?";
             $extra[] = "- Where does {$secondary} help you stay grounded, and where does it slow you down?";
-            $extra[] = "- What’s one small habit you can try for 7 days to strengthen a lower style like {$low}?";
+            if ($low !== '') {
+                $extra[] = "- What's one small habit you can try for 7 days to strengthen a lower style like {$low}?";
+            }
             $long = $long . "\n\n" . implode("\n", $extra);
         }
 

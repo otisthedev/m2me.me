@@ -44,11 +44,16 @@
         const quizPath = quizSlug ? `/${encodeURIComponent(quizSlug)}/` : `/`;
         const quizUrl = `${base}${quizPath}?compare_token=${encodeURIComponent(String(token))}`;
 
+        const locale = (window.matchMeTheme && window.matchMeTheme.locale) || 'en';
+        const isRussian = locale.indexOf('ru') === 0;
+        const compareHeading = isRussian ? 'Сравни свои результаты' : 'Compare Your Results';
+        const compareText = isRussian ? 'Пройди квиз, чтобы сравнить свои результаты и увидеть, как вы совпадаете.' : 'Take the quiz to compare your results and see how you match.';
+        const startButton = isRussian ? 'Начать' : 'Start Quiz';
         root.innerHTML = `
           <div class="match-me-compare-section">
-            <h3>Compare your results</h3>
-            <p>Do a quick quiz and we’ll show you your comparison results at the end.</p>
-            <a class="btn-compare-cta" href="${quizUrl}">Start now</a>
+            <h3>${compareHeading}</h3>
+            <p>${compareText}</p>
+            <a class="btn-compare-cta" href="${quizUrl}">${startButton}</a>
           </div>
         `;
         return;

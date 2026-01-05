@@ -177,15 +177,53 @@ final class ShareMeta
             );
         }
 
+        $locale = (string) get_locale();
+        $isRussian = strpos($locale, 'ru') === 0;
+
         if ($mode === 'compare') {
-            $title = 'Compare with ' . $ownerName . ' — ' . $quizTitle;
-            $description = 'Take the quiz to compare your results with ' . $ownerName . '.';
+            if ($isRussian) {
+                $title = 'Сравнись с ' . $ownerName;
+                // Limit to ~60 chars: "Сравнись с [Name]" = 13 + name length
+                if (mb_strlen($title) > 60) {
+                    $title = 'Сравни свои результаты';
+                }
+                $description = 'Пройди квиз, чтобы сравнить свои результаты с ' . $ownerName . ' и узнать, как вы совпадаете.';
+            } else {
+                $title = 'Compare with ' . $ownerName;
+                // Limit to ~60 chars
+                if (strlen($title) > 60) {
+                    $title = 'Compare Your Results';
+                }
+                $description = 'Take the quiz to compare your personality results with ' . $ownerName . ' and see how you match.';
+            }
         } elseif ($mode === 'match') {
-            $title = 'Comparison Result — ' . $quizTitle;
-            $description = 'See the comparison results and trait-by-trait match breakdown.';
+            if ($isRussian) {
+                $title = 'Результат сравнения — ' . $quizTitle;
+                if (mb_strlen($title) > 60) {
+                    $title = 'Результат сравнения';
+                }
+                $description = 'Посмотри результаты сравнения и узнай, как ваши характеры совпадают.';
+            } else {
+                $title = 'Comparison Result — ' . $quizTitle;
+                if (strlen($title) > 60) {
+                    $title = 'Comparison Result';
+                }
+                $description = 'See the comparison results and discover how your personalities align.';
+            }
         } else {
-            $title = $ownerName . '’s ' . $quizTitle;
-            $description = 'View quiz results and trait breakdown.';
+            if ($isRussian) {
+                $title = $ownerName . ' — результаты';
+                if (mb_strlen($title) > 60) {
+                    $title = 'Результаты ' . $ownerName;
+                }
+                $description = 'Пройди квиз, чтобы сравнить свои результаты с профилем ' . $ownerName . '.';
+            } else {
+                $title = $ownerName . "'s Quiz Results";
+                if (strlen($title) > 60) {
+                    $title = "See $ownerName's Results";
+                }
+                $description = 'Take the quiz to see how your results compare with ' . $ownerName . "'s personality profile.";
+            }
         }
 
         return [

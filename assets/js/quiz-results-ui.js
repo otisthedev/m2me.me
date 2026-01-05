@@ -13,7 +13,8 @@
     function renderResult(result, container) {
         container.innerHTML = '';
 
-        const shortSummary = result.textual_summary_short || result.textual_summary || 'Quiz completed successfully.';
+        const i18n = window.matchMeI18n || {};
+        const shortSummary = result.textual_summary_short || result.textual_summary || (i18n.quizCompleted || 'Quiz completed successfully.');
         const longSummary = result.textual_summary_long || '';
 
         // Result summary
@@ -46,18 +47,19 @@
 
         // Share section
         if (result.share_token) {
+            const i18n = window.matchMeI18n || {};
             const shareSection = renderUnifiedShareSection({
                 kind: 'result',
-                title: 'Share',
+                title: i18n.share || 'Share',
                 urls: {
                     view: (result.share_urls && result.share_urls.view) ? String(result.share_urls.view) : '',
                     compare: (result.share_urls && result.share_urls.compare) ? String(result.share_urls.compare) : '',
                 },
                 defaultKey: 'compare',
-                instagramTitle: String(result.quiz_title || 'Quiz Results'),
-                instagramSummary: String(result.textual_summary_short || result.textual_summary || 'My quiz results'),
+                instagramTitle: String(result.quiz_title || (i18n.quizResults || 'Quiz Results')),
+                instagramSummary: String(result.textual_summary_short || result.textual_summary || (i18n.myQuizResults || 'My quiz results')),
                 storyData: {
-                    headline: 'Result',
+                    headline: i18n.result || 'Result',
                     bigValue: storyTop ? `${storyTop.pct}%` : '',
                     secondary: storyTop ? `${storyTop.label}` : '',
                     name: (window.matchMeTheme && window.matchMeTheme.currentUser && window.matchMeTheme.currentUser.name) ? String(window.matchMeTheme.currentUser.name) : 'You',
@@ -72,9 +74,10 @@
      * Render trait breakdown visualization.
      */
     function renderTraitBreakdown(traitSummary, traitLabels = {}) {
+        const i18n = window.matchMeI18n || {};
         const traits = Object.entries(traitSummary);
         if (traits.length === 0) {
-            return '<p>No trait data available.</p>';
+            return '<p>' + (i18n.noTraitData || 'No trait data available.') + '</p>';
         }
 
         return traits.map(([trait, value]) => {
@@ -230,12 +233,13 @@
         const comparisonUrl = (urls.match ? String(urls.match) : (urls.compare ? String(urls.compare) : ''));
         const resultUrl = (urls.view ? String(urls.view) : '');
 
+        const i18n = window.matchMeI18n || {};
         section.innerHTML = `
             <h3>${escapeHtml(title)}</h3>
             <div class="share-buttons">
-                <button type="button" class="btn-share-instagram">Share as image (Instagram Story)</button>
-                <button type="button" class="btn-share-compare" ${comparisonUrl ? '' : 'disabled aria-disabled="true"'}>Share comparison link</button>
-                <button type="button" class="btn-share-view" ${resultUrl ? '' : 'disabled aria-disabled="true"'}>Share result link</button>
+                <button type="button" class="btn-share-instagram">${escapeHtml(i18n.shareAsImage || 'Share as image (Instagram Story)')}</button>
+                <button type="button" class="btn-share-compare" ${comparisonUrl ? '' : 'disabled aria-disabled="true"'}>${escapeHtml(i18n.shareComparisonLink || 'Share comparison link')}</button>
+                <button type="button" class="btn-share-view" ${resultUrl ? '' : 'disabled aria-disabled="true"'}>${escapeHtml(i18n.shareResultLink || 'Share result link')}</button>
             </div>
         `;
 
@@ -258,12 +262,13 @@
         async function shareLink(url) {
             const u = String(url || '');
             if (!u) return;
+            const i18n = window.matchMeI18n || {};
             try {
                 if (navigator.share) {
-                    const shareTitle = kind === 'match' ? 'Comparison Result' : 'Quiz Results';
+                    const shareTitle = kind === 'match' ? (i18n.comparisonResult || 'Comparison Result') : (i18n.quizResults || 'Quiz Results');
                     const text = kind === 'match'
-                        ? (instagramSummary || 'Comparison result')
-                        : (instagramSummary || 'My quiz results');
+                        ? (instagramSummary || (i18n.comparisonResult || 'Comparison result'))
+                        : (instagramSummary || (i18n.myQuizResults || 'My quiz results'));
                     await navigator.share({ title: shareTitle, text, url: u });
                     return;
                 }
@@ -272,9 +277,9 @@
             }
             try {
                 await copyToClipboard(u);
-                showMessage('Link copied. Paste it anywhere to share.', 'success');
+                showMessage(i18n.linkCopied || 'Link copied. Paste it anywhere to share.', 'success');
             } catch (e) {
-                showMessage('Could not share. Please try again.', 'warning');
+                showMessage(i18n.couldNotShare || 'Could not share. Please try again.', 'warning');
             }
         }
 
@@ -397,74 +402,100 @@
         const title = data && data.title ? String(data.title) : 'Quiz Results';
         const sd = data && data.storyData && typeof data.storyData === 'object' ? data.storyData : null;
 
-        // Brand background + modern blobs
+        // Enhanced brand background with richer gradients
         const bg = ctx.createLinearGradient(0, 0, width, height);
         bg.addColorStop(0, '#1E2A44');
+        bg.addColorStop(0.35, '#2A3A5A');
         bg.addColorStop(0.55, '#6FAFB3');
+        bg.addColorStop(0.75, '#7FA9AD');
         bg.addColorStop(1, '#8FAEA3');
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, width, height);
 
-        // Mesh-like blobs (blur filter if available)
+        // Enhanced mesh-like blobs with better positioning and colors
         ctx.save();
-        try { ctx.filter = 'blur(70px)'; } catch (e) { /* ignore */ }
-        ctx.globalAlpha = 0.55;
-        drawBlob(ctx, 220, 260, 280, 'rgba(246,245,242,0.20)');
-        drawBlob(ctx, 880, 360, 300, 'rgba(111,175,179,0.26)');
-        drawBlob(ctx, 720, 1120, 380, 'rgba(143,174,163,0.22)');
+        try { ctx.filter = 'blur(80px)'; } catch (e) { /* ignore */ }
+        ctx.globalAlpha = 0.65;
+        drawBlob(ctx, 180, 240, 320, 'rgba(246,245,242,0.24)');
+        drawBlob(ctx, 900, 340, 340, 'rgba(111,175,179,0.30)');
+        drawBlob(ctx, 680, 1100, 400, 'rgba(143,174,163,0.26)');
+        drawBlob(ctx, 500, 1600, 280, 'rgba(111,175,179,0.20)');
         ctx.globalAlpha = 1;
         try { ctx.filter = 'none'; } catch (e) { /* ignore */ }
         ctx.restore();
 
-        // Very subtle grain
-        drawGrain(ctx, width, height, 1100);
+        // Enhanced grain texture
+        drawGrain(ctx, width, height, 1400);
 
         const padX = 80;
-        const topY = 130;
+        const topY = 140;
 
-        // Pill
+        // Enhanced pill with better styling
         drawPill(ctx, padX, topY, 'QUIZ RESULTS');
 
-        // Title
+        // Enhanced title with better typography
         ctx.fillStyle = '#F6F5F2';
-        ctx.font = '950 62px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.font = '950 68px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.textBaseline = 'top';
         const titleLines = wrapTextLines(ctx, title, width - padX * 2, 2);
-        let y = topY + 120;
+        let y = topY + 130;
         for (const line of titleLines) {
+            // Add subtle text shadow for depth
+            ctx.save();
+            ctx.shadowColor = 'rgba(11,18,32,0.15)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetY = 2;
             ctx.fillText(line, padX, y);
-            y += 74;
+            ctx.restore();
+            y += 80;
         }
 
         const headline = sd && sd.headline ? String(sd.headline) : (kind === 'match' ? 'Match' : 'Result');
         const bigValue = sd && sd.bigValue ? String(sd.bigValue) : '';
         const secondary = sd && sd.secondary ? String(sd.secondary) : '';
 
-        // Glass card
+        // Enhanced glass card with better glassmorphism
         const cardX = 70;
-        const cardY = 520;
+        const cardY = 540;
         const cardW = width - 140;
-        const cardH = 980;
-        drawGlassCard(ctx, cardX, cardY, cardW, cardH, 46);
+        const cardH = 960;
+        drawGlassCard(ctx, cardX, cardY, cardW, cardH, 50);
 
-        // Stat header
-        ctx.fillStyle = 'rgba(246,245,242,0.86)';
-        ctx.font = '800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-        ctx.fillText(headline, cardX + 44, cardY + 84);
+        // Enhanced stat header with better typography
+        ctx.fillStyle = 'rgba(246,245,242,0.92)';
+        ctx.font = '850 30px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.textBaseline = 'top';
+        ctx.save();
+        ctx.shadowColor = 'rgba(11,18,32,0.12)';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 2;
+        ctx.fillText(headline, cardX + 50, cardY + 90);
+        ctx.restore();
 
         if (bigValue) {
             ctx.fillStyle = '#F6F5F2';
-            ctx.font = '950 110px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-            ctx.fillText(bigValue, cardX + 44, cardY + 195);
+            ctx.font = '950 120px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            ctx.save();
+            ctx.shadowColor = 'rgba(11,18,32,0.20)';
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetY = 4;
+            ctx.fillText(bigValue, cardX + 50, cardY + 200);
+            ctx.restore();
         }
 
         if (secondary) {
-            ctx.fillStyle = 'rgba(246,245,242,0.92)';
-            ctx.font = '900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-            const secLines = wrapTextLines(ctx, secondary, cardW - 88, 2);
-            let sy = cardY + 250;
+            ctx.fillStyle = 'rgba(246,245,242,0.95)';
+            ctx.font = '900 48px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            const secLines = wrapTextLines(ctx, secondary, cardW - 100, 2);
+            let sy = cardY + 270;
             for (const line of secLines) {
-                ctx.fillText(line, cardX + 44, sy);
-                sy += 54;
+                ctx.save();
+                ctx.shadowColor = 'rgba(11,18,32,0.10)';
+                ctx.shadowBlur = 4;
+                ctx.shadowOffsetY = 2;
+                ctx.fillText(line, cardX + 50, sy);
+                ctx.restore();
+                sy += 58;
             }
         }
 
@@ -565,73 +596,100 @@
 
     function drawPill(ctx, x, y, text) {
         ctx.save();
-        ctx.font = '900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-        const padX = 18;
-        const padY = 12;
+        ctx.font = '900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        const padX = 20;
+        const padY = 14;
         const tw = ctx.measureText(text).width;
         const w = tw + padX * 2;
         const h = 24 + padY * 2;
         roundRect(ctx, x, y - h + 6, w, h, h / 2);
-        ctx.fillStyle = 'rgba(246,245,242,0.16)';
+        // Enhanced glassmorphism effect
+        ctx.fillStyle = 'rgba(246,245,242,0.20)';
         ctx.fill();
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(246,245,242,0.26)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(246,245,242,0.32)';
         ctx.stroke();
-        ctx.fillStyle = 'rgba(246,245,242,0.92)';
+        // Add subtle inner highlight
+        ctx.fillStyle = 'rgba(246,245,242,0.08)';
+        roundRect(ctx, x + 1, y - h + 7, w - 2, h - 2, (h - 2) / 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(246,245,242,0.96)';
         ctx.fillText(text, x + padX, y);
         ctx.restore();
     }
 
     function drawGlassCard(ctx, x, y, w, h, r) {
         ctx.save();
-        ctx.shadowColor = 'rgba(11,18,32,0.26)';
-        ctx.shadowBlur = 28;
-        ctx.shadowOffsetY = 18;
+        // Enhanced shadow for depth
+        ctx.shadowColor = 'rgba(11,18,32,0.32)';
+        ctx.shadowBlur = 32;
+        ctx.shadowOffsetY = 20;
         roundRect(ctx, x, y, w, h, r);
-        ctx.fillStyle = 'rgba(246,245,242,0.10)';
+        // Enhanced glassmorphism with gradient overlay
+        ctx.fillStyle = 'rgba(246,245,242,0.12)';
         ctx.fill();
+        // Add subtle inner border highlight
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(246,245,242,0.20)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(246,245,242,0.24)';
         ctx.stroke();
+        // Inner glow effect
+        roundRect(ctx, x + 2, y + 2, w - 4, h - 4, r - 2);
+        ctx.fillStyle = 'rgba(246,245,242,0.04)';
+        ctx.fill();
         ctx.restore();
     }
 
     function drawAvatarRing(ctx, cx, cy, size) {
         ctx.save();
         const r = size / 2;
-        ctx.shadowColor = 'rgba(11,18,32,0.22)';
-        ctx.shadowBlur = 26;
-        ctx.shadowOffsetY = 14;
-        ctx.beginPath(); ctx.arc(cx, cy, r + 18, 0, Math.PI * 2); ctx.closePath();
-        ctx.fillStyle = 'rgba(246,245,242,0.12)'; ctx.fill();
-        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(246,245,242,0.26)'; ctx.stroke();
-        ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI * 2); ctx.closePath();
-        ctx.fillStyle = 'rgba(30,42,68,0.22)'; ctx.fill();
+        // Enhanced outer ring with better shadows
+        ctx.shadowColor = 'rgba(11,18,32,0.28)';
+        ctx.shadowBlur = 30;
+        ctx.shadowOffsetY = 16;
+        ctx.beginPath(); ctx.arc(cx, cy, r + 20, 0, Math.PI * 2); ctx.closePath();
+        ctx.fillStyle = 'rgba(246,245,242,0.14)'; ctx.fill();
+        ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(246,245,242,0.30)'; ctx.stroke();
+        // Enhanced middle ring
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, Math.PI * 2); ctx.closePath();
+        ctx.fillStyle = 'rgba(30,42,68,0.26)'; ctx.fill();
+        // Inner highlight ring
+        ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, Math.PI * 2); ctx.closePath();
+        ctx.fillStyle = 'rgba(246,245,242,0.06)'; ctx.fill();
         ctx.restore();
     }
 
     function drawNamePill(ctx, cx, y, name) {
         ctx.save();
         const text = String(name || '').trim() || 'You';
-        ctx.font = '950 32px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.font = '950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial';
         const tw = ctx.measureText(text).width;
-        const w = Math.min(760, tw + 64);
-        const h = 84;
+        const w = Math.min(760, tw + 72);
+        const h = 88;
         const x = cx - w / 2;
-        ctx.shadowColor = 'rgba(11,18,32,0.20)';
-        ctx.shadowBlur = 22;
-        ctx.shadowOffsetY = 14;
-        roundRect(ctx, x, y, w, h, 42);
-        ctx.fillStyle = 'rgba(246,245,242,0.92)';
+        // Enhanced shadow
+        ctx.shadowColor = 'rgba(11,18,32,0.24)';
+        ctx.shadowBlur = 24;
+        ctx.shadowOffsetY = 16;
+        roundRect(ctx, x, y, w, h, 44);
+        // Enhanced fill with subtle gradient effect
+        ctx.fillStyle = 'rgba(246,245,242,0.95)';
         ctx.fill();
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
+        // Subtle border
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(30,42,68,0.12)';
+        ctx.stroke();
         ctx.fillStyle = '#1E2A44';
         ctx.textAlign = 'center';
-        ctx.fillText(text, cx, y + 55);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, cx, y + h / 2);
         ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
         ctx.restore();
     }
 

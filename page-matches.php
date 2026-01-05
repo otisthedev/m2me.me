@@ -81,14 +81,14 @@ function mm_overall_match_from_maps(
 ?>
 
 <main class="mm-matches container mm-page mm-page-1100">
-    <h1>Matches</h1>
+    <h1><?php echo esc_html__('Matches', 'match-me'); ?></h1>
 
     <?php if (!is_user_logged_in()) : ?>
-        <p>Please log in to see your matches.</p>
+        <p><?php echo esc_html__('Please log in to see your matches.', 'match-me'); ?></p>
         <p>
-            <a class="mm-auth-link" data-auth="login" href="<?php echo esc_url(add_query_arg(['login' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>">Login</a>
-            &nbsp;or&nbsp;
-            <a class="mm-auth-link" data-auth="register" href="<?php echo esc_url(add_query_arg(['register' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>">Register</a>
+            <a class="mm-auth-link" data-auth="login" href="<?php echo esc_url(add_query_arg(['login' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo esc_html__('Login', 'match-me'); ?></a>
+            &nbsp;<?php echo esc_html__('or', 'match-me'); ?>&nbsp;
+            <a class="mm-auth-link" data-auth="register" href="<?php echo esc_url(add_query_arg(['register' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo esc_html__('Register', 'match-me'); ?></a>
         </p>
     <?php else : ?>
         <?php
@@ -204,7 +204,7 @@ function mm_overall_match_from_maps(
             ?>
 
             <div class="mm-match-detail">
-                <a class="mm-back-link" href="<?php echo esc_url(home_url('/matches/')); ?>">← Back to matches</a>
+                <a class="mm-back-link" href="<?php echo esc_url(home_url('/matches/')); ?>">← <?php echo esc_html__('Back to matches', 'match-me'); ?></a>
 
                 <div class="mm-match-hero">
                     <div class="mm-compare-avatar mm-compare-avatar-lg">
@@ -216,20 +216,20 @@ function mm_overall_match_from_maps(
                     </div>
                     <div>
                         <div class="mm-match-title"><strong><?php echo esc_html($otherName); ?></strong></div>
-                        <div class="mm-match-sub"><?php echo esc_html($overallPct); ?>% overall match • <?php echo esc_html(count($overall['per_quiz'])); ?> shared quizzes</div>
+                        <div class="mm-match-sub"><?php echo esc_html($overallPct); ?>% <?php echo esc_html__('overall match', 'match-me'); ?> • <?php echo esc_html(count($overall['per_quiz'])); ?> <?php echo esc_html__('shared quizzes', 'match-me'); ?></div>
                     </div>
 
                     <div class="mm-match-hero-actions">
                         <?php if ($latestMatchToken !== '') : ?>
-                            <a class="mm-compare-link" href="<?php echo esc_url(home_url('/match/' . $latestMatchToken . '/')); ?>">View latest comparison</a>
+                            <a class="mm-compare-link" href="<?php echo esc_url(home_url('/match/' . $latestMatchToken . '/')); ?>"><?php echo esc_html__('View latest comparison', 'match-me'); ?></a>
                         <?php endif; ?>
                     </div>
                 </div>
 
-                <h2 class="mm-mt-lg">Match by quiz</h2>
+                <h2 class="mm-mt-lg"><?php echo esc_html__('Match by quiz', 'match-me'); ?></h2>
                 <div class="mm-match-by-quiz">
                     <?php if ($overall['per_quiz'] === []) : ?>
-                        <div class="mm-empty"><p>No shared quizzes yet.</p></div>
+                        <div class="mm-empty"><p><?php echo esc_html__('No shared quizzes yet.', 'match-me'); ?></p></div>
                     <?php else : ?>
                         <?php foreach ($overall['per_quiz'] as $q) : ?>
                             <?php $pct = (int) round(max(0.0, min(100.0, (float) $q['score']))); ?>
@@ -246,11 +246,11 @@ function mm_overall_match_from_maps(
 
             <section class="mm-mt-md">
                 <div class="mm-recent-header">
-                    <h2 class="mm-recent-title">Top matches</h2>
+                    <h2 class="mm-recent-title"><?php echo esc_html__('Top matches', 'match-me'); ?></h2>
                 </div>
 
                 <?php if ($top === []) : ?>
-                    <div class="mm-empty"><p>No matches yet. Do a few comparisons first.</p></div>
+                    <div class="mm-empty"><p><?php echo esc_html__('No matches yet. Do a few comparisons first.', 'match-me'); ?></p></div>
                 <?php else : ?>
                     <div class="mm-compare-grid">
                         <?php foreach ($top as $c) : ?>
@@ -266,11 +266,11 @@ function mm_overall_match_from_maps(
                                     </div>
                                     <div class="mm-compare-meta">
                                         <div class="mm-compare-line"><strong><?php echo esc_html($c['name']); ?></strong></div>
-                                        <div class="mm-compare-sub"><?php echo esc_html($pct); ?>% overall • <?php echo esc_html((string) $c['shared_quizzes']); ?> shared quizzes</div>
+                                        <div class="mm-compare-sub"><?php echo esc_html($pct); ?>% <?php echo esc_html__('overall', 'match-me'); ?> • <?php echo esc_html((string) $c['shared_quizzes']); ?> <?php echo esc_html__('shared quizzes', 'match-me'); ?></div>
                                     </div>
                                 </div>
                                 <div class="mm-compare-actions">
-                                    <a class="mm-compare-link" href="<?php echo esc_url(add_query_arg(['with' => (string) $c['id']], home_url('/matches/'))); ?>">View overall match</a>
+                                    <a class="mm-compare-link" href="<?php echo esc_url(add_query_arg(['with' => (string) $c['id']], home_url('/matches/'))); ?>"><?php echo esc_html__('View overall match', 'match-me'); ?></a>
                                 </div>
                             </article>
                         <?php endforeach; ?>
@@ -280,11 +280,11 @@ function mm_overall_match_from_maps(
 
             <section class="mm-mt-lg">
                 <div class="mm-recent-header">
-                    <h2 class="mm-recent-title">All matches</h2>
+                    <h2 class="mm-recent-title"><?php echo esc_html__('All matches', 'match-me'); ?></h2>
                 </div>
 
                 <?php if ($cards === []) : ?>
-                    <div class="mm-empty"><p>No matches yet.</p></div>
+                    <div class="mm-empty"><p><?php echo esc_html__('No matches yet.', 'match-me'); ?></p></div>
                 <?php else : ?>
                     <div class="mm-compare-grid">
                         <?php foreach ($cards as $c) : ?>
@@ -300,11 +300,11 @@ function mm_overall_match_from_maps(
                                     </div>
                                     <div class="mm-compare-meta">
                                         <div class="mm-compare-line"><strong><?php echo esc_html($c['name']); ?></strong></div>
-                                        <div class="mm-compare-sub"><?php echo esc_html($pct); ?>% overall • <?php echo esc_html((string) $c['shared_quizzes']); ?> shared quizzes</div>
+                                        <div class="mm-compare-sub"><?php echo esc_html($pct); ?>% <?php echo esc_html__('overall', 'match-me'); ?> • <?php echo esc_html((string) $c['shared_quizzes']); ?> <?php echo esc_html__('shared quizzes', 'match-me'); ?></div>
                                     </div>
                                 </div>
                                 <div class="mm-compare-actions">
-                                    <a class="mm-compare-link" href="<?php echo esc_url(add_query_arg(['with' => (string) $c['id']], home_url('/matches/'))); ?>">View overall match</a>
+                                    <a class="mm-compare-link" href="<?php echo esc_url(add_query_arg(['with' => (string) $c['id']], home_url('/matches/'))); ?>"><?php echo esc_html__('View overall match', 'match-me'); ?></a>
                                 </div>
                             </article>
                         <?php endforeach; ?>

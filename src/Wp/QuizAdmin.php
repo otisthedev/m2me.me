@@ -50,8 +50,9 @@ final class QuizAdmin
         echo '<div class="card"><h2>Upload New Quiz</h2>';
         echo '<form method="post" enctype="multipart/form-data">';
         wp_nonce_field('jqm_upload', 'jqm_nonce');
-        echo '<input type="file" name="jqm_file" accept=".json" required>';
-        submit_button('Upload JSON');
+        echo '<input type="file" name="jqm_file[]" accept=".json" multiple required>';
+        echo '<p class="description">You can select multiple JSON files to upload at once. Posts will be automatically created for each quiz if they don\'t already exist.</p>';
+        submit_button('Upload JSON Files');
         echo '</form></div>';
 
         echo '<div class="card"><h2>Existing Quizzes</h2>';
@@ -137,13 +138,74 @@ final class QuizAdmin
 
         if (!empty($_FILES['jqm_file']) && is_array($_FILES['jqm_file'])) {
             if (isset($_POST['jqm_nonce']) && wp_verify_nonce((string) $_POST['jqm_nonce'], 'jqm_upload')) {
-                $file = $_FILES['jqm_file'];
-                $name = isset($file['name']) ? (string) $file['name'] : '';
-                $tmp = isset($file['tmp_name']) ? (string) $file['tmp_name'] : '';
-                if (pathinfo($name, PATHINFO_EXTENSION) === 'json' && is_uploaded_file($tmp)) {
-                    $target = $baseDir . sanitize_file_name($name);
+                $files = $_FILES['jqm_file'];
+                $uploadedCount = 0;
+                $postCreatedCount = 0;
+                $errors = [];
+                
+                // Handle multiple files
+                $fileCount = is_array($files['name']) ? count($files['name']) : 1;
+                
+                for ($i = 0; $i < $fileCount; $i++) {
+                    $name = is_array($files['name']) ? ($files['name'][$i] ?? '') : (string) ($files['name'] ?? '');
+                    $tmp = is_array($files['tmp_name']) ? ($files['tmp_name'][$i] ?? '') : (string) ($files['tmp_name'] ?? '');
+                    $error = is_array($files['error']) ? ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE) : (int) ($files['error'] ?? UPLOAD_ERR_NO_FILE);
+                    
+                    if ($error !== UPLOAD_ERR_OK) {
+                        if ($error !== UPLOAD_ERR_NO_FILE) {
+                            $errors[] = "Error uploading {$name}: " . $this->getUploadErrorMessage($error);
+                        }
+                        continue;
+                    }
+                    
+                    if (pathinfo($name, PATHINFO_EXTENSION) !== 'json') {
+                        $errors[] = "{$name} is not a JSON file. Skipped.";
+                        continue;
+                    }
+                    
+                    if (!is_uploaded_file($tmp)) {
+                        $errors[] = "{$name} is not a valid uploaded file. Skipped.";
+                        continue;
+                    }
+                    
+                    $sanitizedName = sanitize_file_name($name);
+                    $target = $baseDir . $sanitizedName;
+                    
                     if (move_uploaded_file($tmp, $target)) {
-                        $this->addNotice('File uploaded successfully!');
+                        $uploadedCount++;
+                        
+                        // Try to create post for this quiz
+                        $quizSlug = pathinfo($sanitizedName, PATHINFO_FILENAME);
+                        if ($this->createPostForQuiz($target, $quizSlug)) {
+                            $postCreatedCount++;
+                        }
+                    } else {
+                        $errors[] = "Failed to move {$name} to target directory.";
+                    }
+                }
+                
+                // Build success message
+                $messages = [];
+                if ($uploadedCount > 0) {
+                    $messages[] = sprintf(
+                        '%d file(s) uploaded successfully',
+                        $uploadedCount
+                    );
+                }
+                if ($postCreatedCount > 0) {
+                    $messages[] = sprintf(
+                        '%d post(s) created',
+                        $postCreatedCount
+                    );
+                }
+                if ($uploadedCount > 0) {
+                    $this->addNotice(implode('. ', $messages) . '.', 'success');
+                }
+                
+                // Show errors if any
+                if (!empty($errors)) {
+                    foreach ($errors as $error) {
+                        $this->addNotice($error, 'error');
                     }
                 }
             }
@@ -223,6 +285,94 @@ final class QuizAdmin
             );
         }
         delete_option('jqm_notices');
+    }
+
+    /**
+     * Create a WordPress post for a quiz if it doesn't already exist
+     * 
+     * @param string $quizFilePath Full path to the quiz JSON file
+     * @param string $quizSlug The quiz slug (filename without .json)
+     * @return bool True if post was created or already exists, false on error
+     */
+    private function createPostForQuiz(string $quizFilePath, string $quizSlug): bool
+    {
+        // Check if post already exists
+        $existingPost = get_page_by_path($quizSlug, OBJECT, 'post');
+        if ($existingPost instanceof \WP_Post) {
+            return true; // Post already exists
+        }
+        
+        // Read quiz JSON to extract metadata
+        $quizContent = file_get_contents($quizFilePath);
+        if ($quizContent === false) {
+            return false;
+        }
+        
+        $quizData = json_decode($quizContent, true);
+        if (!is_array($quizData) || !isset($quizData['meta'])) {
+            return false;
+        }
+        
+        $meta = $quizData['meta'];
+        $title = isset($meta['title']) ? (string) $meta['title'] : ucwords(str_replace(['-', '_'], ' ', $quizSlug));
+        $description = isset($meta['description']) ? (string) $meta['description'] : '';
+        
+        // Create post content with quiz shortcode
+        $postContent = '';
+        if ($description !== '') {
+            $postContent .= '<p>' . esc_html($description) . '</p>' . "\n\n";
+        }
+        $postContent .= '[match_me_quiz id="' . esc_attr($quizSlug) . '"]';
+        
+        // Create the post
+        $postId = wp_insert_post([
+            'post_title' => $title,
+            'post_name' => $quizSlug,
+            'post_content' => $postContent,
+            'post_status' => 'publish',
+            'post_type' => 'post',
+            'post_author' => get_current_user_id() ?: 1,
+        ], true);
+        
+        if (is_wp_error($postId)) {
+            return false;
+        }
+        
+        // Store quiz metadata as post meta for reference
+        if (isset($meta['aspect'])) {
+            update_post_meta((int) $postId, '_quiz_aspect', (string) $meta['aspect']);
+        }
+        if (isset($meta['version'])) {
+            update_post_meta((int) $postId, '_quiz_version', (string) $meta['version']);
+        }
+        update_post_meta((int) $postId, '_quiz_slug', $quizSlug);
+        
+        return true;
+    }
+
+    /**
+     * Get human-readable upload error message
+     */
+    private function getUploadErrorMessage(int $errorCode): string
+    {
+        switch ($errorCode) {
+            case UPLOAD_ERR_INI_SIZE:
+                return 'File exceeds upload_max_filesize directive in php.ini';
+            case UPLOAD_ERR_FORM_SIZE:
+                return 'File exceeds MAX_FILE_SIZE directive in HTML form';
+            case UPLOAD_ERR_PARTIAL:
+                return 'File was only partially uploaded';
+            case UPLOAD_ERR_NO_FILE:
+                return 'No file was uploaded';
+            case UPLOAD_ERR_NO_TMP_DIR:
+                return 'Missing temporary folder';
+            case UPLOAD_ERR_CANT_WRITE:
+                return 'Failed to write file to disk';
+            case UPLOAD_ERR_EXTENSION:
+                return 'File upload stopped by extension';
+            default:
+                return 'Unknown upload error';
+        }
     }
 }
 
