@@ -1326,6 +1326,19 @@ p {
     line-height: var(--line-height-relaxed);
 }
 
+/* Hide duplicate title/description for quiz posts */
+.quiz-post-container article .entry-title,
+.quiz-post-container article .entry-content,
+.quiz-post-container article header.entry-header,
+.quiz-post-container article > .entry-header,
+.quiz-post-container article[role="banner"],
+.quiz-post-container article > [role="banner"],
+.quiz-post-container article > [role="banner"] h1,
+.quiz-post-container article > [role="banner"] h2,
+.quiz-post-container article > [role="banner"] + *:not([data-match-me-quiz]):not(.mmq):not(.mmq-intro) {
+    display: none !important;
+}
+
 .page .site-main article.page,
 .single .site-main article.post {
     /* White "main box" for content pages (e.g., Terms) */

@@ -117,18 +117,33 @@
 }
 
 .btn-copy-headline {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   color: #ffffff;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.875rem;
-  transition: background 0.2s;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  min-height: 44px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .btn-copy-headline:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-copy-headline:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+.btn-copy-headline:active {
+  transform: translateY(0);
 }
 
 /* Comparison teaser */
@@ -167,22 +182,36 @@
   background: #667eea;
   color: #ffffff;
   border: none;
-  padding: 0.75rem 2rem;
-  border-radius: 6px;
+  padding: 0.875rem 2rem;
+  border-radius: 8px;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   margin-top: 1rem;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  min-height: 48px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .btn-teaser-compare:hover:not(:disabled) {
   background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-teaser-compare:focus:not(:disabled) {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+.btn-teaser-compare:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .btn-teaser-compare:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Share buttons with subtitles */
@@ -334,17 +363,19 @@
 }
 
 /* Invite dialog */
-.match-me-invite-dialog {
+.match-me-invite-dialog,
+.match-me-group-dialog {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10000;
+  z-index: 100000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  box-sizing: border-box;
 }
 
 .dialog-overlay {
@@ -367,6 +398,35 @@
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+  box-sizing: border-box;
+}
+
+.dialog-content .popup-close-btn,
+.dialog-content .dialog-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+  z-index: 10;
+}
+
+.dialog-content .popup-close-btn:hover,
+.dialog-content .dialog-close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  transform: scale(1.1);
 }
 
 .dialog-content h3 {
@@ -407,33 +467,49 @@
 
 .btn-invite-copy,
 .btn-invite-share {
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
   border: none;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 48px;
 }
 
 .btn-invite-copy {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #ffffff;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .btn-invite-copy:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+.btn-invite-copy:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
 }
 
 .btn-invite-share {
-  background: #f8f9fa;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
+  background: #ffffff;
+  color: var(--color-primary, #1E2A44);
+  border: 2px solid var(--color-primary, #1E2A44);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .btn-invite-share:hover {
-  background: #e9ecef;
+  background: var(--color-primary, #1E2A44);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 42, 68, 0.2);
+}
+
+.btn-invite-share:focus {
+  outline: 2px solid var(--color-primary, #1E2A44);
+  outline-offset: 2px;
 }
 
 .btn-invite-close {
@@ -498,16 +574,26 @@
 .btn-share-compare:hover {
   background: #243454;
   border-color: #243454;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 42, 68, 0.3);
+}
+
+.btn-share-view:focus,
+.btn-share-compare:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .btn-share-instagram:hover {
-  opacity: 0.9;
+  opacity: 0.95;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(131, 58, 180, 0.4);
+  background: linear-gradient(130deg, #833AB4 0%, #FD1D1D 37%, #FCAF45 100%);
 }
-.btn-share-instagram:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-    background: linear-gradient(130deg, #833AB4 0%, #FD1D1D 37%, #FCAF45 100%);
+
+.btn-share-instagram:focus {
+  outline: 2px solid #833AB4;
+  outline-offset: 2px;
 }
 
 .btn-share-view:active,
@@ -1029,20 +1115,34 @@
 }
 
 .btn-create-group {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
   color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  padding: 0.75rem 1.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  padding: 0.875rem 2rem;
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  min-height: 48px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .btn-create-group:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.btn-create-group:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+.btn-create-group:active {
+  transform: translateY(0);
 }
 
 .group-cta-note {

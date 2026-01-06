@@ -17,12 +17,19 @@
         const shortSummary = result.textual_summary_short || result.textual_summary || 'Quiz completed successfully.';
         const longSummary = result.textual_summary_long || '';
 
+        // Get share URL for headline sharing
+        const shareUrl = (result.share_urls && result.share_urls.view) 
+            ? result.share_urls.view 
+            : (result.share_token 
+                ? `${window.location.origin}/result/${result.share_token}/` 
+                : window.location.href);
+
         // ADD: Prominent headline section (viral hook)
         const headlineEl = document.createElement('div');
         headlineEl.className = 'match-me-result-headline';
         headlineEl.innerHTML = `
             <h2 class="result-headline-text">${escapeHtml(shareableHeadline)}</h2>
-            <button type="button" class="btn-copy-headline" data-headline="${escapeHtml(shareableHeadline)}">
+            <button type="button" class="btn-copy-headline" data-headline="${escapeHtml(shareableHeadline)}" data-share-url="${escapeHtml(shareUrl)}">
                 Copy this insight
             </button>
         `;
@@ -31,18 +38,21 @@
         // Add copy functionality
         headlineEl.querySelector('.btn-copy-headline')?.addEventListener('click', async function() {
             const headline = this.getAttribute('data-headline');
+            const url = this.getAttribute('data-share-url');
+            const textToCopy = headline + '\n\n' + url;
+            
             try {
-                await navigator.clipboard.writeText(headline);
-                showMessage('Copied! Share this insight anywhere.', 'success');
+                await navigator.clipboard.writeText(textToCopy);
+                showMessage('Copied! Headline and link ready to share.', 'success');
             } catch (e) {
                 // Fallback
                 const textarea = document.createElement('textarea');
-                textarea.value = headline;
+                textarea.value = textToCopy;
                 document.body.appendChild(textarea);
                 textarea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textarea);
-                showMessage('Copied! Share this insight anywhere.', 'success');
+                showMessage('Copied! Headline and link ready to share.', 'success');
             }
         });
 
@@ -238,6 +248,7 @@
         dialog.innerHTML = `
             <div class="dialog-overlay"></div>
             <div class="dialog-content dialog-content-large">
+                <button type="button" class="dialog-close-btn" aria-label="Close">×</button>
                 <h3>Create Group Comparison</h3>
                 <p class="dialog-description">Invite 3-10 people to take this quiz and see how your group compares.</p>
                 
@@ -262,6 +273,9 @@
         `;
         
         document.body.appendChild(dialog);
+        
+        // Setup dialog handlers (ESC key, overlay click, body scroll)
+        setupDialogHandlers(dialog);
         
         // Add invite functionality
         let inviteCount = 0;
@@ -292,21 +306,57 @@
         
         // Create group handler
         dialog.querySelector('.btn-create-group')?.addEventListener('click', async function() {
+            const createBtn = this;
             const groupName = dialog.querySelector('.group-name-input')?.value || '';
-            const invites = Array.from(dialog.querySelectorAll('.invite-item')).map(item => ({
-                email: item.querySelector('.invite-email')?.value || '',
-                name: item.querySelector('.invite-name')?.value || '',
-            })).filter(inv => inv.email);
+            const inviteItems = Array.from(dialog.querySelectorAll('.invite-item'));
+            
+            // Validate emails
+            const invites = [];
+            let hasInvalidEmail = false;
+            
+            for (const item of inviteItems) {
+                const emailInput = item.querySelector('.invite-email');
+                const email = emailInput?.value.trim() || '';
+                const name = item.querySelector('.invite-name')?.value.trim() || '';
+                
+                if (email === '') {
+                    continue; // Skip empty emails
+                }
+                
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    emailInput.style.borderColor = '#ef4444';
+                    hasInvalidEmail = true;
+                    continue;
+                } else {
+                    emailInput.style.borderColor = '';
+                    invites.push({ email, name });
+                }
+            }
+            
+            if (hasInvalidEmail) {
+                showMessage('Please enter valid email addresses', 'warning');
+                return;
+            }
             
             if (invites.length < 2) {
                 showMessage('Invite at least 2 people to create a group', 'warning');
                 return;
             }
             
+            // Show loading state
+            createBtn.disabled = true;
+            createBtn.textContent = 'Creating...';
+            const originalText = createBtn.textContent;
+            
             try {
                 const response = await fetch('/wp-json/match-me/v1/group/create', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-WP-Nonce': (window.matchMeQuizVars && window.matchMeQuizVars.nonce) || (window.cqVars && window.cqVars.nonce) || ''
+                    },
                     body: JSON.stringify({
                         quiz_slug: quizSlug,
                         group_name: groupName || null,
@@ -315,23 +365,26 @@
                 });
                 
                 const data = await response.json();
-                if (data.group_id) {
-                    showMessage('Group created! Invitations sent.', 'success');
+                
+                if (response.ok && data.group_id) {
+                    showMessage(`Group created! Invitation emails sent to ${invites.length} ${invites.length === 1 ? 'person' : 'people'}.`, 'success');
                     dialog.remove();
                     // Redirect to group page or show group link
-                    if (data.share_token) {
+                    if (data.group_id) {
                         window.location.href = `/group/${data.group_id}/`;
                     }
                 } else {
-                    showMessage(data.message || 'Failed to create group', 'error');
+                    const errorMsg = data.message || data.code || 'Failed to create group';
+                    showMessage(errorMsg, 'error');
+                    createBtn.disabled = false;
+                    createBtn.textContent = 'Create Group';
                 }
             } catch (e) {
-                showMessage('Failed to create group', 'error');
+                showMessage('Network error. Please check your connection and try again.', 'error');
+                createBtn.disabled = false;
+                createBtn.textContent = 'Create Group';
             }
         });
-        
-        dialog.querySelector('.btn-cancel')?.addEventListener('click', () => dialog.remove());
-        dialog.querySelector('.dialog-overlay')?.addEventListener('click', () => dialog.remove());
     }
 
     /**
@@ -347,6 +400,7 @@
         dialog.innerHTML = `
             <div class="dialog-overlay"></div>
             <div class="dialog-content">
+                <button type="button" class="dialog-close-btn" aria-label="Close">×</button>
                 <h3>Invite someone to compare</h3>
                 <p class="dialog-description">Share this link with someone you want to compare results with. When they complete the quiz, you'll both see your match breakdown.</p>
                 
@@ -385,6 +439,9 @@
         `;
         
         document.body.appendChild(dialog);
+        
+        // Setup dialog handlers (ESC key, overlay click, body scroll)
+        setupDialogHandlers(dialog);
         
         // Copy link handler
         dialog.querySelector('.btn-invite-copy')?.addEventListener('click', async function() {
@@ -426,10 +483,6 @@
                 showMessage('Could not share.', 'warning');
             }
         });
-        
-        // Close handler
-        dialog.querySelector('.btn-invite-close')?.addEventListener('click', () => dialog.remove());
-        dialog.querySelector('.dialog-overlay')?.addEventListener('click', () => dialog.remove());
     }
 
     /**
@@ -1352,6 +1405,48 @@
     /**
      * Show message to user
      */
+    /**
+     * Helper function to manage dialog open/close with ESC key and body scroll prevention
+     */
+    function setupDialogHandlers(dialog, onClose) {
+        // Prevent body scroll when dialog is open
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        
+        // ESC key handler
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeDialog();
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+        
+        // Close function
+        function closeDialog() {
+            document.body.style.overflow = originalOverflow;
+            document.removeEventListener('keydown', escHandler);
+            if (onClose) {
+                onClose();
+            } else {
+                dialog.remove();
+            }
+        }
+        
+        // Overlay click handler
+        const overlay = dialog.querySelector('.dialog-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', closeDialog);
+        }
+        
+        // Close button handler
+        const closeBtn = dialog.querySelector('.popup-close-btn, .dialog-close-btn, .btn-cancel, .btn-invite-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeDialog);
+        }
+        
+        return closeDialog;
+    }
+
     function showMessage(message, type = 'info') {
         // Simple implementation - could be enhanced with better UI
         const msgEl = document.createElement('div');
@@ -1365,7 +1460,7 @@
             background: ${type === 'success' ? '#1E2A44' : type === 'warning' ? '#EFEFEF' : '#F6F5F2'};
             color: ${type === 'success' ? '#F6F5F2' : '#2B2E34'};
             border: 1px solid #1E2A44;
-            z-index: 10000;
+            z-index: 100001;
             font-size: 14px;
             max-width: 90%;
             text-align: center;

@@ -1095,6 +1095,115 @@ final class QuizApiController
     }
 
     /**
+     * Send group invitation email to participant.
+     *
+     * @param string $email
+     * @param string $inviteToken
+     * @param string $quizSlug
+     * @param string $quizTitle
+     * @param string $groupName
+     * @param string $inviterName
+     */
+    private function sendGroupInvitationEmail(
+        string $email,
+        string $inviteToken,
+        string $quizSlug,
+        string $quizTitle,
+        ?string $groupName,
+        string $inviterName
+    ): void {
+        if ($email === '' || !is_email($email)) {
+            return;
+        }
+
+        // Don't send to placeholder emails
+        if (str_contains($email, '@instagram.invalid')) {
+            return;
+        }
+
+        $siteName = (string) get_bloginfo('name');
+        $inviteUrl = home_url('/group/join/' . rawurlencode($inviteToken) . '/');
+        $quizUrl = home_url('/' . rawurlencode($quizSlug) . '/');
+
+        $subject = sprintf('%s invited you to a group quiz', $inviterName);
+        if ($siteName !== '') {
+            $subject .= ' • ' . $siteName;
+        }
+
+        $groupNameText = $groupName !== null && $groupName !== '' ? esc_html($groupName) : 'a group';
+        $preheader = esc_html(sprintf('%s invited you to take "%s" as part of %s.', $inviterName, $quizTitle, $groupNameText));
+
+        $brand = '#1E2A44';
+        $bg = '#F6F5F2';
+        $card = '#FFFFFF';
+        $muted = '#6B7280';
+        $border = 'rgba(30,42,68,0.12)';
+
+        $html = '<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Group Quiz Invitation</title>
+</head>
+<body style="margin:0;padding:0;background:' . $bg . ';font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Inter,Arial,sans-serif;color:#2B2E34;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">' . $preheader . '</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:' . $bg . ';padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:600px;max-width:92vw;">
+          <tr>
+            <td style="padding:0 12px 12px 12px;">
+              <div style="font-weight:800;letter-spacing:-0.01em;color:' . $brand . ';font-size:16px;">' . ($siteName !== '' ? $siteName : 'm2me.me') . '</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:' . $card . ';border:1px solid ' . $border . ';border-radius:18px;box-shadow:0 18px 46px rgba(30,42,68,0.12);padding:18px;">
+              <div style="font-size:18px;line-height:1.2;font-weight:900;letter-spacing:-0.02em;color:' . $brand . ';">' . esc_html($inviterName) . ' invited you to a group quiz</div>
+              <div style="margin-top:6px;color:' . $muted . ';font-size:13px;line-height:1.35;">' . esc_html($quizTitle) . '</div>
+              
+              <div style="margin-top:16px;padding:14px;border-radius:16px;background:rgba(111,175,179,0.10);border:1px solid rgba(111,175,179,0.25);">
+                <div style="font-size:13px;color:' . $muted . ';margin-bottom:6px;">Group</div>
+                <div style="font-size:20px;font-weight:700;letter-spacing:-0.01em;color:' . $brand . ';">' . esc_html($groupNameText) . '</div>
+              </div>
+
+              <div style="margin-top:16px;">
+                <a href="' . esc_url($inviteUrl) . '" style="display:inline-block;background:' . $brand . ';color:#F6F5F2;text-decoration:none;padding:12px 16px;border-radius:999px;font-weight:800;">
+                  Join Group & Take Quiz
+                </a>
+              </div>
+
+              <div style="margin-top:14px;color:' . $muted . ';font-size:12px;line-height:1.4;">
+                If the button doesn\'t work, copy this link:<br>
+                <a href="' . esc_url($inviteUrl) . '" style="color:' . $brand . ';text-decoration:underline;">' . esc_html($inviteUrl) . '</a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px;color:' . $muted . ';font-size:12px;line-height:1.4;">
+              You\'re receiving this because ' . esc_html($inviterName) . ' invited you to participate in a group comparison.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>';
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+        ];
+
+        // Best-effort: don't fail the API call if email sending fails
+        try {
+            wp_mail($email, $subject, $html, $headers);
+        } catch (\Throwable) {
+            // ignore
+        }
+    }
+
+    /**
      * POST /wp-json/match-me/v1/result/{result_id}/revoke
      */
     public function revokeToken(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
@@ -2761,15 +2870,29 @@ final class QuizApiController
 
         // Add participants if provided
         $invites = $body['invites'] ?? [];
+        $inviterName = is_user_logged_in() ? (string) wp_get_current_user()->display_name : 'Someone';
+        $quizTitle = (string) (($quizConfig['meta']['title'] ?? '') ?: 'Quiz');
+        
         if (is_array($invites) && !empty($invites)) {
             foreach ($invites as $invite) {
-                if (isset($invite['email']) && !empty($invite['email'])) {
-                    $this->groupRepository->addParticipant(
+                $email = isset($invite['email']) ? trim((string) $invite['email']) : '';
+                if ($email !== '' && is_email($email)) {
+                    $inviteToken = $this->groupRepository->addParticipant(
                         $groupId,
                         $userId,
                         null,
-                        (string) $invite['email'],
+                        $email,
                         isset($invite['name']) ? (string) $invite['name'] : null
+                    );
+                    
+                    // Send invitation email
+                    $this->sendGroupInvitationEmail(
+                        $email,
+                        $inviteToken,
+                        $quizSlug,
+                        $quizTitle,
+                        $groupName,
+                        $inviterName
                     );
                 }
             }
@@ -2809,7 +2932,29 @@ final class QuizApiController
             return new \WP_Error('invalid_request', 'email or user_id is required', ['status' => 400]);
         }
 
+        // Get group info
+        $group = $this->groupRepository->getGroupWithParticipants($groupId);
+        if ($group === null) {
+            return new \WP_Error('not_found', 'Group not found', ['status' => 404]);
+        }
+
         $inviteToken = $this->groupRepository->addParticipant($groupId, $userId, $targetUserId, $email, $name);
+
+        // Send invitation email if email provided
+        if ($email !== null && is_email($email)) {
+            $inviterName = is_user_logged_in() ? (string) wp_get_current_user()->display_name : 'Someone';
+            $quizConfig = $this->quizRepository->load($group['quiz_slug'] ?? '');
+            $quizTitle = $quizConfig !== null ? (string) (($quizConfig['meta']['title'] ?? '') ?: 'Quiz') : 'Quiz';
+            
+            $this->sendGroupInvitationEmail(
+                $email,
+                $inviteToken,
+                $group['quiz_slug'] ?? '',
+                $quizTitle,
+                $group['group_name'] ?? null,
+                $inviterName
+            );
+        }
 
         return new \WP_REST_Response([
             'invite_token' => $inviteToken,
