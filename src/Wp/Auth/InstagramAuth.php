@@ -88,7 +88,9 @@ final class InstagramAuth
                 'response_type' => 'code',
                 'state' => $state,
             ]);
-            wp_safe_redirect($authUrl);
+            // Use wp_redirect for external OAuth provider URLs; wp_safe_redirect would reject
+            // non-local hosts and fall back to wp-admin (which then redirects to wp-login).
+            wp_redirect($authUrl);
             exit;
         }
 
