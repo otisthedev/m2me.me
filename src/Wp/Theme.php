@@ -5,7 +5,9 @@ namespace MatchMe\Wp;
 
 use MatchMe\Config\ThemeConfig;
 use MatchMe\Infrastructure\Db\ComparisonRepository;
+use MatchMe\Infrastructure\Db\GroupComparisonRepository;
 use MatchMe\Infrastructure\Db\Migrations\AddPerformanceIndexes;
+use MatchMe\Infrastructure\Db\Migrations\AddRelationshipContextToComparisons;
 use MatchMe\Infrastructure\Db\Migrations\CreateQuizTables;
 use MatchMe\Infrastructure\Db\QuizRepository;
 use MatchMe\Infrastructure\Db\QuizResultRepository;
@@ -13,6 +15,7 @@ use MatchMe\Infrastructure\Db\QuizResultsTable;
 use MatchMe\Infrastructure\Db\ResultRepository;
 use MatchMe\Infrastructure\Quiz\QuizJsonRepository;
 use MatchMe\Infrastructure\Retention\RetentionPolicy;
+use MatchMe\Quiz\GroupComparisonService;
 use MatchMe\Quiz\MatchingService;
 use MatchMe\Quiz\QuizCalculator;
 use MatchMe\Quiz\ShareTokenGenerator;
@@ -41,6 +44,8 @@ final class Theme
         $targetSchemaVersion = 'quiz-v2-2026-01-08';
         if ($schemaVersion !== $targetSchemaVersion) {
             (new CreateQuizTables($wpdb))->run();
+            // Run relationship context migration
+            (new AddRelationshipContextToComparisons($wpdb))->run();
             update_option('match_me_schema_version', $targetSchemaVersion, true);
             // Ensure new rewrite rules are applied after deploy (e.g., /result/{share_token}/).
             flush_rewrite_rules();
@@ -71,6 +76,8 @@ final class Theme
         $quizDbRepo = new QuizRepository($wpdb);
         $matchingService = new MatchingService($calculator, $resultRepo);
         $tokenGenerator = new ShareTokenGenerator();
+        $groupRepo = new GroupComparisonRepository($wpdb);
+        $groupService = new GroupComparisonService($calculator);
 
         (new QuizFeatureSet($config, $repo, new QuizJsonRepository($config), $resultRepo))->register();
 
@@ -82,7 +89,9 @@ final class Theme
             $comparisonRepo,
             $quizDbRepo,
             $tokenGenerator,
-            $config
+            $config,
+            $groupRepo,
+            $groupService
         ))->register();
 
         // Register GDPR compliance endpoints

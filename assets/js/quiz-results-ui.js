@@ -73,6 +73,31 @@
 
         container.appendChild(comparisonTeaser);
 
+        // ADD: Friend network section (after comparison teaser)
+        if (result.quiz_slug) {
+            loadFriendNetwork(result.quiz_slug, container);
+        }
+
+        // ADD: Group CTA (after comparison teaser)
+        if (result.quiz_slug && result.share_token) {
+            const groupCTA = document.createElement('div');
+            groupCTA.className = 'match-me-group-cta';
+            groupCTA.innerHTML = `
+                <button type="button" class="btn-create-group" data-quiz-slug="${escapeHtml(result.quiz_slug)}" data-quiz-title="${escapeHtml(result.quiz_title || 'Quiz')}">
+                    Create Group Comparison
+                </button>
+                <p class="group-cta-note">Invite 3-10 people to see how your group compares</p>
+            `;
+            
+            groupCTA.querySelector('.btn-create-group')?.addEventListener('click', function() {
+                const quizSlug = this.getAttribute('data-quiz-slug');
+                const quizTitle = this.getAttribute('data-quiz-title');
+                showCreateGroupDialog(quizSlug, quizTitle);
+            });
+            
+            container.appendChild(groupCTA);
+        }
+
         // Result summary
         const summaryEl = document.createElement('div');
         summaryEl.className = 'match-me-result-summary';
@@ -143,6 +168,170 @@
             });
             container.appendChild(shareSection);
         }
+
+        // ADD: Social proof section (after share section)
+        if (result.quiz_slug) {
+            loadSocialProof(result.quiz_slug, container);
+        }
+    }
+
+    /**
+     * Load and display friend network
+     */
+    async function loadFriendNetwork(quizSlug, container) {
+        try {
+            const response = await fetch(`/wp-json/match-me/v1/friends/quiz/${encodeURIComponent(quizSlug)}`);
+            const data = await response.json();
+            
+            if (data.friends && data.friends.length > 0) {
+                const friendsEl = document.createElement('div');
+                friendsEl.className = 'match-me-friend-network';
+                friendsEl.innerHTML = `
+                    <h3>Friends Who Took This Quiz</h3>
+                    <p class="friends-count">${data.count} ${data.count === 1 ? 'friend has' : 'friends have'} taken this quiz</p>
+                    <div class="friends-list">
+                        ${data.friends.map(friend => `
+                            <div class="friend-item">
+                                <span class="friend-name">${escapeHtml(friend.name)}</span>
+                                <button type="button" class="btn-compare-friend" data-user-id="${friend.user_id}">
+                                    Compare
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                container.appendChild(friendsEl);
+            }
+        } catch (e) {
+            // Silent fail
+        }
+    }
+
+    /**
+     * Load and display social proof
+     */
+    async function loadSocialProof(quizSlug, container) {
+        try {
+            const response = await fetch(`/wp-json/match-me/v1/stats/anonymous?quiz_slug=${encodeURIComponent(quizSlug)}`);
+            const data = await response.json();
+            
+            if (data.recent_completions > 0) {
+                const proofEl = document.createElement('div');
+                proofEl.className = 'match-me-social-proof';
+                proofEl.innerHTML = `
+                    <p class="social-proof-text">${escapeHtml(data.message)}</p>
+                `;
+                container.appendChild(proofEl);
+            }
+        } catch (e) {
+            // Silent fail
+        }
+    }
+
+    /**
+     * Show create group dialog
+     */
+    function showCreateGroupDialog(quizSlug, quizTitle) {
+        const dialog = document.createElement('div');
+        dialog.className = 'match-me-group-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-overlay"></div>
+            <div class="dialog-content dialog-content-large">
+                <h3>Create Group Comparison</h3>
+                <p class="dialog-description">Invite 3-10 people to take this quiz and see how your group compares.</p>
+                
+                <div class="group-form">
+                    <label>
+                        <span>Group Name (optional)</span>
+                        <input type="text" class="group-name-input" placeholder="e.g., Team Communication, Family Styles">
+                    </label>
+                    
+                    <div class="participant-invites">
+                        <h4>Invite Participants</h4>
+                        <div class="invite-list" id="invite-list"></div>
+                        <button type="button" class="btn-add-invite">+ Add Invite</button>
+                    </div>
+                </div>
+                
+                <div class="dialog-actions">
+                    <button type="button" class="btn-create-group">Create Group</button>
+                    <button type="button" class="btn-cancel">Cancel</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        
+        // Add invite functionality
+        let inviteCount = 0;
+        const maxInvites = 10;
+        
+        dialog.querySelector('.btn-add-invite')?.addEventListener('click', function() {
+            if (inviteCount >= maxInvites) {
+                showMessage('Maximum 10 participants allowed', 'warning');
+                return;
+            }
+            
+            const inviteItem = document.createElement('div');
+            inviteItem.className = 'invite-item';
+            inviteItem.innerHTML = `
+                <input type="email" class="invite-email" placeholder="Email address">
+                <input type="text" class="invite-name" placeholder="Name (optional)">
+                <button type="button" class="btn-remove-invite">×</button>
+            `;
+            
+            dialog.querySelector('#invite-list').appendChild(inviteItem);
+            inviteCount++;
+            
+            inviteItem.querySelector('.btn-remove-invite')?.addEventListener('click', () => {
+                inviteItem.remove();
+                inviteCount--;
+            });
+        });
+        
+        // Create group handler
+        dialog.querySelector('.btn-create-group')?.addEventListener('click', async function() {
+            const groupName = dialog.querySelector('.group-name-input')?.value || '';
+            const invites = Array.from(dialog.querySelectorAll('.invite-item')).map(item => ({
+                email: item.querySelector('.invite-email')?.value || '',
+                name: item.querySelector('.invite-name')?.value || '',
+            })).filter(inv => inv.email);
+            
+            if (invites.length < 2) {
+                showMessage('Invite at least 2 people to create a group', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/wp-json/match-me/v1/group/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        quiz_slug: quizSlug,
+                        group_name: groupName || null,
+                        invites: invites,
+                    }),
+                });
+                
+                const data = await response.json();
+                if (data.group_id) {
+                    showMessage('Group created! Invitations sent.', 'success');
+                    dialog.remove();
+                    // Redirect to group page or show group link
+                    if (data.share_token) {
+                        window.location.href = `/group/${data.group_id}/`;
+                    }
+                } else {
+                    showMessage(data.message || 'Failed to create group', 'error');
+                }
+            } catch (e) {
+                showMessage('Failed to create group', 'error');
+            }
+        });
+        
+        dialog.querySelector('.btn-cancel')?.addEventListener('click', () => dialog.remove());
+        dialog.querySelector('.dialog-overlay')?.addEventListener('click', () => dialog.remove());
     }
 
     /**
@@ -160,6 +349,21 @@
             <div class="dialog-content">
                 <h3>Invite someone to compare</h3>
                 <p class="dialog-description">Share this link with someone you want to compare results with. When they complete the quiz, you'll both see your match breakdown.</p>
+                
+                <div class="relationship-selector">
+                    <label>
+                        <span>Relationship Type (optional)</span>
+                        <select class="relationship-select">
+                            <option value="unspecified">Not specified</option>
+                            <option value="partner">Partner / Significant Other</option>
+                            <option value="friend">Friend</option>
+                            <option value="colleague">Colleague / Coworker</option>
+                            <option value="family">Family Member</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </label>
+                    <p class="relationship-note">This helps us provide more relevant insights</p>
+                </div>
                 
                 <div class="invite-message-preview">
                     <p class="preview-label">They'll receive this message:</p>

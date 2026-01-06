@@ -19,6 +19,9 @@ final class CreateQuizTables
         $this->createQuestionsTable($charsetCollate);
         $this->createResultsTable($charsetCollate);
         $this->createComparisonsTable($charsetCollate);
+        $this->createGroupComparisonsTable($charsetCollate);
+        $this->createGroupParticipantsTable($charsetCollate);
+        $this->createTraitPercentilesTable($charsetCollate);
     }
 
     private function createAspectsTable(string $charsetCollate): void
@@ -135,6 +138,80 @@ final class CreateQuizTables
             KEY created_at (created_at),
             FOREIGN KEY (result_a) REFERENCES {$this->wpdb->prefix}match_me_results(result_id) ON DELETE CASCADE,
             FOREIGN KEY (result_b) REFERENCES {$this->wpdb->prefix}match_me_results(result_id) ON DELETE CASCADE
+        ) $charsetCollate ENGINE=InnoDB;";
+
+        dbDelta($sql);
+    }
+
+    private function createGroupComparisonsTable(string $charsetCollate): void
+    {
+        $tableName = $this->wpdb->prefix . 'match_me_group_comparisons';
+
+        $sql = "CREATE TABLE $tableName (
+            group_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            quiz_slug VARCHAR(100) NOT NULL,
+            group_name VARCHAR(255) NULL,
+            share_token VARCHAR(64) NOT NULL,
+            created_by_user_id BIGINT UNSIGNED NOT NULL,
+            status ENUM('inviting', 'active', 'completed') NOT NULL DEFAULT 'inviting',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            completed_at DATETIME NULL,
+            PRIMARY KEY (group_id),
+            UNIQUE KEY share_token (share_token),
+            KEY quiz_slug (quiz_slug),
+            KEY created_by (created_by_user_id),
+            KEY status (status),
+            FOREIGN KEY (created_by_user_id) REFERENCES {$this->wpdb->prefix}users(ID) ON DELETE CASCADE
+        ) $charsetCollate ENGINE=InnoDB;";
+
+        dbDelta($sql);
+    }
+
+    private function createGroupParticipantsTable(string $charsetCollate): void
+    {
+        $tableName = $this->wpdb->prefix . 'match_me_group_participants';
+
+        $sql = "CREATE TABLE $tableName (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            group_id BIGINT UNSIGNED NOT NULL,
+            result_id BIGINT UNSIGNED NULL,
+            user_id BIGINT UNSIGNED NULL,
+            invite_token VARCHAR(64) NOT NULL,
+            invite_email VARCHAR(255) NULL,
+            invite_name VARCHAR(255) NULL,
+            status ENUM('invited', 'pending', 'completed') NOT NULL DEFAULT 'invited',
+            invited_by_user_id BIGINT UNSIGNED NOT NULL,
+            invited_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            completed_at DATETIME NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY invite_token (invite_token),
+            KEY group_id (group_id),
+            KEY result_id (result_id),
+            KEY user_id (user_id),
+            KEY status (status),
+            FOREIGN KEY (group_id) REFERENCES {$this->wpdb->prefix}match_me_group_comparisons(group_id) ON DELETE CASCADE,
+            FOREIGN KEY (result_id) REFERENCES {$this->wpdb->prefix}match_me_results(result_id) ON DELETE SET NULL,
+            FOREIGN KEY (user_id) REFERENCES {$this->wpdb->prefix}users(ID) ON DELETE SET NULL
+        ) $charsetCollate ENGINE=InnoDB;";
+
+        dbDelta($sql);
+    }
+
+    private function createTraitPercentilesTable(string $charsetCollate): void
+    {
+        $tableName = $this->wpdb->prefix . 'match_me_trait_percentiles';
+
+        $sql = "CREATE TABLE $tableName (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            quiz_slug VARCHAR(100) NOT NULL,
+            trait_id VARCHAR(100) NOT NULL,
+            percentile_value DECIMAL(5,2) NOT NULL,
+            user_count INT UNSIGNED NOT NULL DEFAULT 0,
+            calculated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY quiz_trait (quiz_slug, trait_id),
+            KEY quiz_slug (quiz_slug),
+            KEY calculated_at (calculated_at)
         ) $charsetCollate ENGINE=InnoDB;";
 
         dbDelta($sql);

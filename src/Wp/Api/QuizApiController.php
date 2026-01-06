@@ -5,9 +5,11 @@ namespace MatchMe\Wp\Api;
 
 use MatchMe\Config\ThemeConfig;
 use MatchMe\Infrastructure\Db\ComparisonRepository;
+use MatchMe\Infrastructure\Db\GroupComparisonRepository;
 use MatchMe\Infrastructure\Db\QuizRepository;
 use MatchMe\Infrastructure\Db\ResultRepository;
 use MatchMe\Infrastructure\Quiz\QuizJsonRepository;
+use MatchMe\Quiz\GroupComparisonService;
 use MatchMe\Quiz\MatchingService;
 use MatchMe\Quiz\QuizCalculator;
 use MatchMe\Quiz\ShareTokenGenerator;
@@ -32,7 +34,9 @@ final class QuizApiController
         private ComparisonRepository $comparisonRepository,
         private QuizRepository $quizDbRepository,
         private ShareTokenGenerator $tokenGenerator,
-        private ThemeConfig $config
+        private ThemeConfig $config,
+        private ?GroupComparisonRepository $groupRepository = null,
+        private ?GroupComparisonService $groupService = null
     ) {
     }
 
@@ -114,6 +118,50 @@ final class QuizApiController
             'methods' => 'POST',
             'callback' => [$this, 'markComparisonNotificationsSeen'],
             'permission_callback' => fn(\WP_REST_Request $r) => is_user_logged_in() && $this->hasRestNonce($r),
+        ]);
+
+        // Group comparison endpoints
+        register_rest_route(self::NAMESPACE, '/group/create', [
+            'methods' => \WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'createGroup'],
+            'permission_callback' => [$this, 'checkAuth'],
+        ]);
+
+        register_rest_route(self::NAMESPACE, '/group/(?P<group_id>\d+)/invite', [
+            'methods' => \WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'inviteToGroup'],
+            'permission_callback' => [$this, 'checkAuth'],
+        ]);
+
+        register_rest_route(self::NAMESPACE, '/group/join/(?P<invite_token>[a-zA-Z0-9]+)', [
+            'methods' => \WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'joinGroup'],
+            'permission_callback' => '__return_true',
+        ]);
+
+        register_rest_route(self::NAMESPACE, '/group/(?P<group_id>\d+)', [
+            'methods' => \WP_REST_Server::READABLE,
+            'callback' => [$this, 'getGroupResults'],
+            'permission_callback' => '__return_true',
+        ]);
+
+        // Friend network and social proof endpoints
+        register_rest_route(self::NAMESPACE, '/friends/quiz/(?P<quiz_slug>[a-zA-Z0-9_-]+)', [
+            'methods' => \WP_REST_Server::READABLE,
+            'callback' => [$this, 'getFriendsWhoTookQuiz'],
+            'permission_callback' => '__return_true',
+        ]);
+
+        register_rest_route(self::NAMESPACE, '/result/(?P<share_token>[a-zA-Z0-9]+)/preview', [
+            'methods' => \WP_REST_Server::READABLE,
+            'callback' => [$this, 'getComparisonPreview'],
+            'permission_callback' => '__return_true',
+        ]);
+
+        register_rest_route(self::NAMESPACE, '/stats/anonymous', [
+            'methods' => \WP_REST_Server::READABLE,
+            'callback' => [$this, 'getAnonymousStats'],
+            'permission_callback' => '__return_true',
         ]);
     }
 
@@ -284,6 +332,21 @@ final class QuizApiController
                 $quizConfig
             );
 
+            // Calculate percentiles
+            $percentiles = [];
+            foreach ($traitVector as $trait => $value) {
+                $percentiles[$trait] = $this->calculatePercentileRanking($quizId, $trait, $value);
+            }
+
+            // Extract quotable insight
+            $quotableInsight = $this->extractQuotableInsight($traitVector, $traitLabels, $summaryShort);
+
+            // Detect surprise
+            arsort($traitVector);
+            $topTrait = array_key_first($traitVector);
+            $topValue = $traitVector[$topTrait] ?? 0.0;
+            $surprise = $this->detectSurprisingPattern($traitVector, $topTrait, $topValue, $quizConfig);
+
             // Store result
             $resultId = $this->resultRepository->insert(
                 $dbQuizId,
@@ -329,6 +392,9 @@ final class QuizApiController
                 'textual_summary_short' => $summaryShort,
                 'textual_summary_long' => $summaryLong,
                 'shareable_headline' => $shareableHeadline,
+                'quotable_insight' => $quotableInsight,
+                'surprise_score' => $surprise['surprise_score'],
+                'trait_percentiles' => $percentiles,
             ], 200);
 
         } catch (\InvalidArgumentException $e) {
@@ -491,6 +557,24 @@ final class QuizApiController
                 'api_compare' => rest_url(self::NAMESPACE . '/result/' . $shareToken . '/compare'),
             ];
 
+            // Calculate percentiles, quotable insight, and surprise score
+            $percentiles = [];
+            $quotableInsight = '';
+            $surpriseScore = 0.0;
+            if (!empty($traitVector)) {
+                foreach ($traitVector as $trait => $value) {
+                    $percentiles[$trait] = $this->calculatePercentileRanking($quizSlug, $trait, $value);
+                }
+                $quotableInsight = $this->extractQuotableInsight($traitVector, $traitLabels, $storedShort);
+                arsort($traitVector);
+                $topTrait = array_key_first($traitVector);
+                $topValue = $traitVector[$topTrait] ?? 0.0;
+                if ($quizConfigForHeadline !== null && !empty($quizConfigForHeadline)) {
+                    $surprise = $this->detectSurprisingPattern($traitVector, $topTrait, $topValue, $quizConfigForHeadline);
+                    $surpriseScore = $surprise['surprise_score'];
+                }
+            }
+
             return new \WP_REST_Response([
                 'result_id' => (int) $result['result_id'],
                 'quiz_title' => $quizTitle,
@@ -501,6 +585,9 @@ final class QuizApiController
                 'textual_summary_short' => $storedShort,
                 'textual_summary_long' => $storedLong,
                 'shareable_headline' => $shareableHeadline,
+                'quotable_insight' => $quotableInsight,
+                'surprise_score' => $surpriseScore,
+                'trait_percentiles' => $percentiles,
                 'share_token' => (string) $shareToken,
                 'share_urls' => $shareUrls,
                 'owner' => $owner,
@@ -784,6 +871,12 @@ final class QuizApiController
             );
 
             // Store comparison
+            $relationshipContext = isset($body['relationship_context']) 
+                ? (string) $body['relationship_context'] 
+                : 'unspecified';
+            if (!in_array($relationshipContext, ['partner', 'friend', 'colleague', 'family', 'other', 'unspecified'], true)) {
+                $relationshipContext = 'unspecified';
+            }
             $comparisonId = $this->comparisonRepository->insert(
                 $resultIdA,
                 $resultIdB,
@@ -793,7 +886,8 @@ final class QuizApiController
                 $matchResult['algorithm_used'],
                 $cmpShort,
                 $cmpLong,
-                $quizVersionA
+                $quizVersionA,
+                $relationshipContext
             );
 
             // Email the owner of result A (the shared result) that someone compared with them.
@@ -2453,6 +2547,495 @@ final class QuizApiController
         } else {
             return "We're {$matchPct}% compatible. Our different styles ({$topLabelA} vs {$topLabelB}) create interesting dynamics worth exploring.";
         }
+    }
+
+    /**
+     * Calculate percentile ranking for a trait value across all users.
+     *
+     * @param string $quizSlug
+     * @param string $traitId
+     * @param float $traitValue Value between 0.0 and 1.0
+     * @return array{percentile: int, total_users: int, rank: int}
+     */
+    private function calculatePercentileRanking(string $quizSlug, string $traitId, float $traitValue): array
+    {
+        global $wpdb;
+
+        // Sanitize trait ID for JSON path (only allow alphanumeric, underscore, hyphen)
+        $safeTraitId = preg_replace('/[^a-zA-Z0-9_-]/', '', $traitId);
+        if ($safeTraitId !== $traitId || $safeTraitId === '') {
+            // If sanitization changed the ID or it's empty, return default
+            return ['percentile' => 50, 'total_users' => 0, 'rank' => 0];
+        }
+
+        // JSON path must be properly escaped - use esc_sql for the path part
+        $jsonPath = '$.' . esc_sql($safeTraitId);
+        $tableName = $wpdb->prefix . 'match_me_results';
+
+        // Get all trait values for this quiz/trait combination
+        // JSON path is safe after sanitization, but we still use prepare for quiz_slug
+        $query = $wpdb->prepare(
+            "SELECT result_id, JSON_UNQUOTE(JSON_EXTRACT(trait_vector, %s)) as trait_value
+             FROM {$tableName}
+             WHERE quiz_slug = %s
+             AND JSON_EXTRACT(trait_vector, %s) IS NOT NULL
+             ORDER BY CAST(JSON_EXTRACT(trait_vector, %s) AS DECIMAL(10,6)) ASC",
+            $jsonPath,
+            $quizSlug,
+            $jsonPath,
+            $jsonPath
+        );
+
+        $results = $wpdb->get_results($query, ARRAY_A);
+
+        if (empty($results)) {
+            return ['percentile' => 50, 'total_users' => 0, 'rank' => 0];
+        }
+
+        $totalUsers = count($results);
+        $rank = 0;
+        foreach ($results as $result) {
+            $value = (float) ($result['trait_value'] ?? 0);
+            if ($value <= $traitValue) {
+                $rank++;
+            } else {
+                break;
+            }
+        }
+
+        $percentile = (int) round(($rank / $totalUsers) * 100);
+
+        return [
+            'percentile' => $percentile,
+            'total_users' => $totalUsers,
+            'rank' => $rank
+        ];
+    }
+
+    /**
+     * Detect if result is genuinely surprising based on trait combinations.
+     *
+     * @param array<string, float> $traitVector
+     * @param string $topTrait
+     * @param float $topValue
+     * @param array<string, mixed> $quizConfig
+     * @return array{is_surprising: bool, surprise_score: float, reason: string}
+     */
+    private function detectSurprisingPattern(
+        array $traitVector,
+        string $topTrait,
+        float $topValue,
+        array $quizConfig
+    ): array {
+        $surpriseScore = 0.0;
+        $reasons = [];
+
+        // Surprise 1: Very high value (>= 0.85) - extreme dominance
+        if ($topValue >= 0.85) {
+            $surpriseScore += 0.4;
+            $reasons[] = 'extreme_dominance';
+        }
+
+        // Surprise 2: Very balanced profile (low variance)
+        $variance = $this->calculateVariance($traitVector);
+        if ($variance < 0.05 && $topValue < 0.65) {
+            $surpriseScore += 0.3;
+            $reasons[] = 'highly_balanced';
+        }
+
+        // Surprise 3: Unexpected trait combinations (quiz-specific)
+        $aspect = (string) ($quizConfig['meta']['aspect'] ?? '');
+        if ($this->hasUnexpectedCombination($traitVector, $aspect)) {
+            $surpriseScore += 0.3;
+            $reasons[] = 'unexpected_combination';
+        }
+
+        return [
+            'is_surprising' => $surpriseScore >= 0.4,
+            'surprise_score' => min(1.0, $surpriseScore),
+            'reason' => $reasons[0] ?? 'none'
+        ];
+    }
+
+    /**
+     * Calculate variance of values.
+     *
+     * @param array<string, float> $values
+     * @return float
+     */
+    private function calculateVariance(array $values): float
+    {
+        if (count($values) < 2) {
+            return 0.5;
+        }
+        $mean = array_sum($values) / count($values);
+        $variance = 0.0;
+        foreach ($values as $v) {
+            $variance += pow($v - $mean, 2);
+        }
+        return $variance / count($values);
+    }
+
+    /**
+     * Check for unexpected trait combinations.
+     *
+     * @param array<string, float> $traitVector
+     * @param string $aspect
+     * @return bool
+     */
+    private function hasUnexpectedCombination(array $traitVector, string $aspect): bool
+    {
+        // Placeholder - can be enhanced with quiz-specific logic
+        // For now, check if there are conflicting high values
+        $highTraits = [];
+        foreach ($traitVector as $trait => $value) {
+            if ($value >= 0.70) {
+                $highTraits[] = $trait;
+            }
+        }
+        // If more than 2 traits are high, it's unexpected
+        return count($highTraits) > 2;
+    }
+
+    /**
+     * Extract a one-line quotable insight from results.
+     *
+     * @param array<string, float> $traitVector
+     * @param array<string, string> $traitLabels
+     * @param string $summaryShort
+     * @return string
+     */
+    private function extractQuotableInsight(
+        array $traitVector,
+        array $traitLabels,
+        string $summaryShort
+    ): string {
+        arsort($traitVector);
+        $topTrait = array_key_first($traitVector);
+        $topValue = $traitVector[$topTrait] ?? 0.0;
+        $topLabel = $traitLabels[$topTrait] ?? ucfirst(str_replace('_', ' ', $topTrait));
+        $topPct = (int) round($topValue * 100);
+
+        // Generate quotable insight (shorter, punchier than headline)
+        if ($topValue >= 0.75) {
+            return "I'm {$topPct}% {$topLabel}—this explains a lot.";
+        } elseif ($topValue >= 0.60) {
+            return "My communication style is {$topPct}% {$topLabel}.";
+        } else {
+            return "I lean toward {$topLabel} ({$topPct}%).";
+        }
+    }
+
+    /**
+     * POST /wp-json/match-me/v1/group/create
+     * Create a new group comparison.
+     */
+    public function createGroup(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
+    {
+        if ($this->groupRepository === null) {
+            return new \WP_Error('not_implemented', 'Group features not available', ['status' => 501]);
+        }
+
+        $userId = is_user_logged_in() ? (int) get_current_user_id() : 0;
+        if ($userId === 0) {
+            return new \WP_Error('unauthorized', 'Authentication required', ['status' => 401]);
+        }
+
+        $body = $request->get_json_params();
+        $quizSlug = (string) ($body['quiz_slug'] ?? '');
+        $groupName = isset($body['group_name']) ? (string) $body['group_name'] : null;
+
+        if ($quizSlug === '') {
+            return new \WP_Error('invalid_request', 'quiz_slug is required', ['status' => 400]);
+        }
+
+        // Verify quiz exists
+        $quizConfig = $this->quizRepository->load($quizSlug);
+        if ($quizConfig === null) {
+            return new \WP_Error('not_found', 'Quiz not found', ['status' => 404]);
+        }
+
+        // Create group
+        $groupId = $this->groupRepository->createGroup($quizSlug, $userId, $groupName);
+        $group = $this->groupRepository->getGroupWithParticipants($groupId);
+
+        // Add participants if provided
+        $invites = $body['invites'] ?? [];
+        if (is_array($invites) && !empty($invites)) {
+            foreach ($invites as $invite) {
+                if (isset($invite['email']) && !empty($invite['email'])) {
+                    $this->groupRepository->addParticipant(
+                        $groupId,
+                        $userId,
+                        null,
+                        (string) $invite['email'],
+                        isset($invite['name']) ? (string) $invite['name'] : null
+                    );
+                }
+            }
+        }
+
+        return new \WP_REST_Response([
+            'group_id' => $groupId,
+            'share_token' => $group['share_token'] ?? '',
+            'quiz_slug' => $quizSlug,
+            'status' => 'inviting',
+            'participants' => $group['participants'] ?? [],
+        ], 200);
+    }
+
+    /**
+     * POST /wp-json/match-me/v1/group/{group_id}/invite
+     * Invite participant to group.
+     */
+    public function inviteToGroup(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
+    {
+        if ($this->groupRepository === null) {
+            return new \WP_Error('not_implemented', 'Group features not available', ['status' => 501]);
+        }
+
+        $userId = is_user_logged_in() ? (int) get_current_user_id() : 0;
+        if ($userId === 0) {
+            return new \WP_Error('unauthorized', 'Authentication required', ['status' => 401]);
+        }
+
+        $groupId = (int) $request->get_param('group_id');
+        $body = $request->get_json_params();
+        $email = isset($body['email']) ? (string) $body['email'] : null;
+        $name = isset($body['name']) ? (string) $body['name'] : null;
+        $targetUserId = isset($body['user_id']) ? (int) $body['user_id'] : null;
+
+        if ($email === null && $targetUserId === null) {
+            return new \WP_Error('invalid_request', 'email or user_id is required', ['status' => 400]);
+        }
+
+        $inviteToken = $this->groupRepository->addParticipant($groupId, $userId, $targetUserId, $email, $name);
+
+        return new \WP_REST_Response([
+            'invite_token' => $inviteToken,
+            'group_id' => $groupId,
+        ], 200);
+    }
+
+    /**
+     * POST /wp-json/match-me/v1/group/join/{invite_token}
+     * Join a group via invite token.
+     */
+    public function joinGroup(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
+    {
+        if ($this->groupRepository === null) {
+            return new \WP_Error('not_implemented', 'Group features not available', ['status' => 501]);
+        }
+
+        $inviteToken = (string) $request->get_param('invite_token');
+        $participant = $this->groupRepository->findParticipantByInviteToken($inviteToken);
+
+        if ($participant === null) {
+            return new \WP_Error('not_found', 'Invite not found', ['status' => 404]);
+        }
+
+        $groupId = (int) ($participant['group_id'] ?? 0);
+        $group = $this->groupRepository->getGroupWithParticipants($groupId);
+
+        return new \WP_REST_Response([
+            'group_id' => $groupId,
+            'quiz_slug' => $group['quiz_slug'] ?? '',
+            'group_name' => $group['group_name'] ?? null,
+            'invite_token' => $inviteToken,
+            'status' => $participant['status'] ?? 'invited',
+        ], 200);
+    }
+
+    /**
+     * GET /wp-json/match-me/v1/group/{group_id}
+     * Get group results.
+     */
+    public function getGroupResults(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
+    {
+        if ($this->groupRepository === null || $this->groupService === null) {
+            return new \WP_Error('not_implemented', 'Group features not available', ['status' => 501]);
+        }
+
+        $groupId = (int) $request->get_param('group_id');
+        $group = $this->groupRepository->getGroupWithParticipants($groupId);
+
+        if ($group === null) {
+            return new \WP_Error('not_found', 'Group not found', ['status' => 404]);
+        }
+
+        // Get all completed results
+        $groupResults = $this->groupRepository->getGroupResults($groupId);
+        if (count($groupResults) < 3) {
+            return new \WP_REST_Response([
+                'group_id' => $groupId,
+                'status' => $group['status'] ?? 'inviting',
+                'participants' => $group['participants'] ?? [],
+                'message' => 'Waiting for more participants to complete the quiz',
+            ], 200);
+        }
+
+        // Calculate group insights
+        $results = [];
+        $traitLabels = [];
+        foreach ($groupResults as $gr) {
+            $resultId = (int) ($gr['result_id'] ?? 0);
+            $result = $this->resultRepository->findById($resultId);
+            if ($result !== null) {
+                $traitVector = json_decode($result['trait_vector'] ?? '{}', true);
+                if (is_array($traitVector)) {
+                    $results[$resultId] = $traitVector;
+                }
+            }
+        }
+
+        if (count($results) >= 3) {
+            $quizConfig = $this->quizRepository->load($group['quiz_slug'] ?? '');
+            if ($quizConfig !== null) {
+                $traitLabels = $this->extractTraitLabels($quizConfig);
+                $insights = $this->groupService->calculateGroupInsights($results, $traitLabels, $group['quiz_slug'] ?? '');
+            } else {
+                $insights = ['average_match_score' => 0.0, 'insights' => [], 'participant_count' => count($results)];
+            }
+        } else {
+            $insights = ['average_match_score' => 0.0, 'insights' => [], 'participant_count' => count($results)];
+        }
+
+        return new \WP_REST_Response([
+            'group_id' => $groupId,
+            'group_name' => $group['group_name'] ?? null,
+            'quiz_slug' => $group['quiz_slug'] ?? '',
+            'status' => $group['status'] ?? 'inviting',
+            'participants' => $group['participants'] ?? [],
+            'insights' => $insights,
+        ], 200);
+    }
+
+    /**
+     * GET /wp-json/match-me/v1/friends/quiz/{quiz_slug}
+     * Get friends who have taken this quiz.
+     */
+    public function getFriendsWhoTookQuiz(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
+    {
+        $quizSlug = (string) $request->get_param('quiz_slug');
+        $userId = is_user_logged_in() ? (int) get_current_user_id() : 0;
+
+        if ($userId === 0) {
+            return new \WP_REST_Response(['friends' => [], 'message' => 'Login to see friends'], 200);
+        }
+
+        global $wpdb;
+        $friendResults = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT DISTINCT r.user_id, u.display_name, u.user_email
+                 FROM {$wpdb->prefix}match_me_results r
+                 JOIN {$wpdb->prefix}users u ON r.user_id = u.ID
+                 WHERE r.quiz_slug = %s
+                 AND r.user_id != %d
+                 AND r.user_id IN (
+                     SELECT user_id FROM {$wpdb->prefix}usermeta 
+                     WHERE meta_key = 'facebook_user_id' AND meta_value != ''
+                 )
+                 LIMIT 20",
+                $quizSlug,
+                $userId
+            ),
+            ARRAY_A
+        );
+
+        $friends = [];
+        foreach ($friendResults as $friend) {
+            $friends[] = [
+                'user_id' => (int) $friend['user_id'],
+                'name' => $friend['display_name'] ?? 'Friend',
+                'has_result' => true,
+            ];
+        }
+
+        return new \WP_REST_Response([
+            'friends' => $friends,
+            'count' => count($friends),
+            'message' => count($friends) > 0
+                ? count($friends) . " friends have taken this quiz"
+                : "Invite friends to take this quiz",
+        ], 200);
+    }
+
+    /**
+     * GET /wp-json/match-me/v1/result/{share_token}/preview
+     * Get a preview of what the comparison would show.
+     */
+    public function getComparisonPreview(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
+    {
+        $shareToken = $request->get_param('share_token');
+        $result = $this->resultRepository->findByShareToken($shareToken);
+
+        if (!$result) {
+            return new \WP_Error('not_found', 'Result not found', ['status' => 404]);
+        }
+
+        $quizSlug = (string) ($result['quiz_slug'] ?? '');
+        $quizConfig = $this->quizRepository->load($quizSlug);
+        $traitLabels = $this->extractTraitLabels($quizConfig ?? []);
+
+        $preview = [
+            'what_youll_see' => [
+                'Your match percentage',
+                'Where you align',
+                'Where you differ',
+                'Communication tips',
+            ],
+            'sample_insight' => 'See how your communication styles compare and discover insights about your relationship dynamics.',
+        ];
+
+        return new \WP_REST_Response($preview, 200);
+    }
+
+    /**
+     * GET /wp-json/match-me/v1/stats/anonymous
+     * Get anonymous statistics for social proof.
+     */
+    public function getAnonymousStats(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
+    {
+        $quizSlug = (string) ($request->get_param('quiz_slug') ?? '');
+
+        global $wpdb;
+
+        // Count total quiz completions (last 24 hours)
+        $recentCompletions = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}match_me_results
+                 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                 AND quiz_slug = %s",
+                $quizSlug
+            )
+        );
+
+        // Count total comparisons (last 24 hours)
+        $recentComparisons = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}match_me_comparisons c
+                 JOIN {$wpdb->prefix}match_me_results r ON c.result_a = r.result_id
+                 WHERE c.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                 AND r.quiz_slug = %s",
+                $quizSlug
+            )
+        );
+
+        return new \WP_REST_Response([
+            'recent_completions' => $recentCompletions,
+            'recent_comparisons' => $recentComparisons,
+            'message' => $recentCompletions > 0
+                ? "{$recentCompletions} people completed this quiz today"
+                : "Be the first to complete this quiz today",
+        ], 200);
+    }
+
+    /**
+     * Check if user is authenticated.
+     */
+    private function checkAuth(\WP_REST_Request $request): bool
+    {
+        return is_user_logged_in();
     }
 }
 

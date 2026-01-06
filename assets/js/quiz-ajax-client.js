@@ -87,6 +87,10 @@
             body.algorithm = options.algorithm;
         }
 
+        if (options.relationship_context) {
+            body.relationship_context = options.relationship_context;
+        }
+
         const nonce = (window.matchMeQuizVars && window.matchMeQuizVars.nonce) || (window.cqVars && window.cqVars.nonce) || '';
 
         return fetch(url, {

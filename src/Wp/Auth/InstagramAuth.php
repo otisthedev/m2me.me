@@ -18,7 +18,8 @@ final class InstagramAuth
     public function register(): void
     {
         add_shortcode('instagram_login_button_server', [$this, 'buttonShortcode']);
-        add_action('init', [$this, 'handle']);
+        // Use template_redirect with high priority to run before WordPress redirects
+        add_action('template_redirect', [$this, 'handle'], 1);
         add_action('admin_notices', [$this, 'profileNotice']);
         add_action('profile_update', [$this, 'removePlaceholderFlagOnEmailUpdate'], 10, 2);
     }
@@ -47,10 +48,20 @@ final class InstagramAuth
             return;
         }
 
+        // Prevent WordPress from redirecting before we handle this
+        remove_action('template_redirect', 'redirect_canonical');
+
         $clientId = $this->config->instagramAppId();
         $clientSecret = $this->config->instagramAppSecret();
         if (!$clientId || !$clientSecret) {
-            wp_die('Instagram login is not configured.');
+            // Show error but don't redirect to login
+            status_header(200);
+            wp_die(
+                '<h1>Instagram Login Error</h1><p>Instagram login is not configured. Please contact the site administrator.</p>',
+                'Instagram Login Not Configured',
+                ['response' => 200]
+            );
+            return;
         }
 
         $redirectUri = home_url('/?instagram_auth=1');
