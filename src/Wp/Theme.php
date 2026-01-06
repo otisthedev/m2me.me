@@ -110,8 +110,8 @@ final class Theme
         add_theme_support('title-tag');
         add_theme_support('post-thumbnails');
         register_nav_menus([
-            'primary' => 'Primary Menu,
-            'footer' => 'Footer Menu,
+            'primary' => 'Primary Menu',
+            'footer' => 'Footer Menu',
         ]);
         add_theme_support('html5', [
             'search-form',
@@ -145,7 +145,7 @@ final class Theme
     {
         // Section
         $wpCustomize->add_section('match_me_header', [
-            'title' => 'Header,
+            'title' => 'Header',
             'priority' => 30,
         ]);
 
@@ -160,7 +160,7 @@ final class Theme
             $wpCustomize,
             'match_me_header_logo_control',
             [
-                'label' => 'Header Logo,
+                'label' => 'Header Logo',
                 'section' => 'match_me_header',
                 'settings' => 'match_me_header_logo',
                 'mime_type' => 'image',
