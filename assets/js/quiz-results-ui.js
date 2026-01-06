@@ -968,19 +968,8 @@
         ctx.font = '24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.fillText('match.me', 540, 1850);
-        let y = topY + 130;
-        for (const line of titleLines) {
-            // Add subtle text shadow for depth
-            ctx.save();
-            ctx.shadowColor = 'rgba(11,18,32,0.15)';
-            ctx.shadowBlur = 8;
-            ctx.shadowOffsetY = 2;
-            ctx.fillText(line, padX, y);
-            ctx.restore();
-            y += 80;
-        }
 
-        const headline = sd && sd.headline ? String(sd.headline) : (kind === 'match' ? 'Match' : 'Result');
+        // Additional rendering section (using already declared headline)
         const bigValue = sd && sd.bigValue ? String(sd.bigValue) : '';
         const secondary = sd && sd.secondary ? String(sd.secondary) : '';
 
@@ -1091,6 +1080,7 @@
         const themeUrl = (window.matchMeTheme && window.matchMeTheme.themeUrl) ? String(window.matchMeTheme.themeUrl) : '';
         const logoUrl = themeUrl ? `${themeUrl.replace(/\/+$/, '')}/assets/img/M2me.me-white.svg` : '';
         if (logoUrl) {
+            const padX = 20; // Padding for logo positioning
             await loadImageContain(ctx, logoUrl, padX, height - 164, 240, 70);
         }
 
