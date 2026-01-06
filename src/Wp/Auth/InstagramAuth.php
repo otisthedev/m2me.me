@@ -18,8 +18,8 @@ final class InstagramAuth
     public function register(): void
     {
         add_shortcode('instagram_login_button_server', [$this, 'buttonShortcode']);
-        // Use template_redirect with high priority to run before WordPress redirects
-        add_action('template_redirect', [$this, 'handle'], 1);
+        // Handle OAuth early (before anything can redirect logged-out users).
+        add_action('init', [$this, 'handle'], 0);
         add_action('admin_notices', [$this, 'profileNotice']);
         add_action('profile_update', [$this, 'removePlaceholderFlagOnEmailUpdate'], 10, 2);
     }

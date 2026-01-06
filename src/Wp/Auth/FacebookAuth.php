@@ -17,8 +17,8 @@ final class FacebookAuth
     public function register(): void
     {
         add_shortcode('facebook_login_button_server', [$this, 'buttonShortcode']);
-        // Use template_redirect with high priority to run before WordPress redirects
-        add_action('template_redirect', [$this, 'handle'], 1);
+        // Handle OAuth early (before anything can redirect logged-out users).
+        add_action('init', [$this, 'handle'], 0);
         add_action('init', [$this, 'handleDeletionCallback']);
         add_action('wp_enqueue_scripts', [$this, 'enqueueSdk']);
     }
