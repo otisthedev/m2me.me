@@ -13,8 +13,65 @@
     function renderResult(result, container) {
         container.innerHTML = '';
 
+        const shareableHeadline = result.shareable_headline || result.textual_summary_short || 'Quiz completed successfully.';
         const shortSummary = result.textual_summary_short || result.textual_summary || 'Quiz completed successfully.';
         const longSummary = result.textual_summary_long || '';
+
+        // ADD: Prominent headline section (viral hook)
+        const headlineEl = document.createElement('div');
+        headlineEl.className = 'match-me-result-headline';
+        headlineEl.innerHTML = `
+            <h2 class="result-headline-text">${escapeHtml(shareableHeadline)}</h2>
+            <button type="button" class="btn-copy-headline" data-headline="${escapeHtml(shareableHeadline)}">
+                Copy this insight
+            </button>
+        `;
+        container.appendChild(headlineEl);
+
+        // Add copy functionality
+        headlineEl.querySelector('.btn-copy-headline')?.addEventListener('click', async function() {
+            const headline = this.getAttribute('data-headline');
+            try {
+                await navigator.clipboard.writeText(headline);
+                showMessage('Copied! Share this insight anywhere.', 'success');
+            } catch (e) {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = headline;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showMessage('Copied! Share this insight anywhere.', 'success');
+            }
+        });
+
+        // ADD: Comparison teaser section (creates curiosity)
+        const comparisonTeaser = document.createElement('div');
+        comparisonTeaser.className = 'match-me-comparison-teaser';
+        const canCompare = result.share_urls && result.share_urls.compare;
+        comparisonTeaser.innerHTML = `
+            <div class="teaser-content">
+                <h3>Want to see how you compare?</h3>
+                <p>Invite someone to take this quiz and discover your compatibility, communication style match, or relationship dynamics.</p>
+                <div class="teaser-benefits">
+                    <span class="benefit-item">See your match percentage</span>
+                    <span class="benefit-item">Understand your differences</span>
+                    <span class="benefit-item">Discover relationship insights</span>
+                </div>
+                <button type="button" class="btn-teaser-compare" ${canCompare ? '' : 'disabled aria-disabled="true"'} data-share-token="${escapeHtml(result.share_token || '')}">
+                    ${canCompare ? 'Compare with someone' : 'Comparison not available'}
+                </button>
+            </div>
+        `;
+
+        // Add click handler
+        comparisonTeaser.querySelector('.btn-teaser-compare')?.addEventListener('click', function() {
+            if (!canCompare) return;
+            showComparisonInviteDialog(result);
+        });
+
+        container.appendChild(comparisonTeaser);
 
         // Result summary
         const summaryEl = document.createElement('div');
@@ -44,28 +101,131 @@
             }
         })();
 
-        // Share section
+        // Share section with updated CTAs
         if (result.share_token) {
+            // Get top traits for story visualization
+            const topTraits = (() => {
+                try {
+                    const entries = Object.entries(result.trait_summary || {});
+                    if (!entries.length) return [];
+                    entries.sort((a, b) => (Number(b[1]) - Number(a[1])));
+                    return entries.slice(0, 3).map(([trait, value]) => ({
+                        trait,
+                        label: (result.trait_labels && result.trait_labels[trait]) || trait.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                        value: Number(value)
+                    }));
+                } catch (e) {
+                    return [];
+                }
+            })();
+
             const shareSection = renderUnifiedShareSection({
                 kind: 'result',
-                title: 'Share',
+                title: 'Other ways to share',
                 urls: {
                     view: (result.share_urls && result.share_urls.view) ? String(result.share_urls.view) : '',
                     compare: (result.share_urls && result.share_urls.compare) ? String(result.share_urls.compare) : '',
                 },
                 defaultKey: 'compare',
                 instagramTitle: String(result.quiz_title || 'Quiz Results'),
-                instagramSummary: String(result.textual_summary_short || result.textual_summary || 'My quiz results'),
+                instagramSummary: String(result.shareable_headline || result.textual_summary_short || result.textual_summary || 'My quiz results'),
+                shareableHeadline: result.shareable_headline || '',
+                quizTitle: result.quiz_title || '',
+                quizAspect: result.quiz_aspect || 'default',
                 storyData: {
-                    headline: 'Result',
+                    headline: result.shareable_headline || 'Result',
                     bigValue: storyTop ? `${storyTop.pct}%` : '',
                     secondary: storyTop ? `${storyTop.label}` : '',
+                    topTraits: topTraits,
                     name: (window.matchMeTheme && window.matchMeTheme.currentUser && window.matchMeTheme.currentUser.name) ? String(window.matchMeTheme.currentUser.name) : 'You',
                     avatarUrl: (window.matchMeTheme && window.matchMeTheme.currentUser && window.matchMeTheme.currentUser.avatarUrl) ? String(window.matchMeTheme.currentUser.avatarUrl) : '',
                 },
             });
             container.appendChild(shareSection);
         }
+    }
+
+    /**
+     * Show comparison invite dialog
+     */
+    function showComparisonInviteDialog(result) {
+        const dialog = document.createElement('div');
+        dialog.className = 'match-me-invite-dialog';
+        const shareableHeadline = result.shareable_headline || result.textual_summary_short || '';
+        const quizTitle = result.quiz_title || 'quiz';
+        const compareUrl = (result.share_urls && result.share_urls.compare) ? String(result.share_urls.compare) : '';
+        
+        dialog.innerHTML = `
+            <div class="dialog-overlay"></div>
+            <div class="dialog-content">
+                <h3>Invite someone to compare</h3>
+                <p class="dialog-description">Share this link with someone you want to compare results with. When they complete the quiz, you'll both see your match breakdown.</p>
+                
+                <div class="invite-message-preview">
+                    <p class="preview-label">They'll receive this message:</p>
+                    <div class="preview-text">
+                        "I took the ${escapeHtml(quizTitle)} and thought you might find it interesting. Want to see how we compare? ${escapeHtml(shareableHeadline)}"
+                    </div>
+                </div>
+                
+                <div class="invite-actions">
+                    <button type="button" class="btn-invite-copy" data-url="${escapeHtml(compareUrl)}">
+                        Copy comparison link
+                    </button>
+                    <button type="button" class="btn-invite-share" data-url="${escapeHtml(compareUrl)}" data-headline="${escapeHtml(shareableHeadline)}" data-quiz-title="${escapeHtml(quizTitle)}">
+                        Share via message
+                    </button>
+                    <button type="button" class="btn-invite-close">Cancel</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        
+        // Copy link handler
+        dialog.querySelector('.btn-invite-copy')?.addEventListener('click', async function() {
+            const url = this.getAttribute('data-url');
+            if (!url) {
+                showMessage('Comparison link not available.', 'warning');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(url);
+                showMessage('Link copied! Send it to someone to compare.', 'success');
+                dialog.remove();
+            } catch (e) {
+                showMessage('Could not copy link.', 'warning');
+            }
+        });
+        
+        // Share handler
+        dialog.querySelector('.btn-invite-share')?.addEventListener('click', async function() {
+            const url = this.getAttribute('data-url');
+            const headline = this.getAttribute('data-headline') || '';
+            const quizTitle = this.getAttribute('data-quiz-title') || 'quiz';
+            if (!url) {
+                showMessage('Comparison link not available.', 'warning');
+                return;
+            }
+            const message = `I took the ${quizTitle} and thought you might find it interesting. Want to see how we compare? ${headline}\n\n${url}`;
+            try {
+                if (navigator.share) {
+                    await navigator.share({ text: message });
+                    dialog.remove();
+                } else {
+                    // Fallback to copy
+                    await navigator.clipboard.writeText(message);
+                    showMessage('Message copied! Paste it in your messaging app.', 'success');
+                    dialog.remove();
+                }
+            } catch (e) {
+                showMessage('Could not share.', 'warning');
+            }
+        });
+        
+        // Close handler
+        dialog.querySelector('.btn-invite-close')?.addEventListener('click', () => dialog.remove());
+        dialog.querySelector('.dialog-overlay')?.addEventListener('click', () => dialog.remove());
     }
 
     /**
@@ -199,6 +359,61 @@
     }
 
     /**
+     * Generate context-aware CTA text based on quiz type and aspect.
+     * Makes CTAs more relevant and compelling.
+     * 
+     * @param {string} aspect - Quiz aspect (communication, decision-making, etc.)
+     * @param {string} quizTitle - Quiz title
+     * @return {object} CTA text variations
+     */
+    function generateContextualCTAText(aspect, quizTitle) {
+        const ctaTexts = {
+            'communication-style': {
+                primary: 'See how we communicate',
+                subtitle: 'Discover your communication style match',
+                benefit: 'Understand how your styles align or differ',
+            },
+            'decision-making-cognitive-style': {
+                primary: 'Compare our decision styles',
+                subtitle: 'See how we make decisions together',
+                benefit: 'Learn how your approaches complement each other',
+            },
+            'values-belief-systems': {
+                primary: 'See our value alignment',
+                subtitle: 'Discover what matters most to both of us',
+                benefit: 'Understand your shared values and differences',
+            },
+            'communication': {
+                primary: 'See how we communicate',
+                subtitle: 'Discover your communication style match',
+                benefit: 'Understand how your styles align or differ',
+            },
+            'decision-making': {
+                primary: 'Compare our decision styles',
+                subtitle: 'See how we make decisions together',
+                benefit: 'Learn how your approaches complement each other',
+            },
+            'values': {
+                primary: 'See our value alignment',
+                subtitle: 'Discover what matters most to both of us',
+                benefit: 'Understand your shared values and differences',
+            },
+            'personality': {
+                primary: 'Compare our personalities',
+                subtitle: 'See how our traits match',
+                benefit: 'Discover your compatibility and differences',
+            },
+            'default': {
+                primary: 'Compare with someone',
+                subtitle: 'See how you match',
+                benefit: 'Discover your compatibility',
+            }
+        };
+        
+        return ctaTexts[aspect] || ctaTexts['default'];
+    }
+
+    /**
      * Unified share section for results + comparisons (same buttons everywhere).
      *
      * Buttons are consistent:
@@ -230,12 +445,42 @@
         const comparisonUrl = (urls.match ? String(urls.match) : (urls.compare ? String(urls.compare) : ''));
         const resultUrl = (urls.view ? String(urls.view) : '');
 
+        // Get contextual CTA text
+        const aspect = opts?.quizAspect || 'default';
+        const quizTitle = opts?.quizTitle || '';
+        const ctaText = generateContextualCTAText(aspect, quizTitle);
+        const shareableHeadline = opts?.shareableHeadline || instagramSummary || '';
+
         section.innerHTML = `
-            <h3>${escapeHtml(title)}</h3>
+            <div class="share-section-header">
+                <h3>${escapeHtml(title)}</h3>
+                <p class="share-section-subtitle">Discover how you match with friends, partners, or colleagues</p>
+            </div>
             <div class="share-buttons">
-                <button type="button" class="btn-share-instagram">Share as image (Instagram Story)</button>
-                <button type="button" class="btn-share-compare" ${comparisonUrl ? '' : 'disabled aria-disabled="true"'}>Share comparison link</button>
-                <button type="button" class="btn-share-view" ${resultUrl ? '' : 'disabled aria-disabled="true"'}>Share result link</button>
+                <!-- PRIMARY CTA: Comparison (most viral potential) -->
+                <button type="button" class="btn-share-compare btn-primary-cta" ${comparisonUrl ? '' : 'disabled aria-disabled="true"'}>
+                    <span class="btn-icon">🔗</span>
+                    <span class="btn-main-text">${comparisonUrl ? ctaText.primary : 'Comparison not available'}</span>
+                    <span class="btn-subtitle">${comparisonUrl ? ctaText.subtitle : 'Complete the quiz first'}</span>
+                </button>
+                
+                <!-- SECONDARY CTA: Instagram Story (visual sharing) -->
+                <button type="button" class="btn-share-instagram btn-secondary-cta">
+                    <span class="btn-icon">📸</span>
+                    <span class="btn-main-text">Share as Instagram Story</span>
+                    <span class="btn-subtitle">Create a visual story with your results</span>
+                </button>
+                
+                <!-- TERTIARY CTA: Direct result sharing (less viral) -->
+                <button type="button" class="btn-share-view btn-tertiary-cta" ${resultUrl ? '' : 'disabled aria-disabled="true"'}>
+                    <span class="btn-icon">🔗</span>
+                    <span class="btn-main-text">${resultUrl ? 'Share my results' : 'Result not available'}</span>
+                    <span class="btn-subtitle">${resultUrl ? 'Send a link to view your quiz results' : 'Complete the quiz first'}</span>
+                </button>
+            </div>
+            <div class="share-privacy-note">
+                <span class="privacy-icon">🔒</span>
+                <span>All sharing is private and voluntary. You control who sees your results.</span>
             </div>
         `;
 
@@ -255,15 +500,25 @@
             });
         }
 
-        async function shareLink(url) {
+        async function shareLink(url, shareType = 'compare') {
             const u = String(url || '');
             if (!u) return;
             try {
                 if (navigator.share) {
-                    const shareTitle = kind === 'match' ? 'Comparison Result' : 'Quiz Results';
-                    const text = kind === 'match'
-                        ? (instagramSummary || 'Comparison result')
-                        : (instagramSummary || 'My quiz results');
+                    const shareTitle = kind === 'match' ? 'Our Comparison Result' : 'My Quiz Results';
+                    
+                    // Generate context-rich share text based on type
+                    let text = '';
+                    if (shareType === 'compare') {
+                        const headline = opts?.shareableHeadline || shareableHeadline || '';
+                        const quizTitle = opts?.quizTitle || '';
+                        text = `I took the ${quizTitle || 'quiz'} and thought you might find it interesting. Want to see how we compare? ${headline}`;
+                    } else if (shareType === 'view') {
+                        text = shareableHeadline || instagramSummary || 'Check out my quiz results';
+                    } else {
+                        text = instagramSummary || 'My quiz results';
+                    }
+                    
                     await navigator.share({ title: shareTitle, text, url: u });
                     return;
                 }
@@ -282,7 +537,7 @@
         if (compareBtn) {
             compareBtn.addEventListener('click', async function() {
                 if (!comparisonUrl) return;
-                await shareLink(comparisonUrl);
+                await shareLink(comparisonUrl, 'compare');
             });
         }
 
@@ -290,7 +545,7 @@
         if (viewBtn) {
             viewBtn.addEventListener('click', async function() {
                 if (!resultUrl) return;
-                await shareLink(resultUrl);
+                await shareLink(resultUrl, 'view');
             });
         }
 
@@ -382,6 +637,22 @@
         });
     }
 
+    /**
+     * Get trait color for visual appeal
+     */
+    function getTraitColor(trait) {
+        const colors = {
+            'leader': '#3b82f6',
+            'organizer': '#10b981',
+            'explorer': '#f59e0b',
+            'harmonizer': '#ec4899',
+            'directness': '#3b82f6',
+            'empathy': '#10b981',
+            'clarity': '#f59e0b',
+        };
+        return colors[trait] || '#667eea';
+    }
+
     async function renderInstagramStoryPngBlobV2(data) {
         const width = 1080;
         const height = 1920;
@@ -396,6 +667,9 @@
         const kind = data && data.kind ? String(data.kind) : 'result';
         const title = data && data.title ? String(data.title) : 'Quiz Results';
         const sd = data && data.storyData && typeof data.storyData === 'object' ? data.storyData : null;
+        
+        // Get shareable headline if available
+        const headline = (sd && sd.headline) ? String(sd.headline) : (data.summary || title);
 
         // Enhanced brand background with richer gradients
         const bg = ctx.createLinearGradient(0, 0, width, height);
@@ -419,20 +693,77 @@
         try { ctx.filter = 'none'; } catch (e) { /* ignore */ }
         ctx.restore();
 
-        // Enhanced grain texture
-        drawGrain(ctx, width, height, 1400);
-
-        const padX = 80;
-        const topY = 140;
-
-        // Enhanced pill with better styling
-        drawPill(ctx, padX, topY, 'QUIZ RESULTS');
-
-        // Enhanced title with better typography
-        ctx.fillStyle = '#F6F5F2';
-        ctx.font = '950 68px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        // Headline (largest, most prominent)
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 72px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        const titleLines = wrapTextLines(ctx, title, width - padX * 2, 2);
+        
+        const headlineLines = wrapTextLines(ctx, headline, 900, 3); // Max 3 lines, 900px wide
+        
+        let yPos = 200;
+        headlineLines.forEach((line, i) => {
+            ctx.fillText(line, 540, yPos + (i * 90));
+        });
+        
+        // Trait visualization (visual bars instead of just text)
+        const topTraits = (sd && sd.topTraits && Array.isArray(sd.topTraits)) ? sd.topTraits : [];
+        if (topTraits.length > 0) {
+            yPos = 600;
+            topTraits.slice(0, 3).forEach((trait, i) => {
+                const label = trait.label || trait.trait || '';
+                const pct = Math.round((trait.value || 0) * 100);
+                
+                // Trait label
+                ctx.font = '36px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'left';
+                ctx.fillText(label, 100, yPos + (i * 180));
+                
+                // Percentage
+                ctx.font = 'bold 48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(`${pct}%`, 980, yPos + (i * 180));
+                
+                // Visual bar
+                const barWidth = (pct / 100) * 880;
+                const barX = 100;
+                const barY = yPos + (i * 180) + 50;
+                const barHeight = 20;
+                
+                // Bar background
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(barX, barY, 880, barHeight);
+                
+                // Bar fill
+                ctx.fillStyle = getTraitColor(trait.trait || '');
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+            });
+        } else if (sd && sd.bigValue) {
+            // Fallback to old format if topTraits not available
+            yPos = 600;
+            ctx.font = 'bold 120px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(sd.bigValue || '', 540, yPos);
+            
+            if (sd.secondary) {
+                ctx.font = '48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                ctx.fillText(sd.secondary, 540, yPos + 150);
+            }
+        }
+        
+        // CTA at bottom
+        yPos = 1600;
+        ctx.font = '32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText('See how you compare', 540, yPos);
+        ctx.fillText('Take the quiz →', 540, yPos + 50);
+        
+        // Subtle branding
+        ctx.font = '24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillText('match.me', 540, 1850);
         let y = topY + 130;
         for (const line of titleLines) {
             // Add subtle text shadow for depth

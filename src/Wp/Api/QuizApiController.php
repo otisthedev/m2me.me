@@ -274,6 +274,15 @@ final class QuizApiController
             $traitLabels = $this->extractTraitLabels($quizConfig);
             $traitDescriptions = $this->extractTraitDescriptions($quizConfig);
             [$summaryShort, $summaryLong] = $this->generateTextualSummaries($traitVector, $traitLabels, $traitDescriptions, (string) ($quizConfig['meta']['aspect'] ?? ''), $quizConfig);
+            
+            // Generate shareable headline (viral hook)
+            $shareableHeadline = $this->generateShareableHeadline(
+                $traitVector,
+                $traitLabels,
+                $traitDescriptions,
+                $summaryShort,
+                $quizConfig
+            );
 
             // Store result
             $resultId = $this->resultRepository->insert(
@@ -319,6 +328,7 @@ final class QuizApiController
                 'textual_summary' => $summaryShort,
                 'textual_summary_short' => $summaryShort,
                 'textual_summary_long' => $summaryLong,
+                'shareable_headline' => $shareableHeadline,
             ], 200);
 
         } catch (\InvalidArgumentException $e) {
@@ -440,6 +450,23 @@ final class QuizApiController
                 );
             }
 
+            // Generate shareable headline (always generate fresh, not stored)
+            $quizConfigForHeadline = $quizConfig ?? [];
+            if (empty($quizConfigForHeadline) && !empty($quizSlug)) {
+                try {
+                    $quizConfigForHeadline = $this->quizRepository->load($quizSlug);
+                } catch (\Throwable) {
+                    $quizConfigForHeadline = [];
+                }
+            }
+            $shareableHeadline = $this->generateShareableHeadline(
+                $traitVector,
+                $traitLabels,
+                $traitDescriptions,
+                $storedShort,
+                $quizConfigForHeadline
+            );
+
             $owner = null;
             $ownerId = (int) ($result['user_id'] ?? 0);
             if ($ownerId > 0) {
@@ -473,6 +500,7 @@ final class QuizApiController
                 'textual_summary' => $storedShort, // backwards compatible
                 'textual_summary_short' => $storedShort,
                 'textual_summary_long' => $storedLong,
+                'shareable_headline' => $shareableHeadline,
                 'share_token' => (string) $shareToken,
                 'share_urls' => $shareUrls,
                 'owner' => $owner,
@@ -744,6 +772,17 @@ final class QuizApiController
                 $quizConfigForCompare ?? []
             );
 
+            // Generate shareable comparison headline
+            $traitVectorA = is_array($resultA['trait_vector'] ?? null) ? (array) $resultA['trait_vector'] : [];
+            $traitVectorB = is_array($resultB['trait_vector'] ?? null) ? (array) $resultB['trait_vector'] : [];
+            $comparisonHeadline = $this->generateComparisonHeadline(
+                (float) ($matchResult['match_score'] ?? 0.0),
+                $traitVectorA,
+                $traitVectorB,
+                $traitLabels,
+                $quizTitle
+            );
+
             // Store comparison
             $comparisonId = $this->comparisonRepository->insert(
                 $resultIdA,
@@ -782,6 +821,7 @@ final class QuizApiController
                 'algorithm_used' => $matchResult['algorithm_used'],
                 'comparison_summary_short' => $cmpShort,
                 'comparison_summary_long' => $cmpLong,
+                'comparison_headline' => $comparisonHeadline,
                 'participants' => [
                     'a' => $ownerA,
                     'b' => $viewer,
@@ -1990,6 +2030,15 @@ final class QuizApiController
                 }
             }
 
+            // Generate comparison headline
+            $comparisonHeadline = $this->generateComparisonHeadline(
+                (float) ($comparison['match_score'] ?? 0.0),
+                $traitVectorA,
+                $traitVectorB,
+                $traitLabels,
+                $quizTitle
+            );
+
             return new \WP_REST_Response([
                 'comparison_id' => (int) ($comparison['id'] ?? 0),
                 'share_token' => (string) ($comparison['share_token'] ?? ''),
@@ -1997,6 +2046,7 @@ final class QuizApiController
                 'breakdown' => $breakdown,
                 'algorithm_used' => (string) ($comparison['algorithm_used'] ?? 'cosine'),
                 'quiz_title' => $quizTitle,
+                'comparison_headline' => $comparisonHeadline,
                 'comparison_summary_short' => $storedShort,
                 'comparison_summary_long' => $storedLong,
                 'share_urls' => [
@@ -2203,6 +2253,206 @@ final class QuizApiController
         }
 
         return [$short, $long];
+    }
+
+    /**
+     * Generate a 1-2 sentence shareable headline that captures the most interesting insight.
+     * This becomes the default share text and Instagram Story title.
+     * 
+     * @param array $traitVector
+     * @param array $traitLabels
+     * @param array $traitDescriptions
+     * @param string $summaryShort
+     * @param array $quizConfig
+     * @return string
+     */
+    private function generateShareableHeadline(
+        array $traitVector, 
+        array $traitLabels, 
+        array $traitDescriptions, 
+        string $summaryShort,
+        array $quizConfig
+    ): string {
+        if (empty($traitVector)) {
+            return 'Quiz completed successfully.';
+        }
+
+        // Find top trait
+        arsort($traitVector);
+        $topTrait = array_key_first($traitVector);
+        $topValue = $traitVector[$topTrait] ?? 0.0;
+        $topLabel = $traitLabels[$topTrait] ?? ucfirst(str_replace('_', ' ', $topTrait));
+        $topPct = (int) round($topValue * 100);
+        
+        // Find secondary trait
+        $sorted = $traitVector;
+        unset($sorted[$topTrait]);
+        arsort($sorted);
+        $secondTrait = array_key_first($sorted);
+        $secondValue = $sorted[$secondTrait] ?? 0.0;
+        $secondLabel = $traitLabels[$secondTrait] ?? ($secondTrait ? ucfirst(str_replace('_', ' ', $secondTrait)) : '');
+        
+        // Detect surprising patterns
+        $isHighDominance = $topValue >= 0.75;
+        $isBalanced = ($topValue - $secondValue) < 0.15;
+        $isUnexpected = $topValue >= 0.70 && $topValue <= 0.85; // High but not extreme
+        
+        // Generate headline based on pattern
+        $aspect = (string) ($quizConfig['meta']['aspect'] ?? 'personality');
+        
+        $headline = '';
+        if ($isHighDominance) {
+            // Only use strong language if trait is actually high (>= 0.75)
+            if ($topValue >= 0.75) {
+                $headline = "I'm {$topPct}% {$topLabel}—this explains a lot about how I {$this->getActionForTrait($topTrait, $aspect)}.";
+            } else {
+                $headline = "I'm {$topPct}% {$topLabel}—this often shows up in how I {$this->getActionForTrait($topTrait, $aspect)}.";
+            }
+        } elseif ($isBalanced) {
+            // For balanced profiles, ensure both traits are meaningful (>= 0.40)
+            if ($secondValue >= 0.40) {
+                $headline = "I'm a balanced {$topLabel}-{$secondLabel} mix. This explains why I can {$this->getActionForTrait($topTrait, $aspect)} and {$this->getActionForTrait($secondTrait, $aspect)}.";
+            } else {
+                $headline = "I lean toward {$topLabel} with some {$secondLabel} tendencies. See how we match?";
+            }
+        } elseif ($isUnexpected) {
+            $headline = "Turns out I'm {$topPct}% {$topLabel}. This surprised me—want to see how you compare?";
+        } else {
+            // Ensure second trait is meaningful before mentioning it
+            if ($secondValue >= 0.45) {
+                $headline = "I'm {$topPct}% {$topLabel} with strong {$secondLabel} tendencies. See how we match?";
+            } else {
+                $headline = "I'm {$topPct}% {$topLabel}. Want to see how we compare?";
+            }
+        }
+        
+        // Validate and correct headline for accuracy
+        return $this->validateHeadlineAccuracy($headline, $traitVector, $topValue);
+    }
+
+    /**
+     * Get action verb for trait based on aspect.
+     * 
+     * @param string $trait
+     * @param string $aspect
+     * @return string
+     */
+    private function getActionForTrait(string $trait, string $aspect): string {
+        // Return action verbs that make the trait relatable
+        // IMPORTANT: Only use verbs that are factually supported by the trait definition
+        $actions = [
+            'communication-style' => [
+                'directness' => 'communicate',
+                'empathy' => 'listen',
+                'clarity' => 'explain things',
+            ],
+            'decision-making-cognitive-style' => [
+                'leader' => 'make decisions',
+                'organizer' => 'create structure',
+                'explorer' => 'try new things',
+            ],
+            'communication' => [
+                'directness' => 'communicate',
+                'empathy' => 'listen',
+                'clarity' => 'explain things',
+            ],
+            'decision-making' => [
+                'leader' => 'make decisions',
+                'organizer' => 'create structure',
+                'explorer' => 'try new things',
+            ],
+        ];
+        
+        $aspectActions = $actions[$aspect] ?? [];
+        return $aspectActions[$trait] ?? 'operate';
+    }
+
+    /**
+     * Validate headline accuracy before returning.
+     * Ensures claims are supported by trait values and don't overstate results.
+     * 
+     * @param string $headline
+     * @param array $traitVector
+     * @param float $topValue
+     * @return string Validated headline (may be modified if original is too strong)
+     */
+    private function validateHeadlineAccuracy(string $headline, array $traitVector, float $topValue): string {
+        $text = $headline;
+        
+        // Rule 1: If top trait is below 0.60, avoid strong claims
+        if ($topValue < 0.60) {
+            // Replace strong claims with softer language
+            $text = str_replace(
+                ['strongly', 'definitely', 'always', 'never', 'explains a lot'],
+                ['often', 'tend to', 'usually', 'rarely', 'often shows up'],
+                $text
+            );
+        }
+        
+        // Rule 2: If top trait is below 0.50, use balanced language
+        if ($topValue < 0.50) {
+            $text = str_replace(
+                ["I'm", "I am"],
+                ["I tend toward", "My results suggest"],
+                $text
+            );
+        }
+        
+        // Rule 3: Never claim 100% or absolute statements unless value is >= 0.95
+        if ($topValue < 0.95 && preg_match('/\b(100%|completely|totally|absolutely)\b/i', $text)) {
+            $text = preg_replace('/\b(100%|completely|totally|absolutely)\b/i', 'strongly', $text);
+        }
+        
+        // Rule 4: Ensure percentages in headline match actual trait values
+        if (preg_match('/(\d+)%/', $text, $matches)) {
+            $claimedPct = (int) $matches[1];
+            $actualPct = (int) round($topValue * 100);
+            // If claimed percentage is more than 5% off, correct it
+            if (abs($claimedPct - $actualPct) > 5) {
+                $text = str_replace($matches[0], $actualPct . '%', $text);
+            }
+        }
+        
+        return $text;
+    }
+
+    /**
+     * Generate a shareable headline for comparison results that creates curiosity.
+     * 
+     * @param float $matchScore
+     * @param array $traitVectorA
+     * @param array $traitVectorB
+     * @param array $traitLabels
+     * @param string $quizTitle
+     * @return string
+     */
+    private function generateComparisonHeadline(
+        float $matchScore,
+        array $traitVectorA,
+        array $traitVectorB,
+        array $traitLabels,
+        string $quizTitle
+    ): string {
+        $matchPct = (int) round($matchScore * 100);
+        
+        // Find top traits for each person
+        arsort($traitVectorA);
+        arsort($traitVectorB);
+        $topTraitA = array_key_first($traitVectorA);
+        $topTraitB = array_key_first($traitVectorB);
+        $topLabelA = $traitLabels[$topTraitA] ?? ucfirst(str_replace('_', ' ', $topTraitA));
+        $topLabelB = $traitLabels[$topTraitB] ?? ucfirst(str_replace('_', ' ', $topTraitB));
+        
+        // Generate headline based on match score
+        if ($matchScore >= 0.80) {
+            return "We're {$matchPct}% compatible—both strong {$topLabelA} types. This explains why we work so well together.";
+        } elseif ($matchScore >= 0.65) {
+            return "We're {$matchPct}% compatible with complementary styles: {$topLabelA} meets {$topLabelB}. This explains our dynamic.";
+        } elseif ($matchScore >= 0.50) {
+            return "We're {$matchPct}% compatible—different styles ({$topLabelA} vs {$topLabelB}) that can complement each other with understanding.";
+        } else {
+            return "We're {$matchPct}% compatible. Our different styles ({$topLabelA} vs {$topLabelB}) create interesting dynamics worth exploring.";
+        }
     }
 }
 
