@@ -34,17 +34,14 @@ final class QuizShortcodes
     {
         $quizId = isset($atts['id']) ? (string) $atts['id'] : '';
         $quizId = sanitize_file_name($quizId);
-        $locale = (string) get_locale();
-        $isRussian = strpos($locale, 'ru') === 0;
-        $quizNotFound = $isRussian ? 'Квиз не найден' : 'Quiz not found';
         if ($quizId === '') {
-            return '<p>' . esc_html($quizNotFound) . '</p>';
+            return '<p>Quiz not found</p>';
         }
 
         try {
             $quizData = $this->quizzes->load($quizId);
         } catch (\Throwable) {
-            return '<p>' . esc_html($quizNotFound) . '</p>';
+            return '<p>Quiz not found</p>';
         }
 
         // Detect format: if any question has options_json, use new format (v2)
@@ -123,14 +120,8 @@ final class QuizShortcodes
                 </button>
                 <div class="share-btn">
                     <?php
-                    $locale = (string) get_locale();
-                    $isRussian = strpos($locale, 'ru') === 0;
                     $ownerId = $hasPrevious ? (int) ($previous['user_id'] ?? 0) : 0;
-                    if ($isRussian) {
-                        echo (is_user_logged_in() && (int) get_current_user_id() === $ownerId) ? 'Поделиться результатом' : 'Поделиться квизом';
-                    } else {
-                        echo (is_user_logged_in() && (int) get_current_user_id() === $ownerId) ? 'Share Result' : 'Share Quiz';
-                    }
+                    echo (is_user_logged_in() && (int) get_current_user_id() === $ownerId) ? 'Share Result' : 'Share Quiz';
                     ?>
                 </div>
             </div>
@@ -176,17 +167,14 @@ final class QuizShortcodes
     {
         $quizId = isset($atts['id']) ? (string) $atts['id'] : '';
         $quizId = sanitize_file_name($quizId);
-        $locale = (string) get_locale();
-        $isRussian = strpos($locale, 'ru') === 0;
-        $quizNotFound = $isRussian ? 'Квиз не найден' : 'Quiz not found';
         if ($quizId === '') {
-            return '<p>' . esc_html($quizNotFound) . '</p>';
+            return '<p>Quiz not found</p>';
         }
 
         try {
             $quizData = $this->quizzes->load($quizId);
         } catch (\Throwable) {
-            return '<p>' . esc_html($quizNotFound) . '</p>';
+            return '<p>Quiz not found</p>';
         }
 
         $this->enqueueQuizRuntimeV2($quizData, [
@@ -212,13 +200,18 @@ final class QuizShortcodes
             ?>
 
             <div class="mmq-intro">
-                <?php if ($postId && has_post_thumbnail($postId)) : ?>
-                    <div class="mmq-intro-image">
-                        <?= get_the_post_thumbnail($postId, 'large', ['loading' => 'eager', 'decoding' => 'async']) ?>
+                <div class="mmq-intro-title">
+                    <?= esc_html((string) ($quizData['meta']['title'] ?? 'Quiz')) ?>
+                </div>
+                <div class="mmq-intro-content">
+                    <?php if ($postId && has_post_thumbnail($postId)) : ?>
+                        <div class="mmq-intro-image">
+                            <?= get_the_post_thumbnail($postId, 'large', ['loading' => 'eager', 'decoding' => 'async']) ?>
+                        </div>
+                    <?php endif; ?>
+                    <div class="mmq-intro-text">
+                        <p><?= esc_html($desc) ?></p>
                     </div>
-                <?php endif; ?>
-                <div class="mmq-intro-text">
-                    <p><?= esc_html($desc) ?></p>
                 </div>
                 <div class="mmq-intro-actions">
                     <button type="button" class="mmq-start">Start Quiz</button>
@@ -251,7 +244,7 @@ final class QuizShortcodes
     public function appendStartQuizLink(string $excerpt): string
     {
         // Archive/listing CTA should be "View" (quiz starts only on the single page after user clicks Start Quiz).
-        return $excerpt . ' <a class="start-quiz" href="' . esc_url(get_permalink()) . '">View</a>';
+        return $excerpt . '<br><a class="start-quiz" href="' . esc_url(get_permalink()) . '">View</a>';
     }
 
     public function enqueueAssets(): void
@@ -323,25 +316,6 @@ final class QuizShortcodes
         wp_enqueue_script('match-me-quiz-results-ui', get_template_directory_uri() . '/assets/js/quiz-results-ui.js', ['match-me-clipboard'], $resultsUiVer, true);
         wp_enqueue_script('match-me-quiz-public-v2', get_template_directory_uri() . '/assets/js/quiz-public-v2.js', ['match-me-clipboard', 'match-me-quiz-ajax-client', 'match-me-quiz-results-ui'], $runnerVer, true);
 
-        // Localize strings for JavaScript
-        $locale = (string) get_locale();
-        $isRussian = strpos($locale, 'ru') === 0;
-        wp_localize_script('match-me-quiz-results-ui', 'matchMeI18n', [
-            'share' => $isRussian ? 'Поделиться' : 'Share',
-            'result' => $isRussian ? 'Результат' : 'Result',
-            'noTraitData' => $isRussian ? 'Данные о чертах недоступны.' : 'No trait data available.',
-            'quizCompleted' => $isRussian ? 'Квиз успешно завершен.' : 'Quiz completed successfully.',
-            'view' => $isRussian ? 'Посмотреть' : 'View',
-            'compare' => $isRussian ? 'Сравнить' : 'Compare',
-            'shareAsImage' => $isRussian ? 'Поделиться изображением' : 'Share as image',
-            'shareComparisonLink' => $isRussian ? 'Сравнись со мной' : 'Compare With Me',
-            'shareResultLink' => $isRussian ? 'Поделиться ссылкой' : 'Share Link',
-            'linkCopied' => $isRussian ? 'Ссылка скопирована. Вставьте её куда угодно.' : 'Link copied. Paste it anywhere to share.',
-            'couldNotShare' => $isRussian ? 'Не удалось поделиться. Попробуйте снова.' : 'Could not share. Please try again.',
-            'comparisonResult' => $isRussian ? 'Результат сравнения' : 'Comparison Result',
-            'quizResults' => $isRussian ? 'Результаты квиза' : 'Quiz Results',
-            'myQuizResults' => $isRussian ? 'Мои результаты квиза' : 'My quiz results',
-        ]);
 
         $inline = 'window.matchMeQuizData=' . wp_json_encode($quizData) . ';'
             . 'window.matchMeQuizVars=' . wp_json_encode($vars) . ';';
@@ -453,11 +427,7 @@ final class QuizShortcodes
             $out .= '<h2 class="entry-title ast-blog-single-element" itemprop="headline"><a href="' . esc_url($link) . '" rel="bookmark">' . esc_html((string) $title) . '</a></h2>';
             // Intentionally omit entry meta for minimalist design.
             $out .= '<div class="ast-excerpt-container ast-blog-single-element">';
-            $locale = (string) get_locale();
-            $isRussian = strpos($locale, 'ru') === 0;
-            $viewResult = $isRussian ? 'Посмотреть результат' : 'View Result';
-            $view = $isRussian ? 'Посмотреть' : 'View';
-            $out .= $attemptId ? '<a class="start-quiz" href="' . esc_url($link) . '">' . esc_html($viewResult) . '</a>' : '<a class="start-quiz" href="' . esc_url($link) . '">' . esc_html($view) . '</a>';
+            $out .= $attemptId ? '<a class="start-quiz" href="' . esc_url($link) . '">View Result</a>' : '<a class="start-quiz" href="' . esc_url($link) . '">View</a>';
             $out .= '</div>';
             // Intentionally omit "Read More" for minimalist design.
             $out .= '<div class="entry-content clear" itemprop="text"></div>';

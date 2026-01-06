@@ -1432,6 +1432,10 @@ article.post:hover {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(30, 42, 68, 0.10);
+    border-radius: 16px;
+    box-shadow: 0 14px 34px rgba(30, 42, 68, 0.08);
 }
 
 .mm-post-card-thumb {
@@ -1460,6 +1464,7 @@ article.post:hover {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
+    flex: 1;
 }
 
 /* Grid description (excerpt) */
@@ -1472,11 +1477,29 @@ article.post:hover {
     font-size: var(--font-size-sm);
     line-height: 1.6;
     margin-bottom: 0;
+}
+
+.mm-post-grid .entry-content p:not(:has(.start-quiz)) {
     display: -webkit-box;
     line-clamp: 3;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.mm-post-grid .entry-content p:has(.start-quiz) {
+    display: flex;
+    flex-direction: column;
+}
+
+.mm-post-grid .entry-content p:has(.start-quiz) br {
+    display: none;
+}
+
+.mm-post-grid .entry-content p:has(.start-quiz) .start-quiz {
+    margin-top: auto;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 /* Make "View" CTA full-width and minimal in grid cards */
@@ -1487,7 +1510,12 @@ article.post:hover {
     color: var(--color-primary);
     border: 1px solid rgba(30, 42, 68, 0.18);
     border-radius: 999px;
-    margin-top: var(--space-sm);
+    margin-top: auto;
+    padding: var(--space-sm) var(--space-md);
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .mm-post-grid .start-quiz:hover {

@@ -17,14 +17,14 @@ $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
 ?>
 
 <main class="mm-comparisons container mm-page mm-page-980">
-    <h1><?php echo esc_html__('Comparison history', 'match-me'); ?></h1>
+    <h1><?php echo 'Comparison history; ?></h1>
 
     <?php if (!is_user_logged_in()) : ?>
-        <p><?php echo esc_html__('Please log in to see your comparison history.', 'match-me'); ?></p>
+        <p><?php echo 'Please log in to see your comparison history.; ?></p>
         <p>
-            <a class="mm-auth-link" data-auth="login" href="<?php echo esc_url(add_query_arg(['login' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo esc_html__('Login', 'match-me'); ?></a>
-            &nbsp;<?php echo esc_html__('or', 'match-me'); ?>&nbsp;
-            <a class="mm-auth-link" data-auth="register" href="<?php echo esc_url(add_query_arg(['register' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo esc_html__('Register', 'match-me'); ?></a>
+            <a class="mm-auth-link" data-auth="login" href="<?php echo esc_url(add_query_arg(['login' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo 'Login; ?></a>
+            &nbsp;<?php echo 'or; ?>&nbsp;
+            <a class="mm-auth-link" data-auth="register" href="<?php echo esc_url(add_query_arg(['register' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo 'Register; ?></a>
         </p>
     <?php else : ?>
         <?php
@@ -85,7 +85,7 @@ $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
 
         <?php if ($rows === []) : ?>
             <div class="mm-empty mm-mt-md">
-                <p><?php echo esc_html__('No comparisons yet. Take a quiz and share the compare link to get started.', 'match-me'); ?></p>
+                <p><?php echo 'No comparisons yet. Take a quiz and share the compare link to get started.; ?></p>
             </div>
         <?php else : ?>
             <div class="mm-compare-grid mm-mt-md">
@@ -152,16 +152,16 @@ $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
                                 <div class="mm-compare-line">
                                     <strong><?php echo esc_html($otherName); ?></strong>
                                     <?php if ($ago !== '') : ?>
-                                        <?php echo esc_html__('did a comparison', 'match-me'); ?> <?php echo esc_html($ago); ?>
+                                        <?php echo 'did a comparison; ?> <?php echo esc_html($ago); ?>
                                     <?php else : ?>
-                                        <?php echo esc_html__('did a comparison recently', 'match-me'); ?>
+                                        <?php echo 'did a comparison recently; ?>
                                     <?php endif; ?>
                                 </div>
-                                <div class="mm-compare-sub"><?php echo esc_html($quizTitle); ?> • <?php echo esc_html($matchScore); ?>% <?php echo esc_html__('match', 'match-me'); ?></div>
+                                <div class="mm-compare-sub"><?php echo esc_html($quizTitle); ?> • <?php echo esc_html($matchScore); ?>% <?php echo 'match; ?></div>
                             </div>
                         </div>
                         <div class="mm-compare-actions">
-                            <a class="mm-compare-link" href="<?php echo esc_url($url); ?>"><?php echo esc_html__('Check results', 'match-me'); ?></a>
+                            <a class="mm-compare-link" href="<?php echo esc_url($url); ?>"><?php echo 'Check results; ?></a>
                         </div>
                     </article>
                 <?php endforeach; ?>

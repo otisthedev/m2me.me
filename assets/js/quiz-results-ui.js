@@ -13,8 +13,7 @@
     function renderResult(result, container) {
         container.innerHTML = '';
 
-        const i18n = window.matchMeI18n || {};
-        const shortSummary = result.textual_summary_short || result.textual_summary || (i18n.quizCompleted || 'Quiz completed successfully.');
+        const shortSummary = result.textual_summary_short || result.textual_summary || 'Quiz completed successfully.';
         const longSummary = result.textual_summary_long || '';
 
         // Result summary
@@ -47,19 +46,18 @@
 
         // Share section
         if (result.share_token) {
-            const i18n = window.matchMeI18n || {};
             const shareSection = renderUnifiedShareSection({
                 kind: 'result',
-                title: i18n.share || 'Share',
+                title: 'Share',
                 urls: {
                     view: (result.share_urls && result.share_urls.view) ? String(result.share_urls.view) : '',
                     compare: (result.share_urls && result.share_urls.compare) ? String(result.share_urls.compare) : '',
                 },
                 defaultKey: 'compare',
-                instagramTitle: String(result.quiz_title || (i18n.quizResults || 'Quiz Results')),
-                instagramSummary: String(result.textual_summary_short || result.textual_summary || (i18n.myQuizResults || 'My quiz results')),
+                instagramTitle: String(result.quiz_title || 'Quiz Results'),
+                instagramSummary: String(result.textual_summary_short || result.textual_summary || 'My quiz results'),
                 storyData: {
-                    headline: i18n.result || 'Result',
+                    headline: 'Result',
                     bigValue: storyTop ? `${storyTop.pct}%` : '',
                     secondary: storyTop ? `${storyTop.label}` : '',
                     name: (window.matchMeTheme && window.matchMeTheme.currentUser && window.matchMeTheme.currentUser.name) ? String(window.matchMeTheme.currentUser.name) : 'You',
@@ -74,10 +72,9 @@
      * Render trait breakdown visualization.
      */
     function renderTraitBreakdown(traitSummary, traitLabels = {}) {
-        const i18n = window.matchMeI18n || {};
         const traits = Object.entries(traitSummary);
         if (traits.length === 0) {
-            return '<p>' + (i18n.noTraitData || 'No trait data available.') + '</p>';
+            return '<p>No trait data available.</p>';
         }
 
         return traits.map(([trait, value]) => {
@@ -233,13 +230,12 @@
         const comparisonUrl = (urls.match ? String(urls.match) : (urls.compare ? String(urls.compare) : ''));
         const resultUrl = (urls.view ? String(urls.view) : '');
 
-        const i18n = window.matchMeI18n || {};
         section.innerHTML = `
             <h3>${escapeHtml(title)}</h3>
             <div class="share-buttons">
-                <button type="button" class="btn-share-instagram">${escapeHtml(i18n.shareAsImage || 'Share as image (Instagram Story)')}</button>
-                <button type="button" class="btn-share-compare" ${comparisonUrl ? '' : 'disabled aria-disabled="true"'}>${escapeHtml(i18n.shareComparisonLink || 'Share comparison link')}</button>
-                <button type="button" class="btn-share-view" ${resultUrl ? '' : 'disabled aria-disabled="true"'}>${escapeHtml(i18n.shareResultLink || 'Share result link')}</button>
+                <button type="button" class="btn-share-instagram">Share as image (Instagram Story)</button>
+                <button type="button" class="btn-share-compare" ${comparisonUrl ? '' : 'disabled aria-disabled="true"'}>Share comparison link</button>
+                <button type="button" class="btn-share-view" ${resultUrl ? '' : 'disabled aria-disabled="true"'}>Share result link</button>
             </div>
         `;
 
@@ -262,13 +258,12 @@
         async function shareLink(url) {
             const u = String(url || '');
             if (!u) return;
-            const i18n = window.matchMeI18n || {};
             try {
                 if (navigator.share) {
-                    const shareTitle = kind === 'match' ? (i18n.comparisonResult || 'Comparison Result') : (i18n.quizResults || 'Quiz Results');
+                    const shareTitle = kind === 'match' ? 'Comparison Result' : 'Quiz Results';
                     const text = kind === 'match'
-                        ? (instagramSummary || (i18n.comparisonResult || 'Comparison result'))
-                        : (instagramSummary || (i18n.myQuizResults || 'My quiz results'));
+                        ? (instagramSummary || 'Comparison result')
+                        : (instagramSummary || 'My quiz results');
                     await navigator.share({ title: shareTitle, text, url: u });
                     return;
                 }
@@ -277,9 +272,9 @@
             }
             try {
                 await copyToClipboard(u);
-                showMessage(i18n.linkCopied || 'Link copied. Paste it anywhere to share.', 'success');
+                showMessage('Link copied. Paste it anywhere to share.', 'success');
             } catch (e) {
-                showMessage(i18n.couldNotShare || 'Could not share. Please try again.', 'warning');
+                showMessage('Could not share. Please try again.', 'warning');
             }
         }
 
@@ -567,10 +562,7 @@
         return await new Promise((resolve, reject) => {
             canvas.toBlob((blob) => {
                 if (!blob) {
-                    const locale = (window.matchMeTheme && window.matchMeTheme.locale) || 'en';
-                    const isRussian = locale.indexOf('ru') === 0;
-                    const errorMsg = isRussian ? 'Не удалось создать изображение' : 'Failed to generate image';
-                    return reject(new Error(errorMsg));
+                    return reject(new Error('Failed to generate image'));
                 }
                 resolve(blob);
             }, 'image/png', 1);
@@ -746,10 +738,7 @@
             blob = await renderInstagramStoryPngBlobV2(data);
         } catch (e) {
             console.error('Failed to render story image:', e);
-            const locale = (window.matchMeTheme && window.matchMeTheme.locale) || 'en';
-            const isRussian = locale.indexOf('ru') === 0;
-            const errorMsg = isRussian ? 'Не удалось создать изображение для истории. Попробуйте снова.' : 'Could not generate the story image. Please try again.';
-            showMessage(errorMsg, 'error');
+            showMessage('Could not generate the story image. Please try again.', 'error');
             return;
         }
 

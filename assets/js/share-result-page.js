@@ -12,15 +12,11 @@
     const root = document.getElementById('mm-share-result-root');
     if ((!token && !comparisonToken) || !root) return;
 
-    const locale = (window.matchMeTheme && window.matchMeTheme.locale) || 'en';
-    const isRussian = locale.indexOf('ru') === 0;
-    const loadingTitle = isRussian ? 'Загрузка результата…' : 'Loading result…';
-    const loadingSubtitle = isRussian ? 'Один момент.' : 'One moment.';
     root.innerHTML =
       '<div class="mm-result-loading">' +
-      '<div class="mm-result-loading-title">' + loadingTitle + '</div>' +
+      '<div class="mm-result-loading-title">Loading result…</div>' +
       '<div class="mm-spinner" aria-hidden="true"></div>' +
-      '<div class="mm-result-loading-subtitle">' + loadingSubtitle + '</div>' +
+      '<div class="mm-result-loading-subtitle">One moment.</div>' +
       '</div>';
 
     try {
@@ -38,9 +34,8 @@
 
       if (String(mode) === 'compare') {
         if (!result || result.can_compare !== true) {
-          const errorMsg = isRussian ? 'Этот результат не позволяет сравнение.' : 'This result does not allow comparison.';
           root.innerHTML =
-            '<div class="error-message">' + escapeHtml(errorMsg) + '</div>';
+            '<div class="error-message">This result does not allow comparison.</div>';
           return;
         }
 
@@ -49,14 +44,11 @@
         const quizPath = quizSlug ? `/${encodeURIComponent(quizSlug)}/` : `/`;
         const quizUrl = `${base}${quizPath}?compare_token=${encodeURIComponent(String(token))}`;
 
-        const compareHeading = isRussian ? 'Сравни свои результаты' : 'Compare Your Results';
-        const compareText = isRussian ? 'Пройди квиз, чтобы сравнить свои результаты и увидеть, как вы совпадаете.' : 'Take the quiz to compare your results and see how you match.';
-        const startButton = isRussian ? 'Начать' : 'Start Quiz';
         root.innerHTML = `
           <div class="match-me-compare-section">
-            <h3>${compareHeading}</h3>
-            <p>${compareText}</p>
-            <a class="btn-compare-cta" href="${quizUrl}">${startButton}</a>
+            <h3>Compare Your Results</h3>
+            <p>Take the quiz to compare your results and see how you match.</p>
+            <a class="btn-compare-cta" href="${quizUrl}">Start Quiz</a>
           </div>
         `;
         return;
@@ -64,7 +56,7 @@
 
       window.MatchMeQuizUI.renderResult(result, root);
     } catch (e) {
-      const defaultMsg = isRussian ? 'Не удалось загрузить этот результат.' : 'Could not load this result.';
+      const defaultMsg = 'Could not load this result.';
       const msg =
         (e && e.message) ||
         (e && e.data && e.data.message) ||

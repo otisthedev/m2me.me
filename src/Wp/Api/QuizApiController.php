@@ -248,7 +248,7 @@ final class QuizApiController
             // Validate answers
             $answers = $body['answers'] ?? [];
             if (!is_array($answers) || empty($answers)) {
-                return new \WP_Error('invalid_answers', __('Answers array is required', 'match-me'), ['status' => 400]);
+                return new \WP_Error('invalid_answers', 'Answers array is required, ['status' => 400]);
             }
 
             // Calculate trait vector
@@ -324,19 +324,19 @@ final class QuizApiController
         } catch (\InvalidArgumentException $e) {
             return new \WP_Error(
                 'invalid_request',
-                $e->getMessage() ?: __('Invalid request. Please check your input and try again.', 'match-me'),
+                $e->getMessage() ?: 'Invalid request. Please check your input and try again.,
                 ['status' => 400, 'error_code' => 'VALIDATION_ERROR']
             );
         } catch (\RuntimeException $e) {
             return new \WP_Error(
                 'server_error',
-                __('An error occurred while processing your request. Please try again later.', 'match-me'),
+                'An error occurred while processing your request. Please try again later.,
                 ['status' => 500, 'error_code' => 'SERVER_ERROR', 'details' => $e->getMessage()]
             );
         } catch (\Throwable $e) {
             return new \WP_Error(
                 'server_error',
-                __('An unexpected error occurred. Please try again later.', 'match-me'),
+                'An unexpected error occurred. Please try again later.,
                 ['status' => 500, 'error_code' => 'UNEXPECTED_ERROR']
             );
         }
@@ -355,7 +355,7 @@ final class QuizApiController
             if ($result === null) {
                 return new \WP_Error(
                     'not_found',
-                    __('The quiz result you are looking for could not be found. The link may be incorrect or the result may have been deleted.', 'match-me'),
+                    'The quiz result you are looking for could not be found. The link may be incorrect or the result may have been deleted.,
                     ['status' => 404, 'error_code' => 'RESULT_NOT_FOUND']
                 );
             }
@@ -364,7 +364,7 @@ final class QuizApiController
             if (!empty($result['revoked_at'])) {
                 return new \WP_Error(
                     'forbidden',
-                    __('This result is no longer available. The share link has been revoked by the owner.', 'match-me'),
+                    'This result is no longer available. The share link has been revoked by the owner.,
                     ['status' => 403, 'error_code' => 'TOKEN_REVOKED']
                 );
             }
@@ -377,7 +377,7 @@ final class QuizApiController
                 if ($userId === 0 || $userId !== $resultUserId) {
                     return new \WP_Error(
                         'forbidden',
-                        __('This result is private and can only be viewed by its owner. Please log in with the account that created this result.', 'match-me'),
+                        'This result is private and can only be viewed by its owner. Please log in with the account that created this result.,
                         ['status' => 403, 'error_code' => 'RESULT_PRIVATE']
                     );
                 }
@@ -531,7 +531,7 @@ final class QuizApiController
             if ($resultA === null) {
                 return new \WP_Error(
                     'not_found',
-                    __('The quiz result you are trying to compare with could not be found. The link may be incorrect.', 'match-me'),
+                    'The quiz result you are trying to compare with could not be found. The link may be incorrect.,
                     ['status' => 404, 'error_code' => 'RESULT_A_NOT_FOUND']
                 );
             }
@@ -541,7 +541,7 @@ final class QuizApiController
             if ($shareMode !== 'share_match') {
                 return new \WP_Error(
                     'forbidden',
-                    __('This result does not allow comparisons. The owner has restricted sharing options.', 'match-me'),
+                    'This result does not allow comparisons. The owner has restricted sharing options.,
                     ['status' => 403, 'error_code' => 'COMPARISON_NOT_ALLOWED']
                 );
             }
@@ -556,7 +556,7 @@ final class QuizApiController
                 if ($resultB === null) {
                     return new \WP_Error(
                         'not_found',
-                        __('The second quiz result could not be found. It may have been deleted.', 'match-me'),
+                        'The second quiz result could not be found. It may have been deleted.,
                         ['status' => 404, 'error_code' => 'RESULT_B_NOT_FOUND']
                     );
                 }
@@ -596,7 +596,7 @@ final class QuizApiController
             } else {
                 return new \WP_Error(
                     'invalid_request',
-                    __('To compare results, please provide either an existing result_id or submit new quiz answers with quiz_id.', 'match-me'),
+                    'To compare results, please provide either an existing result_id or submit new quiz answers with quiz_id.,
                     ['status' => 400, 'error_code' => 'MISSING_COMPARISON_DATA']
                 );
             }
@@ -612,7 +612,7 @@ final class QuizApiController
             if ($quizSlugB !== '' && $quizSlugA !== '' && $quizSlugA !== $quizSlugB) {
                 return new \WP_Error(
                     'quiz_mismatch',
-                    __('Cannot compare results from different quizzes. Both results must be from the same quiz.', 'match-me'),
+                    'Cannot compare results from different quizzes. Both results must be from the same quiz.,
                     ['status' => 400, 'quiz_slug_a' => $quizSlugA, 'quiz_slug_b' => $quizSlugB]
                 );
             }
@@ -633,7 +633,7 @@ final class QuizApiController
             if ($quizVersionB !== '' && $quizVersionA !== '' && $quizVersionA !== $quizVersionB) {
                 return new \WP_Error(
                     'version_mismatch',
-                    __('Cannot compare results from different quiz versions. Please retake the quiz with the latest version.', 'match-me'),
+                    'Cannot compare results from different quiz versions. Please retake the quiz with the latest version.,
                     ['status' => 400, 'quiz_version_a' => $quizVersionA, 'quiz_version_b' => $quizVersionB]
                 );
             }
@@ -849,7 +849,7 @@ final class QuizApiController
         $viewerAvatar = (string) ($viewer['viewer_avatar_url'] ?? '');
         $matchPct = (int) round(max(0.0, min(100.0, $matchScore)));
 
-        $subject = sprintf(__('%s compared with you — %d%% match', 'match-me'), $viewerName, $matchPct);
+        $subject = sprintf('%s compared with you — %d%% match, $viewerName, $matchPct);
         if ($siteName !== '') {
             $subject .= ' • ' . $siteName;
         }
@@ -888,7 +888,7 @@ final class QuizApiController
         $matchUrl = esc_url((string) ($data['match_url'] ?? home_url('/')));
         $quizTitle = esc_html((string) ($data['quiz_title'] ?? 'Quiz'));
 
-        $preheader = esc_html(sprintf(__('%s did a comparison with you. See your match and the full breakdown.', 'match-me'), $viewerName));
+        $preheader = esc_html(sprintf('%s did a comparison with you. See your match and the full breakdown., $viewerName));
 
         $brand = '#1E2A44';
         $bg = '#F6F5F2';

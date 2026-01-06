@@ -24,7 +24,7 @@
                     </a>
                 </div>
 
-                <nav class="mm-footer-nav" aria-label="<?php echo esc_attr__('Footer Menu', 'match-me'); ?>">
+                <nav class="mm-footer-nav" aria-label="<?php echo 'Footer Menu'; ?>">
                     <?php
                     if (has_nav_menu('footer')) {
                         wp_nav_menu([

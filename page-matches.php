@@ -81,14 +81,14 @@ function mm_overall_match_from_maps(
 ?>
 
 <main class="mm-matches container mm-page mm-page-1100">
-    <h1><?php echo esc_html__('Matches', 'match-me'); ?></h1>
+    <h1><?php echo 'Matches; ?></h1>
 
     <?php if (!is_user_logged_in()) : ?>
-        <p><?php echo esc_html__('Please log in to see your matches.', 'match-me'); ?></p>
+        <p><?php echo 'Please log in to see your matches.; ?></p>
         <p>
-            <a class="mm-auth-link" data-auth="login" href="<?php echo esc_url(add_query_arg(['login' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo esc_html__('Login', 'match-me'); ?></a>
-            &nbsp;<?php echo esc_html__('or', 'match-me'); ?>&nbsp;
-            <a class="mm-auth-link" data-auth="register" href="<?php echo esc_url(add_query_arg(['register' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo esc_html__('Register', 'match-me'); ?></a>
+            <a class="mm-auth-link" data-auth="login" href="<?php echo esc_url(add_query_arg(['login' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo 'Login; ?></a>
+            &nbsp;<?php echo 'or; ?>&nbsp;
+            <a class="mm-auth-link" data-auth="register" href="<?php echo esc_url(add_query_arg(['register' => '1', 'redirect_to' => $redirectTo], home_url('/'))); ?>"><?php echo 'Register; ?></a>
         </p>
     <?php else : ?>
         <?php
@@ -204,7 +204,7 @@ function mm_overall_match_from_maps(
             ?>
 
             <div class="mm-match-detail">
-                <a class="mm-back-link" href="<?php echo esc_url(home_url('/matches/')); ?>">← <?php echo esc_html__('Back to matches', 'match-me'); ?></a>
+                <a class="mm-back-link" href="<?php echo esc_url(home_url('/matches/')); ?>">← <?php echo 'Back to matches; ?></a>
 
                 <div class="mm-match-hero">
                     <div class="mm-compare-avatar mm-compare-avatar-lg">
@@ -216,20 +216,20 @@ function mm_overall_match_from_maps(
                     </div>
                     <div>
                         <div class="mm-match-title"><strong><?php echo esc_html($otherName); ?></strong></div>
-                        <div class="mm-match-sub"><?php echo esc_html($overallPct); ?>% <?php echo esc_html__('overall match', 'match-me'); ?> • <?php echo esc_html(count($overall['per_quiz'])); ?> <?php echo esc_html__('shared quizzes', 'match-me'); ?></div>
+                        <div class="mm-match-sub"><?php echo esc_html($overallPct); ?>% <?php echo 'overall match; ?> • <?php echo esc_html(count($overall['per_quiz'])); ?> <?php echo 'shared quizzes; ?></div>
                     </div>
 
                     <div class="mm-match-hero-actions">
                         <?php if ($latestMatchToken !== '') : ?>
-                            <a class="mm-compare-link" href="<?php echo esc_url(home_url('/match/' . $latestMatchToken . '/')); ?>"><?php echo esc_html__('View latest comparison', 'match-me'); ?></a>
+                            <a class="mm-compare-link" href="<?php echo esc_url(home_url('/match/' . $latestMatchToken . '/')); ?>"><?php echo 'View latest comparison; ?></a>
                         <?php endif; ?>
                     </div>
                 </div>
 
-                <h2 class="mm-mt-lg"><?php echo esc_html__('Match by quiz', 'match-me'); ?></h2>
+                <h2 class="mm-mt-lg"><?php echo 'Match by quiz; ?></h2>
                 <div class="mm-match-by-quiz">
                     <?php if ($overall['per_quiz'] === []) : ?>
-                        <div class="mm-empty"><p><?php echo esc_html__('No shared quizzes yet.', 'match-me'); ?></p></div>
+                        <div class="mm-empty"><p><?php echo 'No shared quizzes yet.; ?></p></div>
                     <?php else : ?>
                         <?php foreach ($overall['per_quiz'] as $q) : ?>
                             <?php $pct = (int) round(max(0.0, min(100.0, (float) $q['score']))); ?>
@@ -246,11 +246,11 @@ function mm_overall_match_from_maps(
 
             <section class="mm-mt-md">
                 <div class="mm-recent-header">
-                    <h2 class="mm-recent-title"><?php echo esc_html__('Top matches', 'match-me'); ?></h2>
+                    <h2 class="mm-recent-title"><?php echo 'Top matches; ?></h2>
                 </div>
 
                 <?php if ($top === []) : ?>
-                    <div class="mm-empty"><p><?php echo esc_html__('No matches yet. Do a few comparisons first.', 'match-me'); ?></p></div>
+                    <div class="mm-empty"><p><?php echo 'No matches yet. Do a few comparisons first.; ?></p></div>
                 <?php else : ?>
                     <div class="mm-compare-grid">
                         <?php foreach ($top as $c) : ?>
@@ -266,11 +266,11 @@ function mm_overall_match_from_maps(
                                     </div>
                                     <div class="mm-compare-meta">
                                         <div class="mm-compare-line"><strong><?php echo esc_html($c['name']); ?></strong></div>
-                                        <div class="mm-compare-sub"><?php echo esc_html($pct); ?>% <?php echo esc_html__('overall', 'match-me'); ?> • <?php echo esc_html((string) $c['shared_quizzes']); ?> <?php echo esc_html__('shared quizzes', 'match-me'); ?></div>
+                                        <div class="mm-compare-sub"><?php echo esc_html($pct); ?>% <?php echo 'overall; ?> • <?php echo esc_html((string) $c['shared_quizzes']); ?> <?php echo 'shared quizzes; ?></div>
                                     </div>
                                 </div>
                                 <div class="mm-compare-actions">
-                                    <a class="mm-compare-link" href="<?php echo esc_url(add_query_arg(['with' => (string) $c['id']], home_url('/matches/'))); ?>"><?php echo esc_html__('View overall match', 'match-me'); ?></a>
+                                    <a class="mm-compare-link" href="<?php echo esc_url(add_query_arg(['with' => (string) $c['id']], home_url('/matches/'))); ?>"><?php echo 'View overall match; ?></a>
                                 </div>
                             </article>
                         <?php endforeach; ?>
@@ -280,11 +280,11 @@ function mm_overall_match_from_maps(
 
             <section class="mm-mt-lg">
                 <div class="mm-recent-header">
-                    <h2 class="mm-recent-title"><?php echo esc_html__('All matches', 'match-me'); ?></h2>
+                    <h2 class="mm-recent-title"><?php echo 'All matches; ?></h2>
                 </div>
 
                 <?php if ($cards === []) : ?>
-                    <div class="mm-empty"><p><?php echo esc_html__('No matches yet.', 'match-me'); ?></p></div>
+                    <div class="mm-empty"><p><?php echo 'No matches yet.; ?></p></div>
                 <?php else : ?>
                     <div class="mm-compare-grid">
                         <?php foreach ($cards as $c) : ?>
@@ -300,11 +300,11 @@ function mm_overall_match_from_maps(
                                     </div>
                                     <div class="mm-compare-meta">
                                         <div class="mm-compare-line"><strong><?php echo esc_html($c['name']); ?></strong></div>
-                                        <div class="mm-compare-sub"><?php echo esc_html($pct); ?>% <?php echo esc_html__('overall', 'match-me'); ?> • <?php echo esc_html((string) $c['shared_quizzes']); ?> <?php echo esc_html__('shared quizzes', 'match-me'); ?></div>
+                                        <div class="mm-compare-sub"><?php echo esc_html($pct); ?>% <?php echo 'overall; ?> • <?php echo esc_html((string) $c['shared_quizzes']); ?> <?php echo 'shared quizzes; ?></div>
                                     </div>
                                 </div>
                                 <div class="mm-compare-actions">
-                                    <a class="mm-compare-link" href="<?php echo esc_url(add_query_arg(['with' => (string) $c['id']], home_url('/matches/'))); ?>"><?php echo esc_html__('View overall match', 'match-me'); ?></a>
+                                    <a class="mm-compare-link" href="<?php echo esc_url(add_query_arg(['with' => (string) $c['id']], home_url('/matches/'))); ?>"><?php echo 'View overall match; ?></a>
                                 </div>
                             </article>
                         <?php endforeach; ?>

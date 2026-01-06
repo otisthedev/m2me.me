@@ -17,14 +17,14 @@ get_header();
 ?>
 
 <main class="mm-profile container mm-page mm-page-900">
-    <h1><?php echo esc_html__('My Profile', 'match-me'); ?></h1>
+    <h1><?php echo 'My Profile; ?></h1>
 
     <?php if (!is_user_logged_in()) : ?>
-        <p><?php echo esc_html__('Please log in to see your saved results.', 'match-me'); ?></p>
+        <p><?php echo 'Please log in to see your saved results.; ?></p>
         <p>
-            <a class="mm-auth-link" data-auth="login" href="<?php echo esc_url(add_query_arg(['login' => '1', 'redirect_to' => home_url('/profile/')], home_url('/'))); ?>"><?php echo esc_html__('Login', 'match-me'); ?></a>
-            &nbsp;<?php echo esc_html__('or', 'match-me'); ?>&nbsp;
-            <a class="mm-auth-link" data-auth="register" href="<?php echo esc_url(add_query_arg(['register' => '1', 'redirect_to' => home_url('/profile/')], home_url('/'))); ?>"><?php echo esc_html__('Register', 'match-me'); ?></a>
+            <a class="mm-auth-link" data-auth="login" href="<?php echo esc_url(add_query_arg(['login' => '1', 'redirect_to' => home_url('/profile/')], home_url('/'))); ?>"><?php echo 'Login; ?></a>
+            &nbsp;<?php echo 'or; ?>&nbsp;
+            <a class="mm-auth-link" data-auth="register" href="<?php echo esc_url(add_query_arg(['register' => '1', 'redirect_to' => home_url('/profile/')], home_url('/'))); ?>"><?php echo 'Register; ?></a>
         </p>
     <?php else : ?>
         <?php
@@ -62,7 +62,7 @@ get_header();
 
         <?php if (isset($_GET['updated']) && (string) $_GET['updated'] === '1') : ?>
             <div class="mm-profile-notice">
-                <?php echo esc_html__('Profile updated.', 'match-me'); ?>
+                <?php echo 'Profile updated.; ?>
             </div>
         <?php endif; ?>
 
@@ -77,7 +77,7 @@ get_header();
                                 <path d="M20.71 6.04a1 1 0 0 0 0-1.41l-1.34-1.34a1 1 0 0 0-1.41 0l-1.06 1.06 3.75 3.75 1.06-1.06Z" fill="currentColor"/>
                             </svg>
                         </span>
-                        <span class="mm-profile-avatar-edit-text"><?php echo esc_html__('Edit', 'match-me'); ?></span>
+                        <span class="mm-profile-avatar-edit-text"><?php echo 'Edit; ?></span>
                     </span>
                 </button>
                 <div class="mm-profile-identity">
@@ -86,14 +86,14 @@ get_header();
                 </div>
             </div>
             <div class="mm-profile-quick">
-                <a class="mm-pill-link" href="<?php echo esc_url(home_url('/matches/')); ?>"><?php echo esc_html__('Matches', 'match-me'); ?></a>
-                <a class="mm-pill-link" href="<?php echo esc_url(home_url('/comparisons/')); ?>"><?php echo esc_html__('Comparisons', 'match-me'); ?></a>
-                <a class="mm-pill-link" href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>"><?php echo esc_html__('Logout', 'match-me'); ?></a>
+                <a class="mm-pill-link" href="<?php echo esc_url(home_url('/matches/')); ?>"><?php echo 'Matches; ?></a>
+                <a class="mm-pill-link" href="<?php echo esc_url(home_url('/comparisons/')); ?>"><?php echo 'Comparisons; ?></a>
+                <a class="mm-pill-link" href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>"><?php echo 'Logout; ?></a>
             </div>
         </section>
 
         <section class="mm-section mm-mb-lg">
-            <h2><?php echo esc_html__('Profile details', 'match-me'); ?></h2>
+            <h2><?php echo 'Profile details; ?></h2>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" class="mm-grid">
                 <input type="hidden" name="action" value="match_me_profile_update">
@@ -101,27 +101,27 @@ get_header();
 
                 <div class="mm-grid-2">
                     <label class="mm-field">
-                        <span class="mm-field-label"><?php echo esc_html__('First name', 'match-me'); ?></span>
+                        <span class="mm-field-label"><?php echo 'First name; ?></span>
                         <input class="mm-input" type="text" name="first_name" value="<?php echo esc_attr($currentFirst); ?>">
                     </label>
                     <label class="mm-field">
-                        <span class="mm-field-label"><?php echo esc_html__('Last name', 'match-me'); ?></span>
+                        <span class="mm-field-label"><?php echo 'Last name; ?></span>
                         <input class="mm-input" type="text" name="last_name" value="<?php echo esc_attr($currentLast); ?>">
                     </label>
                 </div>
 
                 <div id="mm-profile-photo-panel" class="mm-profile-photo-panel" hidden>
                 <label class="mm-field">
-                    <span class="mm-field-label"><?php echo esc_html__('Profile image (upload)', 'match-me'); ?></span>
+                    <span class="mm-field-label"><?php echo 'Profile image (upload); ?></span>
                     <div class="mm-file">
                         <input id="mm_profile_picture_file" class="mm-file-input" type="file" name="profile_picture_file" accept="image/*">
-                        <label for="mm_profile_picture_file" class="mm-profile-btn mm-profile-btn-outline"><?php echo esc_html__('Choose file', 'match-me'); ?></label>
-                        <span class="mm-file-name" aria-live="polite"><?php echo esc_html__('No file chosen', 'match-me'); ?></span>
+                        <label for="mm_profile_picture_file" class="mm-profile-btn mm-profile-btn-outline"><?php echo 'Choose file; ?></label>
+                        <span class="mm-file-name" aria-live="polite"><?php echo 'No file chosen; ?></span>
                     </div>
                 </label>
 
                 <label class="mm-field">
-                    <span class="mm-field-label"><?php echo esc_html__('Or profile image URL', 'match-me'); ?></span>
+                    <span class="mm-field-label"><?php echo 'Or profile image URL; ?></span>
                     <input class="mm-input" type="url" name="profile_picture_url" value="<?php echo esc_attr($currentPic); ?>" placeholder="https://...">
                 </label>
                 </div>
@@ -129,12 +129,12 @@ get_header();
                 <label class="mm-toggle">
                     <input type="checkbox" name="email_compare_notify" value="1" <?php checked($emailNotifyOn); ?>>
                     <span>
-                        <div class="mm-toggle-title"><?php echo esc_html__('Email notifications', 'match-me'); ?></div>
-                        <div class="mm-toggle-sub"><?php echo esc_html__('Email me when someone compares with my results.', 'match-me'); ?></div>
+                        <div class="mm-toggle-title"><?php echo 'Email notifications; ?></div>
+                        <div class="mm-toggle-sub"><?php echo 'Email me when someone compares with my results.; ?></div>
                     </span>
                 </label>
 
-                <button type="submit" class="mm-profile-btn mm-profile-btn-primary"><?php echo esc_html__('Save changes', 'match-me'); ?></button>
+                <button type="submit" class="mm-profile-btn mm-profile-btn-primary"><?php echo 'Save changes; ?></button>
             </form>
 
             <script>
@@ -145,7 +145,7 @@ get_header();
                     const nameEl = document.querySelector('.mm-file-name');
 
                     if (input && nameEl) {
-                        const noFileText = <?php echo wp_json_encode(__('No file chosen', 'match-me')); ?>;
+                        const noFileText = <?php echo wp_json_encode('No file chosen); ?>;
                         input.addEventListener('change', function () {
                             const f = input.files && input.files[0] ? input.files[0].name : '';
                             nameEl.textContent = f || noFileText;
@@ -176,9 +176,9 @@ get_header();
         </section>
 
         <section class="mm-section">
-            <h2><?php echo esc_html__('Latest Results (new quizzes)', 'match-me'); ?></h2>
+            <h2><?php echo 'Latest Results (new quizzes); ?></h2>
             <?php if ($latestV2 === []) : ?>
-                <p><?php echo esc_html__('No results yet.', 'match-me'); ?></p>
+                <p><?php echo 'No results yet.; ?></p>
             <?php else : ?>
                 <ul class="mm-list">
                     <?php foreach ($latestV2 as $row) : ?>
@@ -194,17 +194,17 @@ get_header();
                                 <div>
                                     <div class="mm-row-title"><?php echo esc_html($title); ?></div>
                                     <?php if ($takenAt !== '') : ?>
-                                        <div class="mm-muted mm-text-sm"><?php echo esc_html__('Latest:', 'match-me'); ?> <?php echo esc_html($takenAt); ?></div>
+                                        <div class="mm-muted mm-text-sm"><?php echo 'Latest:; ?> <?php echo esc_html($takenAt); ?></div>
                                     <?php endif; ?>
                                 </div>
                                 <div class="mm-row-actions">
                                     <?php if ($viewUrl !== '') : ?>
-                                        <a class="mm-pill-link" href="<?php echo esc_url($viewUrl); ?>"><?php echo esc_html__('View', 'match-me'); ?></a>
+                                        <a class="mm-pill-link" href="<?php echo esc_url($viewUrl); ?>"><?php echo 'View; ?></a>
                                     <?php endif; ?>
                                     <?php if ($compareUrl !== '') : ?>
-                                        <a class="mm-pill-link" href="<?php echo esc_url($compareUrl); ?>"><?php echo esc_html__('Compare', 'match-me'); ?></a>
+                                        <a class="mm-pill-link" href="<?php echo esc_url($compareUrl); ?>"><?php echo 'Compare; ?></a>
                                     <?php endif; ?>
-                                    <a class="mm-pill-link" href="<?php echo esc_url(home_url('/' . $quizSlug . '/')); ?>"><?php echo esc_html__('Take again', 'match-me'); ?></a>
+                                    <a class="mm-pill-link" href="<?php echo esc_url(home_url('/' . $quizSlug . '/')); ?>"><?php echo 'Take again; ?></a>
                                 </div>
                             </div>
                         </li>
@@ -216,27 +216,27 @@ get_header();
         <?php /* Legacy results removed */ ?>
 
         <section class="mm-section mm-mt-xl mm-divider-top">
-            <h2><?php echo esc_html__('Privacy & Data (GDPR)', 'match-me'); ?></h2>
+            <h2><?php echo 'Privacy & Data (GDPR); ?></h2>
             
             <div class="mm-gdpr-actions">
                 <div class="mm-gdpr-action">
-                    <h3><?php echo esc_html__('Export your data', 'match-me'); ?></h3>
+                    <h3><?php echo 'Export your data; ?></h3>
                     <p class="mm-muted mm-max-70ch">
-                        <?php echo esc_html__('Download all your data in JSON format, including your profile, quiz results, and comparisons. This is your right under GDPR (Article 20 - Right to Data Portability).', 'match-me'); ?>
+                        <?php echo 'Download all your data in JSON format, including your profile, quiz results, and comparisons. This is your right under GDPR (Article 20 - Right to Data Portability).; ?>
                     </p>
                     <button type="button" class="mm-profile-btn mm-profile-btn-outline" id="mm-export-data-btn">
-                        <?php echo esc_html__('Export my data', 'match-me'); ?>
+                        <?php echo 'Export my data; ?>
                     </button>
                     <div id="mm-export-status" class="mm-gdpr-status" role="status" aria-live="polite"></div>
                 </div>
 
                 <div class="mm-gdpr-action mm-mt-md">
-                    <h3><?php echo esc_html__('Delete your data', 'match-me'); ?></h3>
+                    <h3><?php echo 'Delete your data; ?></h3>
                     <p class="mm-muted mm-max-70ch">
-                        <?php echo esc_html__('Request deletion of all your data. This will permanently delete your quiz results, comparisons, and profile information. This action cannot be undone. This is your right under GDPR (Article 17 - Right to Erasure).', 'match-me'); ?>
+                        <?php echo 'Request deletion of all your data. This will permanently delete your quiz results, comparisons, and profile information. This action cannot be undone. This is your right under GDPR (Article 17 - Right to Erasure).; ?>
                     </p>
                     <button type="button" class="mm-profile-btn mm-profile-btn-outline mm-profile-btn-danger" id="mm-delete-data-btn">
-                        <?php echo esc_html__('Delete my data', 'match-me'); ?>
+                        <?php echo 'Delete my data; ?>
                     </button>
                     <div id="mm-delete-status" class="mm-gdpr-status" role="status" aria-live="polite"></div>
                 </div>
@@ -247,17 +247,17 @@ get_header();
                     const API_BASE = '<?php echo esc_js(rest_url('match-me/v1')); ?>';
                     const nonce = '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>';
                     const i18n = {
-                        exporting: <?php echo wp_json_encode(__('Exporting your data...', 'match-me')); ?>,
-                        exportSuccess: <?php echo wp_json_encode(__('Data exported successfully!', 'match-me')); ?>,
-                        exportError: <?php echo wp_json_encode(__('Error:', 'match-me')); ?>,
-                        exportFailed: <?php echo wp_json_encode(__('Failed to export data', 'match-me')); ?>,
-                        deleteConfirm: <?php echo wp_json_encode(__('Delete your data?\n\nThis will permanently delete your quiz results, comparisons, and profile information. This cannot be undone.', 'match-me')); ?>,
-                        deletePrompt: <?php echo wp_json_encode(__('Type DELETE to confirm data deletion:', 'match-me')); ?>,
-                        deleteCancelled: <?php echo wp_json_encode(__('Data deletion cancelled.', 'match-me')); ?>,
-                        deleteFinalConfirm: <?php echo wp_json_encode(__('Final confirmation: permanently delete all your data now?', 'match-me')); ?>,
-                        deleting: <?php echo wp_json_encode(__('Deleting your data...', 'match-me')); ?>,
-                        deleteSuccess: <?php echo wp_json_encode(__('Your data has been deleted successfully. Redirecting...', 'match-me')); ?>,
-                        deleteFailed: <?php echo wp_json_encode(__('Failed to delete data', 'match-me')); ?>
+                        exporting: <?php echo wp_json_encode('Exporting your data...); ?>,
+                        exportSuccess: <?php echo wp_json_encode('Data exported successfully!); ?>,
+                        exportError: <?php echo wp_json_encode('Error:); ?>,
+                        exportFailed: <?php echo wp_json_encode('Failed to export data); ?>,
+                        deleteConfirm: <?php echo wp_json_encode('Delete your data?\n\nThis will permanently delete your quiz results, comparisons, and profile information. This cannot be undone.); ?>,
+                        deletePrompt: <?php echo wp_json_encode('Type DELETE to confirm data deletion:); ?>,
+                        deleteCancelled: <?php echo wp_json_encode('Data deletion cancelled.); ?>,
+                        deleteFinalConfirm: <?php echo wp_json_encode('Final confirmation: permanently delete all your data now?); ?>,
+                        deleting: <?php echo wp_json_encode('Deleting your data...); ?>,
+                        deleteSuccess: <?php echo wp_json_encode('Your data has been deleted successfully. Redirecting...); ?>,
+                        deleteFailed: <?php echo wp_json_encode('Failed to delete data); ?>
                     };
 
                     // Export data
@@ -358,9 +358,9 @@ get_header();
         </section>
 
         <section class="mm-section mm-mt-xl mm-divider-top">
-            <h2><?php echo esc_html__('Delete account', 'match-me'); ?></h2>
+            <h2><?php echo 'Delete account; ?></h2>
             <p class="mm-muted mm-max-70ch">
-                <?php echo esc_html__('This will permanently delete your account and', 'match-me'); ?> <strong><?php echo esc_html__('everything related to you', 'match-me'); ?></strong>, <?php echo esc_html__('including your profile information, quiz history, results, and comparisons. This action cannot be undone.', 'match-me'); ?>
+                <?php echo 'This will permanently delete your account and; ?> <strong><?php echo 'everything related to you; ?></strong>, <?php echo 'including your profile information, quiz history, results, and comparisons. This action cannot be undone.; ?>
             </p>
 
             <form id="mm-delete-account-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -369,7 +369,7 @@ get_header();
                 <input type="hidden" name="confirm_delete" value="">
 
                 <button type="button" class="mm-profile-btn mm-profile-btn-danger" id="mm-delete-account-btn">
-                    <?php echo esc_html__('Delete my account', 'match-me'); ?>
+                    <?php echo 'Delete my account; ?>
                 </button>
             </form>
 
@@ -379,10 +379,10 @@ get_header();
                     const form = document.getElementById('mm-delete-account-form');
                     if (!btn || !form) return;
                     const i18n = {
-                        deleteConfirm: <?php echo wp_json_encode(__('Delete your account?\n\nThis will permanently delete your profile, quiz history, results, and comparisons. This cannot be undone.', 'match-me')); ?>,
-                        deletePrompt: <?php echo wp_json_encode(__('Type DELETE to confirm account deletion:', 'match-me')); ?>,
-                        deleteCancelled: <?php echo wp_json_encode(__('Account deletion cancelled.', 'match-me')); ?>,
-                        deleteFinalConfirm: <?php echo wp_json_encode(__('Final confirmation: permanently delete your account now?', 'match-me')); ?>
+                        deleteConfirm: <?php echo wp_json_encode('Delete your account?\n\nThis will permanently delete your profile, quiz history, results, and comparisons. This cannot be undone.); ?>,
+                        deletePrompt: <?php echo wp_json_encode('Type DELETE to confirm account deletion:); ?>,
+                        deleteCancelled: <?php echo wp_json_encode('Account deletion cancelled.); ?>,
+                        deleteFinalConfirm: <?php echo wp_json_encode('Final confirmation: permanently delete your account now?); ?>
                     };
 
                     btn.addEventListener('click', function () {

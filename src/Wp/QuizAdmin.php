@@ -296,12 +296,6 @@ final class QuizAdmin
      */
     private function createPostForQuiz(string $quizFilePath, string $quizSlug): bool
     {
-        // Check if post already exists
-        $existingPost = get_page_by_path($quizSlug, OBJECT, 'post');
-        if ($existingPost instanceof \WP_Post) {
-            return true; // Post already exists
-        }
-        
         // Read quiz JSON to extract metadata
         $quizContent = file_get_contents($quizFilePath);
         if ($quizContent === false) {
@@ -317,18 +311,27 @@ final class QuizAdmin
         $title = isset($meta['title']) ? (string) $meta['title'] : ucwords(str_replace(['-', '_'], ' ', $quizSlug));
         $description = isset($meta['description']) ? (string) $meta['description'] : '';
         
-        // Create post content with quiz shortcode
-        $postContent = '';
-        if ($description !== '') {
-            $postContent .= '<p>' . esc_html($description) . '</p>' . "\n\n";
+        // Generate slug from title (not from JSON filename)
+        // Remove version suffixes like -v1, -v2, etc.
+        $postSlug = sanitize_title($title);
+        
+        // Check if post already exists with this slug
+        $existingPost = get_page_by_path($postSlug, OBJECT, 'post');
+        if ($existingPost instanceof \WP_Post) {
+            // Update the quiz slug reference if it changed
+            update_post_meta((int) $existingPost->ID, '_quiz_json_slug', $quizSlug);
+            return true; // Post already exists
         }
-        $postContent .= '[match_me_quiz id="' . esc_attr($quizSlug) . '"]';
+        
+        // Create post content with just the shortcode (description is shown in quiz intro)
+        $postContent = '[match_me_quiz id="' . esc_attr($quizSlug) . '"]';
         
         // Create the post
         $postId = wp_insert_post([
             'post_title' => $title,
-            'post_name' => $quizSlug,
+            'post_name' => $postSlug,
             'post_content' => $postContent,
+            'post_excerpt' => $description, // Store description as excerpt for quiz intro
             'post_status' => 'publish',
             'post_type' => 'post',
             'post_author' => get_current_user_id() ?: 1,
@@ -345,6 +348,9 @@ final class QuizAdmin
         if (isset($meta['version'])) {
             update_post_meta((int) $postId, '_quiz_version', (string) $meta['version']);
         }
+        // Store the JSON filename slug for loading the quiz
+        update_post_meta((int) $postId, '_quiz_json_slug', $quizSlug);
+        // Keep old meta for backward compatibility
         update_post_meta((int) $postId, '_quiz_slug', $quizSlug);
         
         return true;

@@ -33,7 +33,7 @@
         }
         
         wp_link_pages(array(
-            'before' => '<div class="page-links">' . esc_html__('Pages:', 'match-me'),
+            'before' => '<div class="page-links">' . 'Pages:',
             'after'  => '</div>',
         ));
         ?>
@@ -44,7 +44,7 @@
             <?php
             $tags = get_the_tag_list('', ', ');
             if ($tags) {
-                echo '<span class="tags-links">' . esc_html__('Tagged: ', 'match-me') . $tags . '</span>';
+                echo '<span class="tags-links">' . 'Tagged: ' . $tags . '</span>';
             }
             ?>
         </footer>
