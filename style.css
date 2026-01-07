@@ -6,6 +6,11 @@ Author: OtisTheDev
 Text Domain: match-me
 */
 
+/* Prevent double-tap zoom on mobile */
+* {
+  touch-action: manipulation;
+}
+
 /* ============================================
    Mobile-First Design Tokens
    ============================================ */
@@ -1328,24 +1333,43 @@ p {
 
 /* Hide duplicate title/description for quiz posts */
 .quiz-post-container article .entry-title,
-.quiz-post-container article .entry-content,
 .quiz-post-container article header.entry-header,
 .quiz-post-container article > .entry-header,
 .quiz-post-container article[role="banner"],
 .quiz-post-container article > [role="banner"],
 .quiz-post-container article > [role="banner"] h1,
 .quiz-post-container article > [role="banner"] h2,
-.quiz-post-container article > [role="banner"] + *:not([data-match-me-quiz]):not(.mmq):not(.mmq-intro) {
+.quiz-post-container article > [role="banner"] + *:not([data-match-me-quiz]):not(.mmq):not(.mmq-intro),
+/* Hide H1 and paragraph in entry-content that are NOT part of quiz shortcode */
+.quiz-post-container article .entry-content > h1,
+.quiz-post-container article .entry-content > h2,
+.quiz-post-container article .entry-content > p {
     display: none !important;
 }
 
-.page .site-main article.page,
-.single .site-main article.post {
+/* But keep quiz shortcode elements visible */
+.quiz-post-container article .entry-content [data-match-me-quiz],
+.quiz-post-container article .entry-content .mmq,
+.quiz-post-container article .entry-content .mmq-intro-title {
+    display: block !important;
+}
+
+.page .site-main article.page {
     /* White "main box" for content pages (e.g., Terms) */
     background: #ffffff;
     border: 1px solid var(--color-border);
     box-shadow: 0 12px 34px rgba(30, 42, 68, 0.06);
     max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.single .site-main article.post {
+    /* Transparent background for quiz posts */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    max-width: 100%;
     margin-left: auto;
     margin-right: auto;
 }

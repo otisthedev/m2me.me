@@ -258,10 +258,44 @@
                         <input type="text" class="group-name-input" placeholder="e.g., Team Communication, Family Styles">
                     </label>
                     
-                    <div class="participant-invites">
-                        <h4>Invite Participants</h4>
-                        <div class="invite-list" id="invite-list"></div>
-                        <button type="button" class="btn-add-invite">+ Add Invite</button>
+                    <div class="invite-method-selector">
+                        <div class="invite-tabs">
+                            <button type="button" class="invite-tab active" data-method="email">Email Invites</button>
+                            <button type="button" class="invite-tab" data-method="link">Share Link</button>
+                        </div>
+                    </div>
+                    
+                    <div id="email-invites-section" class="invite-section">
+                        <div class="participant-invites">
+                            <h4>Invite Participants</h4>
+                            <div class="invite-list" id="invite-list"></div>
+                            <button type="button" class="btn-add-invite">+ Add Invite</button>
+                        </div>
+                    </div>
+                    
+                    <div id="link-invite-section" class="invite-section" style="display: none;">
+                        <div class="link-invite-content">
+                            <p class="link-invite-description">Create the group first, then share the link with anyone you want to invite.</p>
+                        </div>
+                        
+                        <div id="invite-link-container" class="invite-link-container" style="display: none;">
+                            <label>
+                                <span>Invite Link</span>
+                                <div class="link-input-group">
+                                    <input type="text" id="invite-link-input" class="invite-link-input" readonly>
+                                    <button type="button" id="btn-copy-link" class="btn-copy-link">Copy</button>
+                                </div>
+                            </label>
+                            
+                            <div class="link-share-actions">
+                                <button type="button" class="btn-share-link" data-share="message">
+                                    Share via Message
+                                </button>
+                                <button type="button" class="btn-share-link" data-share="whatsapp">
+                                    Share on WhatsApp
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -304,51 +338,78 @@
             });
         });
         
+        // Invite method tabs
+        const emailSection = dialog.querySelector('#email-invites-section');
+        const linkSection = dialog.querySelector('#link-invite-section');
+        const tabs = dialog.querySelectorAll('.invite-tab');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                tabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                const method = this.getAttribute('data-method');
+                
+                if (method === 'email') {
+                    emailSection.style.display = 'block';
+                    linkSection.style.display = 'none';
+                } else {
+                    emailSection.style.display = 'none';
+                    linkSection.style.display = 'block';
+                }
+            });
+        });
+        
         // Create group handler
         dialog.querySelector('.btn-create-group')?.addEventListener('click', async function() {
             const createBtn = this;
             const groupName = dialog.querySelector('.group-name-input')?.value || '';
+            const activeMethod = dialog.querySelector('.invite-tab.active')?.getAttribute('data-method') || 'email';
             const inviteItems = Array.from(dialog.querySelectorAll('.invite-item'));
             
-            // Validate emails
-            const invites = [];
-            let hasInvalidEmail = false;
+            let invites = [];
             
-            for (const item of inviteItems) {
-                const emailInput = item.querySelector('.invite-email');
-                const email = emailInput?.value.trim() || '';
-                const name = item.querySelector('.invite-name')?.value.trim() || '';
+            if (activeMethod === 'email') {
+                // Validate emails
+                let hasInvalidEmail = false;
                 
-                if (email === '') {
-                    continue; // Skip empty emails
+                for (const item of inviteItems) {
+                    const emailInput = item.querySelector('.invite-email');
+                    const email = emailInput?.value.trim() || '';
+                    const name = item.querySelector('.invite-name')?.value.trim() || '';
+                    
+                    if (email === '') {
+                        continue; // Skip empty emails
+                    }
+                    
+                    // Validate email format
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        emailInput.style.borderColor = '#ef4444';
+                        hasInvalidEmail = true;
+                        continue;
+                    } else {
+                        emailInput.style.borderColor = '';
+                        invites.push({ email, name });
+                    }
                 }
                 
-                // Validate email format
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                    emailInput.style.borderColor = '#ef4444';
-                    hasInvalidEmail = true;
-                    continue;
-                } else {
-                    emailInput.style.borderColor = '';
-                    invites.push({ email, name });
+                if (hasInvalidEmail) {
+                    showMessage('Please enter valid email addresses', 'warning');
+                    return;
                 }
-            }
-            
-            if (hasInvalidEmail) {
-                showMessage('Please enter valid email addresses', 'warning');
-                return;
-            }
-            
-            if (invites.length < 2) {
-                showMessage('Invite at least 2 people to create a group', 'warning');
-                return;
+                
+                if (invites.length < 2) {
+                    showMessage('Invite at least 2 people to create a group', 'warning');
+                    return;
+                }
+            } else if (activeMethod === 'link') {
+                // For link invites, no minimum required - people will join via link
+                invites = [];
             }
             
             // Show loading state
             createBtn.disabled = true;
             createBtn.textContent = 'Creating...';
-            const originalText = createBtn.textContent;
             
             try {
                 const response = await fetch('/wp-json/match-me/v1/group/create', {
@@ -367,11 +428,69 @@
                 const data = await response.json();
                 
                 if (response.ok && data.group_id) {
-                    showMessage(`Group created! Invitation emails sent to ${invites.length} ${invites.length === 1 ? 'person' : 'people'}.`, 'success');
-                    dialog.remove();
-                    // Redirect to group page or show group link
-                    if (data.group_id) {
-                        window.location.href = `/group/${data.group_id}/`;
+                    if (activeMethod === 'email' && invites.length > 0) {
+                        showMessage(`Group created! Invitation emails sent to ${invites.length} ${invites.length === 1 ? 'person' : 'people'}.`, 'success');
+                        setTimeout(() => {
+                            dialog.remove();
+                            if (data.group_id) {
+                                window.location.href = `/group/${data.group_id}/`;
+                            }
+                        }, 2000);
+                    } else if (activeMethod === 'link') {
+                        // Create an open invite token for link sharing
+                        // Use placeholder email that won't trigger email sending
+                        try {
+                            const placeholderEmail = `link-invite-${Date.now()}@placeholder.invalid`;
+                            const inviteResponse = await fetch(`/wp-json/match-me/v1/group/${data.group_id}/invite`, {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'X-WP-Nonce': (window.matchMeQuizVars && window.matchMeQuizVars.nonce) || (window.cqVars && window.cqVars.nonce) || ''
+                                },
+                                body: JSON.stringify({
+                                    email: placeholderEmail, // Placeholder email for link-based invite
+                                    name: null
+                                }),
+                            });
+                            
+                            const inviteData = await inviteResponse.json();
+                            const inviteToken = inviteData.invite_token || '';
+                            
+                            if (inviteToken) {
+                                const inviteUrl = `${window.location.origin}/group/join/${inviteToken}/`;
+                                const linkInput = dialog.querySelector('#invite-link-input');
+                                const linkContainer = dialog.querySelector('#invite-link-container');
+                                
+                                linkInput.value = inviteUrl;
+                                linkContainer.style.display = 'block';
+                                
+                                // Hide form, show link
+                                dialog.querySelector('.group-form > label').style.display = 'none';
+                                dialog.querySelector('.invite-method-selector').style.display = 'none';
+                                emailSection.style.display = 'none';
+                                linkSection.style.display = 'block';
+                                createBtn.textContent = 'Done';
+                                createBtn.disabled = false;
+                                
+                                showMessage('Group created! Share the link below to invite people.', 'success');
+                            } else {
+                                showMessage('Group created, but could not generate invite link.', 'warning');
+                                createBtn.disabled = false;
+                                createBtn.textContent = 'Create Group';
+                            }
+                        } catch (inviteError) {
+                            showMessage('Group created, but could not generate invite link.', 'warning');
+                            createBtn.disabled = false;
+                            createBtn.textContent = 'Create Group';
+                        }
+                    } else {
+                        showMessage('Group created!', 'success');
+                        setTimeout(() => {
+                            dialog.remove();
+                            if (data.group_id) {
+                                window.location.href = `/group/${data.group_id}/`;
+                            }
+                        }, 2000);
                     }
                 } else {
                     const errorMsg = data.message || data.code || 'Failed to create group';
@@ -384,6 +503,66 @@
                 createBtn.disabled = false;
                 createBtn.textContent = 'Create Group';
             }
+        });
+        
+        // Copy link handler
+        dialog.querySelector('#btn-copy-link')?.addEventListener('click', async function() {
+            const linkInput = dialog.querySelector('#invite-link-input');
+            const link = linkInput?.value || '';
+            
+            if (!link) return;
+            
+            try {
+                await navigator.clipboard.writeText(link);
+                this.textContent = 'Copied!';
+                showMessage('Link copied to clipboard!', 'success');
+                setTimeout(() => {
+                    this.textContent = 'Copy';
+                }, 2000);
+            } catch (e) {
+                // Fallback
+                linkInput.select();
+                document.execCommand('copy');
+                this.textContent = 'Copied!';
+                showMessage('Link copied to clipboard!', 'success');
+                setTimeout(() => {
+                    this.textContent = 'Copy';
+                }, 2000);
+            }
+        });
+        
+        // Share link handlers
+        dialog.querySelectorAll('.btn-share-link').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const linkInput = dialog.querySelector('#invite-link-input');
+                const link = linkInput?.value || '';
+                const shareType = this.getAttribute('data-share');
+                
+                if (!link) return;
+                
+                const quizTitle = quizTitle || 'this quiz';
+                const message = `I'd like you to take ${quizTitle} and compare our results! Join here: ${link}`;
+                
+                if (shareType === 'whatsapp') {
+                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                } else if (shareType === 'message') {
+                    if (navigator.share) {
+                        try {
+                            await navigator.share({
+                                title: 'Join my group quiz',
+                                text: message,
+                                url: link
+                            });
+                        } catch (e) {
+                            // User cancelled or error
+                        }
+                    } else {
+                        // Fallback to copy
+                        await navigator.clipboard.writeText(message);
+                        showMessage('Message copied! Paste it in your messaging app.', 'success');
+                    }
+                }
+            });
         });
     }
 

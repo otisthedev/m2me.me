@@ -200,9 +200,9 @@ final class QuizShortcodes
             ?>
 
             <div class="mmq-intro">
-                <div class="mmq-intro-title">
+                <h1 class="mmq-intro-title">
                     <?= esc_html((string) ($quizData['meta']['title'] ?? 'Quiz')) ?>
-                </div>
+                </h1>
                 <div class="mmq-intro-content">
                     <?php if ($postId && has_post_thumbnail($postId)) : ?>
                         <div class="mmq-intro-image">
