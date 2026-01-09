@@ -20,7 +20,7 @@
   width: calc(100% - 2rem);
   max-width: 520px;
   margin: min(8vh, 64px) auto 0;
-  background: var(--color-bg, #F6F5F2);
+  background: #ffffff;
   border-radius: 12px;
   padding: 22px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
@@ -59,8 +59,8 @@
 }
 
 .mm-auth-title {
-  font-size: 26px;
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 750;
   letter-spacing: -0.02em;
   color: var(--color-primary, #1E2A44);
   margin-bottom: 6px;
@@ -117,11 +117,15 @@
 }
 
 .mm-auth-panels {
-  margin-top: 18px;
+  margin-top: 16px;
   overflow: auto;
   padding-right: 2px;
   min-height: 0;
   overflow-x: hidden;
+}
+
+.mm-auth-social-block {
+  margin-top: 8px;
 }
 
 .mm-auth-panel {
@@ -150,10 +154,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  min-height: 44px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border, #E5E7EB);
-  background: rgba(255, 255, 255, 0.65);
+  min-height: 52px;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 42, 68, 0.14);
+  background: #ffffff;
   color: var(--color-text, #2B2E34);
   text-decoration: none;
   font-weight: 700;
@@ -164,7 +168,7 @@
 }
 
 .mm-auth-social-btn:hover {
-  background: rgba(30, 42, 68, 0.06);
+  background: rgba(30, 42, 68, 0.03);
   border-color: rgba(30, 42, 68, 0.22);
   transform: translateY(-1px);
   box-shadow: 0 14px 34px rgba(30, 42, 68, 0.12);
@@ -177,8 +181,8 @@
   width: 30px;
   height: 30px;
   border-radius: 10px;
-  background: rgba(143, 174, 163, 0.18);
-  border: 1px solid rgba(143, 174, 163, 0.28);
+  background: rgba(30, 42, 68, 0.06);
+  border: 1px solid rgba(30, 42, 68, 0.10);
 }
 
 .mm-auth-social-text {
@@ -189,7 +193,27 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 16px 0;
+  margin: 14px 0 12px;
+}
+
+/* Provider accents (recognizable, still minimal) */
+.mm-auth-social-btn[data-mm-auth-social="facebook"] {
+  background: #1877F2;
+  border-color: rgba(24, 119, 242, 0.35);
+  color: #ffffff;
+}
+.mm-auth-social-btn[data-mm-auth-social="facebook"] .mm-auth-social-icon {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.mm-auth-social-btn[data-mm-auth-social="instagram"] {
+  background: linear-gradient(135deg, #833AB4 0%, #FD1D1D 45%, #FCAF45 100%);
+  border-color: rgba(253, 29, 29, 0.25);
+  color: #ffffff;
+}
+.mm-auth-social-btn[data-mm-auth-social="instagram"] .mm-auth-social-icon {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .mm-auth-divider::before,
@@ -264,6 +288,8 @@
 }
 
 .mm-auth-password input {
+  position: relative;
+  z-index: 1;
   padding-right: 56px;
 }
 
@@ -272,6 +298,12 @@
   top: 50%;
   right: 6px;
   transform: translateY(-50%);
+  z-index: 2;
+  width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
   min-width: 44px;
   height: 44px;
   border-radius: 10px;
@@ -281,6 +313,7 @@
   font-weight: 800;
   font-size: 12px;
   letter-spacing: 0.02em;
+  line-height: 1;
   cursor: pointer;
   padding: 0 10px;
 }
@@ -397,27 +430,7 @@
   color: var(--color-text, #2B2E34);
 }
 
-.mm-auth-social-details {
-  margin-top: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(30, 42, 68, 0.10);
-  background: rgba(255, 255, 255, 0.50);
-  padding: 10px 12px;
-}
-
-.mm-auth-social-summary {
-  list-style: none;
-  cursor: pointer;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  font-weight: 800;
-  color: var(--color-text, #2B2E34);
-}
-
-.mm-auth-social-summary::-webkit-details-marker {
-  display: none;
-}
+/* Legacy disclosure container removed: social is now always visible and first. */
 
 @media (prefers-reduced-motion: reduce) {
   .mm-auth-close,
@@ -480,6 +493,10 @@
 
   .mm-auth-submit {
     min-height: 46px;
+  }
+
+  .mm-auth-social-btn {
+    min-height: 52px;
   }
 }
 

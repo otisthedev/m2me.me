@@ -1111,12 +1111,33 @@ document.addEventListener('DOMContentLoaded', () => {
             : false;
 
         if (ok) {
-            alert(successMessage + '\n' + text);
+            showSuccessMessage(successMessage);
             return;
         }
 
-        // Last resort: show the link and ask for manual copy.
-        alert('Copy this link:\n' + text);
+        // Fallback: try legacy execCommand copy
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', 'readonly');
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            ta.style.top = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            ta.setSelectionRange(0, ta.value.length);
+            const copied = document.execCommand && document.execCommand('copy');
+            document.body.removeChild(ta);
+            if (copied) {
+                showSuccessMessage(successMessage);
+                return;
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        // Last resort: show the link inline (non-blocking) for manual copy.
+        showWarningMessage('Copy this link: ' + text);
     }
 
 

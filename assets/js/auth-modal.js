@@ -265,12 +265,17 @@
 
     // Password visibility toggles.
     qsa('[data-mm-auth-toggle]', modal).forEach((btn) => {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', function (e) {
+        // Prevent label default behavior from swallowing the click in some browsers.
+        try { e.preventDefault(); } catch (e2) { /* ignore */ }
+        try { e.stopPropagation(); } catch (e2) { /* ignore */ }
+
         const key = btn.getAttribute('data-mm-auth-toggle') || '';
         const input = qs(`[data-mm-auth-field="${cssEscape(key)}"]`, modal);
         if (!input) return;
-        const isHidden = input.getAttribute('type') === 'password';
-        input.setAttribute('type', isHidden ? 'text' : 'password');
+        const isHidden = (input.getAttribute('type') === 'password') || (input.type === 'password');
+        // Use property assignment for best cross-browser behavior.
+        input.type = isHidden ? 'text' : 'password';
         btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
         btn.textContent = isHidden ? 'Hide' : 'Show';
         btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
