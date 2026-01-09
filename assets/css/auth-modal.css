@@ -295,8 +295,9 @@
 
 .mm-auth-eye {
   position: absolute;
-  top: 50%;
+  top: 0;
   right: 6px;
+  background: transparent;
   transform: translateY(-50%);
   z-index: 2;
   width: 44px;
@@ -306,7 +307,8 @@
   flex: 0 0 auto;
   min-width: 44px;
   height: 44px;
-  border-radius: 10px;
+  border: 0;
+  box-shadow: none;
   color: var(--color-text, #2B2E34);
   font-weight: 800;
   font-size: 12px;
@@ -356,7 +358,7 @@
   min-height: 52px;
   border-radius: 10px;
   /* border: 1px solid rgba(30, 42, 68, 0.12); */
-  background: linear-gradient(135deg, rgba(131, 58, 180, 0.95) 0%, rgba(253, 29, 29, 0.92) 52%, rgba(252, 175, 69, 0.92) 100%);
+  /* background: linear-gradient(135deg, rgba(131, 58, 180, 0.95) 0%, rgba(253, 29, 29, 0.92) 52%, rgba(252, 175, 69, 0.92) 100%); */
   color: var(--color-bg, #F6F5F2);
   font-weight: 800;
   cursor: pointer;
