@@ -42,9 +42,7 @@ final class FacebookAuth
             return;
         }
 
-        // Prevent WordPress from redirecting before we handle this
-        remove_action('template_redirect', 'redirect_canonical');
-
+        // Check config FIRST
         $appId = $this->config->facebookAppId();
         $appSecret = $this->config->facebookAppSecret();
         if (!$appId || !$appSecret) {
@@ -58,10 +56,10 @@ final class FacebookAuth
             return;
         }
 
+        // Prevent WordPress from redirecting before we handle this
+        remove_action('template_redirect', 'redirect_canonical');
+
         $redirectUri = home_url('/?facebook_auth=1');
-        $redirectTo = isset($_GET['redirect_to']) ? (string) $_GET['redirect_to'] : '';
-        $redirectTo = wp_validate_redirect($redirectTo, home_url('/'));
-        $state = isset($_GET['state']) ? sanitize_text_field((string) $_GET['state']) : '';
 
         if (isset($_GET['error'])) {
             $msg = isset($_GET['error_description']) ? sanitize_text_field((string) $_GET['error_description']) : sanitize_text_field((string) $_GET['error']);
@@ -69,16 +67,17 @@ final class FacebookAuth
         }
 
         if (!isset($_GET['code'])) {
-            error_log('Facebook OAuth Callback Reached. Code: ' . $_GET['code'] . ', State: ' . ($_GET['state'] ?? 'none'));
-
             // First hop: generate state and store redirect_to transient.
+            $redirectTo = isset($_GET['redirect_to']) ? (string) $_GET['redirect_to'] : '';
+            $redirectTo = wp_validate_redirect($redirectTo, home_url('/'));
+            
             $state = wp_generate_uuid4();
             set_transient('match_me_oauth_state_' . $state, ['redirect_to' => $redirectTo], 10 * MINUTE_IN_SECONDS);
 
             $scope = 'email,public_profile';
             $url = 'https://www.facebook.com/v24.0/dialog/oauth?' . http_build_query([
                 'client_id' => $appId,
-                'redirect_uri' => $redirectUri,
+                'redirect_uri' => urlencode($redirectUri),
                 'scope' => $scope,
                 'response_type' => 'code',
                 'state' => $state,
@@ -89,16 +88,27 @@ final class FacebookAuth
             exit;
         }
 
-        // Callback: resolve redirect_to from state (preferred).
-        if ($state !== '') {
-            $stored = get_transient('match_me_oauth_state_' . $state);
+        // Callback: handle the OAuth response
+        $code = sanitize_text_field((string) $_GET['code']);
+        $incomingState = isset($_GET['state']) ? sanitize_text_field((string) $_GET['state']) : '';
+        
+        // FIRST: Try to get redirect from state transient
+        if ($incomingState !== '') {
+            $stored = get_transient('match_me_oauth_state_' . $incomingState);
             if (is_array($stored) && isset($stored['redirect_to'])) {
                 $redirectTo = wp_validate_redirect((string) $stored['redirect_to'], home_url('/'));
+                delete_transient('match_me_oauth_state_' . $incomingState);
+            } else {
+                // State is invalid/expired
+                wp_die('Invalid or expired OAuth state. Please try logging in again.');
             }
-            delete_transient('match_me_oauth_state_' . $state);
         }
-
-        $code = sanitize_text_field((string) $_GET['code']);
+        // Only use GET parameter if state wasn't valid
+        elseif (isset($_GET['redirect_to'])) {
+            $redirectTo = wp_validate_redirect((string) $_GET['redirect_to'], home_url('/'));
+        } else {
+            $redirectTo = home_url('/');
+        }
 
         $tokenUrl = 'https://graph.facebook.com/v24.0/oauth/access_token?' . http_build_query([
             'client_id' => $appId,
@@ -109,7 +119,8 @@ final class FacebookAuth
 
         $tokenResponse = wp_remote_get($tokenUrl);
         if (is_wp_error($tokenResponse)) {
-            wp_die('Error during Facebook token exchange.');
+            error_log('Facebook token exchange error: ' . $tokenResponse->get_error_message());
+            wp_die('Error during Facebook token exchange. Check server logs.');
         }
 
         $tokenBody = json_decode((string) wp_remote_retrieve_body($tokenResponse), true);
@@ -125,6 +136,7 @@ final class FacebookAuth
 
         $userInfoResponse = wp_remote_get($userInfoUrl);
         if (is_wp_error($userInfoResponse)) {
+            error_log('Facebook user info error: ' . $userInfoResponse->get_error_message());
             wp_die('Error retrieving user information from Facebook.');
         }
 
@@ -182,6 +194,7 @@ final class FacebookAuth
             ]);
 
             if (is_wp_error($userId)) {
+                error_log('WordPress user creation error: ' . $userId->get_error_message());
                 wp_die('Error creating WordPress user account.');
             }
 
@@ -205,7 +218,7 @@ final class FacebookAuth
             return;
         }
 
-        $inline = "window.fbAsyncInit=function(){FB.init({appId:'" . esc_js($appId) . "',xfbml:true,version:'v22.0'});FB.AppEvents&&FB.AppEvents.logPageView&&FB.AppEvents.logPageView();};(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(d.getElementById(id)){return;}js=d.createElement(s);js.id=id;js.src='https://connect.facebook.net/en_US/sdk.js';fjs.parentNode.insertBefore(js,fjs);}(document,'script','facebook-jssdk'));";
+        $inline = "window.fbAsyncInit=function(){FB.init({appId:'" . esc_js($appId) . "',xfbml:true,version:'v24.0'});FB.AppEvents&&FB.AppEvents.logPageView&&FB.AppEvents.logPageView();};(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(d.getElementById(id)){return;}js=d.createElement(s);js.id=id;js.src='https://connect.facebook.net/en_US/sdk.js';fjs.parentNode.insertBefore(js,fjs);}(document,'script','facebook-jssdk'));";
         wp_register_script('match-me-facebook-sdk', '', [], null, true);
         wp_enqueue_script('match-me-facebook-sdk');
         wp_add_inline_script('match-me-facebook-sdk', $inline);
@@ -429,6 +442,3 @@ final class FacebookAuth
         exit;
     }
 }
-
-
-
