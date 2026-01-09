@@ -1605,7 +1605,7 @@ input[type="button"] {
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    /* box-shadow: 0 10px 24px rgba(30, 42, 68, 0.14); */
+    box-shadow: 0 10px 24px rgba(30, 42, 68, 0.14);
     transition: transform var(--transition), background var(--transition), box-shadow var(--transition), filter var(--transition);
     -webkit-tap-highlight-color: transparent;
     min-height: 44px;
