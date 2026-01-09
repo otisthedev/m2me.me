@@ -887,36 +887,76 @@
         const ctaText = generateContextualCTAText(aspect, quizTitle);
         const shareableHeadline = opts?.shareableHeadline || instagramSummary || '';
 
+        const iconCompare = `
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10.2 13.8a3 3 0 0 1 0-4.2l2.5-2.5a3 3 0 0 1 4.2 4.2l-.9.9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M13.8 10.2a3 3 0 0 1 0 4.2l-2.5 2.5a3 3 0 0 1-4.2-4.2l.9-.9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        `;
+        const iconStory = `
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8.5 7.5h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2" />
+                <path d="M9.2 7.5l.5-1.1A2 2 0 0 1 11.5 5h1A2 2 0 0 1 14.3 6.4l.5 1.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        `;
+        const iconChevron = `
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+
         section.innerHTML = `
             <div class="share-section-header">
                 <h3>${escapeHtml(title)}</h3>
-                <p class="share-section-subtitle">Discover how you match with friends, partners, or colleagues</p>
+                <p class="share-section-subtitle">Share your result or invite someone to compare</p>
             </div>
-            <div class="share-buttons">
-                <!-- PRIMARY CTA: Comparison (most viral potential) -->
-                <button type="button" class="btn-share-compare btn-primary-cta" ${comparisonUrl ? '' : 'disabled aria-disabled="true"'}>
-                    <span class="btn-icon">🔗</span>
-                    <span class="btn-main-text">${comparisonUrl ? ctaText.primary : 'Comparison not available'}</span>
-                    <span class="btn-subtitle">${comparisonUrl ? ctaText.subtitle : 'Complete the quiz first'}</span>
+            <div class="share-buttons" role="group" aria-label="Share actions">
+                <button
+                    type="button"
+                    class="btn-share-compare mm-share-btn mm-share-btn--primary"
+                    ${comparisonUrl ? '' : 'disabled aria-disabled="true"'}
+                    aria-label="${comparisonUrl ? escapeHtml(ctaText.primary) : 'Comparison not available'}"
+                >
+                    <span class="mm-share-btn__icon" aria-hidden="true">${iconCompare}</span>
+                    <span class="mm-share-btn__text">
+                        <span class="mm-share-btn__title">${comparisonUrl ? escapeHtml(ctaText.primary) : 'Comparison not available'}</span>
+                        <span class="mm-share-btn__subtitle">${comparisonUrl ? escapeHtml(ctaText.subtitle) : 'Complete the quiz first'}</span>
+                    </span>
+                    <span class="mm-share-btn__chevron" aria-hidden="true">${iconChevron}</span>
                 </button>
-                
-                <!-- SECONDARY CTA: Instagram Story (visual sharing) -->
-                <button type="button" class="btn-share-instagram btn-secondary-cta">
-                    <span class="btn-icon">📸</span>
-                    <span class="btn-main-text">Share as Instagram Story</span>
-                    <span class="btn-subtitle">Create a visual story with your results</span>
+
+                <button
+                    type="button"
+                    class="btn-share-instagram mm-share-btn mm-share-btn--instagram"
+                    aria-label="Share to Instagram Story"
+                >
+                    <span class="mm-share-btn__icon" aria-hidden="true">${iconStory}</span>
+                    <span class="mm-share-btn__text">
+                        <span class="mm-share-btn__title">Share to Instagram Story</span>
+                        <span class="mm-share-btn__subtitle">Download or share a story image</span>
+                    </span>
+                    <span class="mm-share-btn__chevron" aria-hidden="true">${iconChevron}</span>
                 </button>
-                
-                <!-- TERTIARY CTA: Direct result sharing (less viral) -->
-                <button type="button" class="btn-share-view btn-tertiary-cta" ${resultUrl ? '' : 'disabled aria-disabled="true"'}>
-                    <span class="btn-icon">🔗</span>
-                    <span class="btn-main-text">${resultUrl ? 'Share my results' : 'Result not available'}</span>
-                    <span class="btn-subtitle">${resultUrl ? 'Send a link to view your quiz results' : 'Complete the quiz first'}</span>
+
+                <button
+                    type="button"
+                    class="btn-share-view mm-share-btn mm-share-btn--tertiary"
+                    ${resultUrl ? '' : 'disabled aria-disabled="true"'}
+                    aria-label="${resultUrl ? 'Share my results' : 'Result not available'}"
+                >
+                    <span class="mm-share-btn__icon" aria-hidden="true">${iconCompare}</span>
+                    <span class="mm-share-btn__text">
+                        <span class="mm-share-btn__title">${resultUrl ? 'Share my results' : 'Result not available'}</span>
+                        <span class="mm-share-btn__subtitle">${resultUrl ? 'Send a link to view this result' : 'Complete the quiz first'}</span>
+                    </span>
+                    <span class="mm-share-btn__chevron" aria-hidden="true">${iconChevron}</span>
                 </button>
             </div>
-            <div class="share-privacy-note">
-                <span class="privacy-icon">🔒</span>
-                <span>All sharing is private and voluntary. You control who sees your results.</span>
+
+            <div class="share-privacy-note" role="note">
+                <span class="privacy-icon" aria-hidden="true">🔒</span>
+                <span>Sharing is optional. You control who sees your result.</span>
             </div>
         `;
 
@@ -926,6 +966,11 @@
                 // Prefer sharing a comparison-capable link in the story (match > compare > view)
                 const u = comparisonUrl || resultUrl;
                 if (!u) return;
+                try {
+                    if (window.matchMeEvents && typeof window.matchMeEvents.emit === 'function') {
+                        window.matchMeEvents.emit('share_click', { kind: 'instagram_story' });
+                    }
+                } catch (e) { /* ignore */ }
                 await handleInstagramStoryShareV2({
                     kind,
                     title: instagramTitle,
@@ -973,6 +1018,11 @@
         if (compareBtn) {
             compareBtn.addEventListener('click', async function() {
                 if (!comparisonUrl) return;
+                try {
+                    if (window.matchMeEvents && typeof window.matchMeEvents.emit === 'function') {
+                        window.matchMeEvents.emit('share_click', { kind: 'compare_link' });
+                    }
+                } catch (e) { /* ignore */ }
                 await shareLink(comparisonUrl, 'compare');
             });
         }
@@ -981,6 +1031,11 @@
         if (viewBtn) {
             viewBtn.addEventListener('click', async function() {
                 if (!resultUrl) return;
+                try {
+                    if (window.matchMeEvents && typeof window.matchMeEvents.emit === 'function') {
+                        window.matchMeEvents.emit('share_click', { kind: 'result_link' });
+                    }
+                } catch (e) { /* ignore */ }
                 await shareLink(resultUrl, 'view');
             });
         }
@@ -1680,9 +1735,78 @@
      * Show compare dialog.
      */
     function showCompareDialog(shareToken) {
-        // In a real implementation, this would show a dialog/modal
-        // For now, show a simple prompt.
-        alert('Compare feature: Enter the other person\'s share token or have them take the quiz.');
+        const token = String(shareToken || '').trim();
+        if (!token) {
+            showMessage('Comparison link not available yet. Complete the quiz first.', 'warning');
+            return;
+        }
+
+        const base = (window.matchMeTheme && window.matchMeTheme.homeUrl) ? String(window.matchMeTheme.homeUrl).replace(/\/+$/, '') : window.location.origin;
+        const compareUrl = `${base}/compare/${encodeURIComponent(token)}/`;
+
+        const dialog = document.createElement('div');
+        dialog.className = 'match-me-invite-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-overlay"></div>
+            <div class="dialog-content">
+                <button type="button" class="dialog-close-btn" aria-label="Close">×</button>
+                <h3>Compare with someone</h3>
+                <p class="dialog-description">Share this link. When they take the quiz, you’ll both see your match breakdown.</p>
+
+                <label class="mm-auth-field" style="display:block;">
+                    <span>Comparison link</span>
+                    <div class="link-input-group" style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" class="invite-link-input" value="${escapeHtml(compareUrl)}" readonly style="flex:1; min-height:48px;">
+                        <button type="button" class="btn-copy-link" style="min-height:48px; padding:0 14px; border-radius:10px; border:1px solid var(--color-border,#E5E7EB); background:#fff; font-weight:800; cursor:pointer;">Copy</button>
+                    </div>
+                </label>
+
+                <div class="invite-actions" style="margin-top:12px;">
+                    <button type="button" class="btn-invite-share" data-url="${escapeHtml(compareUrl)}">Share</button>
+                    <button type="button" class="btn-invite-close">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(dialog);
+        setupDialogHandlers(dialog);
+
+        const copyBtn = dialog.querySelector('.btn-copy-link');
+        const shareBtn = dialog.querySelector('.btn-invite-share');
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async function () {
+                try {
+                    await copyToClipboard(compareUrl);
+                    showMessage('Link copied. Send it to someone to compare.', 'success');
+                } catch (e) {
+                    showMessage('Could not copy link. Please try again.', 'warning');
+                }
+            });
+        }
+
+        if (shareBtn) {
+            shareBtn.addEventListener('click', async function () {
+                try {
+                    if (navigator.share) {
+                        await navigator.share({
+                            title: 'Compare results',
+                            text: 'Take this quiz and compare our results:',
+                            url: compareUrl,
+                        });
+                        return;
+                    }
+                } catch (e) {
+                    // fall through to copy
+                }
+                try {
+                    await copyToClipboard(compareUrl);
+                    showMessage('Link copied. Paste it into any chat app.', 'success');
+                } catch (e) {
+                    showMessage('Could not share. Please try again.', 'warning');
+                }
+            });
+        }
     }
 
     /**

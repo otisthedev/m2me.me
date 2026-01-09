@@ -1343,14 +1343,26 @@ p {
 /* Hide H1 and paragraph in entry-content that are NOT part of quiz shortcode */
 .quiz-post-container article .entry-content > h1,
 .quiz-post-container article .entry-content > h2,
-.quiz-post-container article .entry-content > p {
+.quiz-post-container article .entry-content > p,
+/* Hide all H1 and P elements in article that are not inside quiz shortcode */
+.quiz-post-container article h1:not(.mmq-intro-title),
+.quiz-post-container article p {
     display: none !important;
 }
 
 /* But keep quiz shortcode elements visible */
 .quiz-post-container article .entry-content [data-match-me-quiz],
 .quiz-post-container article .entry-content .mmq,
-.quiz-post-container article .entry-content .mmq-intro-title {
+.quiz-post-container article .entry-content .mmq-intro-title,
+.quiz-post-container article .mmq,
+.quiz-post-container article .mmq-intro-title,
+.quiz-post-container article [data-match-me-quiz],
+.quiz-post-container article .mmq-intro,
+.quiz-post-container article .mmq-intro-content,
+.quiz-post-container article .mmq-intro-text,
+.quiz-post-container article .mmq-intro-text p,
+.quiz-post-container article .mmq h1,
+.quiz-post-container article [data-match-me-quiz] h1 {
     display: block !important;
 }
 
@@ -1362,6 +1374,20 @@ p {
     max-width: 860px;
     margin-left: auto;
     margin-right: auto;
+}
+
+.page .site-main article.page.mm-page-quiz {
+    /* Quiz pages should look like the quiz app, not a content article. */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    max-width: 100%;
+}
+
+.page .site-main article.page.mm-page-quiz .entry-content {
+    /* Remove “article” typography defaults around the quiz app container. */
+    font-size: inherit;
+    line-height: inherit;
 }
 
 .single .site-main article.post {

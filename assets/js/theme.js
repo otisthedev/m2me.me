@@ -4,6 +4,41 @@
 (function() {
     'use strict';
 
+    /**
+     * Lightweight event emitter for UX instrumentation.
+     *
+     * Consumers can replace `window.matchMeEvents.emit` to forward to GA/GTM/etc.
+     * Default behavior: dispatch a DOM event + (in dev) log to console.
+     */
+    (function initMatchMeEvents() {
+        if (window.matchMeEvents && typeof window.matchMeEvents.emit === 'function') return;
+        const isDev = (function () {
+            try {
+                return /localhost|127\.0\.0\.1/i.test(String(window.location && window.location.hostname));
+            } catch (e) {
+                return false;
+            }
+        })();
+
+        window.matchMeEvents = {
+            emit: function (name, payload) {
+                const detail = {
+                    name: String(name || ''),
+                    payload: payload || {},
+                    ts: Date.now(),
+                };
+                try {
+                    document.dispatchEvent(new CustomEvent('matchMeEvent', { detail }));
+                } catch (e) {
+                    // ignore
+                }
+                if (isDev && typeof console !== 'undefined' && console && typeof console.log === 'function') {
+                    console.log('[matchMeEvent]', detail.name, detail.payload);
+                }
+            }
+        };
+    })();
+
     document.addEventListener('DOMContentLoaded', function() {
         const header = document.querySelector('#masthead');
         const menuToggle = document.querySelector('.menu-toggle');

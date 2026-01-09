@@ -256,16 +256,13 @@ final class QuizShortcodes
         $fallback = $this->config->themeVersion();
 
         $publicCss = $baseDir . '/assets/css/quiz-public.css';
-        $popupCss = $baseDir . '/assets/css/quiz-popup.css';
         $publicJs = $baseDir . '/assets/js/quiz-public.js';
         // quiz-popup.js used to contain a hard-coded register/login popup; auth is now handled globally via AuthModal.
 
         $publicCssVer = is_file($publicCss) ? (string) filemtime($publicCss) : $fallback;
-        $popupCssVer = is_file($popupCss) ? (string) filemtime($popupCss) : $fallback;
         $publicJsVer = is_file($publicJs) ? (string) filemtime($publicJs) : $fallback;
 
         wp_enqueue_style('match-me-quiz-public', get_template_directory_uri() . '/assets/css/quiz-public.css', [], $publicCssVer);
-        wp_enqueue_style('match-me-quiz-popup', get_template_directory_uri() . '/assets/css/quiz-popup.css', [], $popupCssVer);
         // Register clipboard helper and make it a dependency for copy/share actions.
         wp_register_script('match-me-clipboard', get_template_directory_uri() . '/assets/js/mm-clipboard.js', [], $this->config->themeVersion(), true);
         wp_enqueue_script('match-me-quiz-public', get_template_directory_uri() . '/assets/js/quiz-public.js', ['match-me-clipboard'], $publicJsVer, true);

@@ -107,6 +107,7 @@
     const messages = {
       invalid_email: 'Please enter a valid email address.',
       weak_password: 'Your password is too short. Use at least 8 characters.',
+      password_mismatch: 'Passwords do not match. Please try again.',
       email_exists: 'An account with this email already exists. Try logging in instead.',
       register_failed: 'Registration failed. Please try again in a moment.',
     };
@@ -148,6 +149,12 @@
     setBackgroundInert(true);
     isOpen = true;
 
+    try {
+      if (window.matchMeEvents && typeof window.matchMeEvents.emit === 'function') {
+        window.matchMeEvents.emit('auth_modal_open', { mode: mode || 'login' });
+      }
+    } catch (e) { /* ignore */ }
+
     // Move focus into the dialog for accessibility.
     const firstField = qs('input[name="log"], input[name="email"], button[data-mm-auth-close]', modal);
     if (firstField && typeof firstField.focus === 'function') {
@@ -181,11 +188,52 @@
     document.documentElement.style.overflow = '';
     setBackgroundInert(false);
     isOpen = false;
+
+    try {
+      if (window.matchMeEvents && typeof window.matchMeEvents.emit === 'function') {
+        window.matchMeEvents.emit('auth_modal_close', {});
+      }
+    } catch (e) { /* ignore */ }
   }
 
   document.addEventListener('DOMContentLoaded', function () {
     const modal = qs('#mm-auth-modal');
     if (!modal) return;
+
+    function clearFieldError(fieldKey) {
+      const msg = qs(`[data-mm-auth-error-for="${cssEscape(fieldKey)}"]`, modal);
+      if (msg) msg.textContent = '';
+      const input = qs(`[data-mm-auth-field="${cssEscape(fieldKey)}"]`, modal);
+      if (input) input.removeAttribute('aria-invalid');
+    }
+
+    function setFieldError(fieldKey, message) {
+      const msg = qs(`[data-mm-auth-error-for="${cssEscape(fieldKey)}"]`, modal);
+      if (msg) msg.textContent = String(message || '');
+      const input = qs(`[data-mm-auth-field="${cssEscape(fieldKey)}"]`, modal);
+      if (input) input.setAttribute('aria-invalid', 'true');
+    }
+
+    function focusField(fieldKey) {
+      const input = qs(`[data-mm-auth-field="${cssEscape(fieldKey)}"]`, modal);
+      if (input && typeof input.focus === 'function') input.focus();
+    }
+
+    function isValidEmail(value) {
+      const v = String(value || '').trim();
+      if (!v) return false;
+      // Simple, forgiving email check (server is authoritative).
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    }
+
+    function cssEscape(s) {
+      const v = String(s || '');
+      try {
+        return CSS && typeof CSS.escape === 'function' ? CSS.escape(v) : v.replace(/"/g, '\\"');
+      } catch (e) {
+        return v.replace(/"/g, '\\"');
+      }
+    }
 
     qsa('[data-mm-auth-close]', modal).forEach((el) => {
       el.addEventListener('click', function () {
@@ -196,6 +244,125 @@
     qsa('[data-mm-auth-tab]', modal).forEach((tab) => {
       tab.addEventListener('click', function () {
         setMode(modal, tab.getAttribute('data-mm-auth-tab') || 'login');
+      });
+    });
+
+    // Lightweight mode switch links/buttons inside panels.
+    qsa('[data-mm-auth-switch]', modal).forEach((btn) => {
+      btn.addEventListener('click', function () {
+        const mode = btn.getAttribute('data-mm-auth-switch') || 'login';
+        setMode(modal, mode);
+        // Focus first field of the newly visible panel.
+        const first = qs(
+          mode === 'register'
+            ? '[data-mm-auth-panel="register"] input, [data-mm-auth-panel="register"] button'
+            : '[data-mm-auth-panel="login"] input, [data-mm-auth-panel="login"] button',
+          modal
+        );
+        if (first && typeof first.focus === 'function') first.focus();
+      });
+    });
+
+    // Password visibility toggles.
+    qsa('[data-mm-auth-toggle]', modal).forEach((btn) => {
+      btn.addEventListener('click', function () {
+        const key = btn.getAttribute('data-mm-auth-toggle') || '';
+        const input = qs(`[data-mm-auth-field="${cssEscape(key)}"]`, modal);
+        if (!input) return;
+        const isHidden = input.getAttribute('type') === 'password';
+        input.setAttribute('type', isHidden ? 'text' : 'password');
+        btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+        btn.textContent = isHidden ? 'Hide' : 'Show';
+        btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+      });
+    });
+
+    // Inline validation + loading/double-submit prevention.
+    qsa('form[data-mm-auth-form]', modal).forEach((form) => {
+      // Clear errors as user types.
+      qsa('[data-mm-auth-field]', form).forEach((input) => {
+        input.addEventListener('input', function () {
+          const key = input.getAttribute('data-mm-auth-field') || '';
+          if (key) clearFieldError(key);
+        });
+      });
+
+      form.addEventListener('submit', function (e) {
+        const kind = form.getAttribute('data-mm-auth-form') || 'login';
+        const submitBtn = qs('[data-mm-auth-submit]', form);
+        if (form.getAttribute('data-mm-auth-submitting') === '1') {
+          e.preventDefault();
+          return;
+        }
+
+        // Clear any previous field errors in this form.
+        qsa('[data-mm-auth-error-for]', form).forEach((el) => {
+          el.textContent = '';
+        });
+        qsa('[data-mm-auth-field]', form).forEach((el) => {
+          el.removeAttribute('aria-invalid');
+        });
+
+        const errors = [];
+
+        if (kind === 'login') {
+          const loginId = qs('[data-mm-auth-field="login_id"]', form)?.value || '';
+          const pwd = qs('[data-mm-auth-field="login_password"]', form)?.value || '';
+          if (!String(loginId || '').trim()) {
+            errors.push({ key: 'login_id', msg: 'Please enter your email or username.' });
+          }
+          if (!String(pwd || '').trim()) {
+            errors.push({ key: 'login_password', msg: 'Please enter your password.' });
+          }
+        } else {
+          const email = qs('[data-mm-auth-field="register_email"]', form)?.value || '';
+          const pwd = qs('[data-mm-auth-field="register_password"]', form)?.value || '';
+          const confirm = qs('[data-mm-auth-field="register_password_confirm"]', form)?.value || '';
+
+          if (!isValidEmail(email)) {
+            errors.push({ key: 'register_email', msg: 'Please enter a valid email address.' });
+          }
+          if (String(pwd || '').length < 8) {
+            errors.push({ key: 'register_password', msg: 'Use at least 8 characters.' });
+          }
+          if (!String(confirm || '').trim()) {
+            errors.push({ key: 'register_password_confirm', msg: 'Please confirm your password.' });
+          } else if (String(confirm) !== String(pwd)) {
+            errors.push({ key: 'register_password_confirm', msg: 'Passwords do not match.' });
+          }
+        }
+
+        if (errors.length) {
+          e.preventDefault();
+          try {
+            if (window.matchMeEvents && typeof window.matchMeEvents.emit === 'function') {
+              window.matchMeEvents.emit('auth_submit_validation_error', {
+                kind,
+                fields: errors.map((x) => x.key),
+              });
+            }
+          } catch (e2) { /* ignore */ }
+          errors.forEach((er) => setFieldError(er.key, er.msg));
+          focusField(errors[0].key);
+          return;
+        }
+
+        try {
+          if (window.matchMeEvents && typeof window.matchMeEvents.emit === 'function') {
+            window.matchMeEvents.emit('auth_submit', { kind });
+          }
+        } catch (e2) { /* ignore */ }
+
+        // Loading state
+        form.setAttribute('data-mm-auth-submitting', '1');
+        if (submitBtn) {
+          if (!submitBtn.getAttribute('data-mm-auth-original-text')) {
+            submitBtn.setAttribute('data-mm-auth-original-text', submitBtn.textContent || '');
+          }
+          submitBtn.classList.add('is-loading');
+          submitBtn.setAttribute('aria-disabled', 'true');
+          submitBtn.disabled = true;
+        }
       });
     });
 

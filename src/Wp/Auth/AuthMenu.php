@@ -317,57 +317,22 @@ final class AuthMenu
                 <div class="mm-auth-alert" data-mm-auth-alert style="display:none;" role="status" aria-live="polite"></div>
 
                 <div class="mm-auth-body">
-                    <div class="mm-auth-tabs" role="tablist" aria-label="Authentication">
-                        <button type="button" class="mm-auth-tab is-active" role="tab" aria-selected="true" data-mm-auth-tab="login">Login</button>
-                        <button type="button" class="mm-auth-tab" role="tab" aria-selected="false" data-mm-auth-tab="register">Register</button>
-                    </div>
-
                     <div class="mm-auth-panels">
                         <section class="mm-auth-panel is-active" data-mm-auth-panel="login">
-                            <div class="mm-auth-section-title">Continue with</div>
-                            <div class="mm-auth-social">
-                                <a class="mm-auth-social-btn" data-mm-auth-social="google" href="<?php echo esc_url(add_query_arg('google_auth', '1', $home)); ?>">
-                                    <span class="mm-auth-social-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M21.805 12.23c0-.63-.057-1.232-.163-1.81H12v3.426h5.504a4.71 4.71 0 0 1-2.04 3.09v2.22h3.3c1.93-1.776 3.04-4.39 3.04-7.926Z" fill="#1E2A44"/>
-                                            <path d="M12 22c2.7 0 4.965-.896 6.62-2.424l-3.3-2.22c-.916.614-2.09.977-3.32.977-2.604 0-4.81-1.76-5.595-4.127H2.99v2.29A10 10 0 0 0 12 22Z" fill="#8FAEA3"/>
-                                            <path d="M6.405 12.206A5.995 5.995 0 0 1 6.09 10.5c0-.593.106-1.17.315-1.706V6.504H2.99A10 10 0 0 0 2 10.5c0 1.61.386 3.13.99 4.496l3.415-2.29Z" fill="#6FAFB3"/>
-                                            <path d="M12 4.667c1.47 0 2.79.506 3.83 1.498l2.87-2.87C16.96 1.668 14.7 1 12 1A10 10 0 0 0 2.99 6.504l3.415 2.29C7.19 6.427 9.396 4.667 12 4.667Z" fill="#1E2A44"/>
-                                        </svg>
-                                    </span>
-                                    <span class="mm-auth-social-text">Google</span>
-                                </a>
-                                <a class="mm-auth-social-btn" data-mm-auth-social="facebook" href="<?php echo esc_url(add_query_arg('facebook_auth', '1', $home)); ?>">
-                                    <span class="mm-auth-social-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M13.5 21v-8.2h2.76l.41-3.2H13.5V7.56c0-.93.26-1.56 1.6-1.56h1.7V3.14c-.3-.04-1.34-.14-2.55-.14-2.53 0-4.26 1.55-4.26 4.4V9.6H7.5v3.2H10v8.2h3.5Z" fill="#1E2A44"/>
-                                        </svg>
-                                    </span>
-                                    <span class="mm-auth-social-text">Facebook</span>
-                                </a>
-                                <a class="mm-auth-social-btn" data-mm-auth-social="instagram" href="<?php echo esc_url(add_query_arg('instagram_auth', '1', $home)); ?>">
-                                    <span class="mm-auth-social-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9Z" fill="#1E2A44"/>
-                                            <path d="M12 7.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5Zm0 2A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z" fill="#6FAFB3"/>
-                                            <path d="M17.6 6.4a1 1 0 1 1-1-1 1 1 0 0 1 1 1Z" fill="#8FAEA3"/>
-                                        </svg>
-                                    </span>
-                                    <span class="mm-auth-social-text">Instagram</span>
-                                </a>
-                            </div>
-
-                            <div class="mm-auth-divider"><span>or</span></div>
-
-                            <form class="mm-auth-form" method="post" action="<?php echo esc_url(wp_login_url()); ?>">
+                            <form class="mm-auth-form" method="post" action="<?php echo esc_url(wp_login_url()); ?>" novalidate data-mm-auth-form="login">
                                 <input type="hidden" name="redirect_to" value="" data-mm-auth-redirect>
                                 <label class="mm-auth-field">
                                     <span>Email or Username</span>
-                                    <input type="text" name="log" autocomplete="username" required>
+                                    <input type="text" name="log" autocomplete="username" inputmode="email" required data-mm-auth-field="login_id">
+                                    <small class="mm-auth-inline-error" data-mm-auth-error-for="login_id" aria-live="polite"></small>
                                 </label>
                                 <label class="mm-auth-field">
                                     <span>Password</span>
-                                    <input type="password" name="pwd" autocomplete="current-password" required>
+                                    <span class="mm-auth-password">
+                                        <input type="password" name="pwd" autocomplete="current-password" required data-mm-auth-field="login_password">
+                                        <button type="button" class="mm-auth-eye" data-mm-auth-toggle="login_password" aria-label="Show password" aria-pressed="false">Show</button>
+                                    </span>
+                                    <small class="mm-auth-inline-error" data-mm-auth-error-for="login_password" aria-live="polite"></small>
                                 </label>
                                 <div class="mm-auth-row">
                                     <label class="mm-auth-checkbox">
@@ -376,72 +341,121 @@ final class AuthMenu
                                     </label>
                                     <a class="mm-auth-link-subtle" href="<?php echo esc_url($lostPasswordUrl); ?>">Forgot password?</a>
                                 </div>
-                                <button type="submit" class="mm-auth-submit">Login</button>
+                                <button type="submit" class="mm-auth-submit" data-mm-auth-submit>Login</button>
+                                <div class="mm-auth-switch-row">
+                                    <button type="button" class="mm-auth-switch" data-mm-auth-switch="register">Don’t have an account? Register</button>
+                                </div>
                             </form>
+
+                            <details class="mm-auth-social-details">
+                                <summary class="mm-auth-social-summary">Continue with</summary>
+                                <div class="mm-auth-social">
+                                    <a class="mm-auth-social-btn" data-mm-auth-social="google" href="<?php echo esc_url(add_query_arg('google_auth', '1', $home)); ?>">
+                                        <span class="mm-auth-social-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M21.805 12.23c0-.63-.057-1.232-.163-1.81H12v3.426h5.504a4.71 4.71 0 0 1-2.04 3.09v2.22h3.3c1.93-1.776 3.04-4.39 3.04-7.926Z" fill="#1E2A44"/>
+                                                <path d="M12 22c2.7 0 4.965-.896 6.62-2.424l-3.3-2.22c-.916.614-2.09.977-3.32.977-2.604 0-4.81-1.76-5.595-4.127H2.99v2.29A10 10 0 0 0 12 22Z" fill="#8FAEA3"/>
+                                                <path d="M6.405 12.206A5.995 5.995 0 0 1 6.09 10.5c0-.593.106-1.17.315-1.706V6.504H2.99A10 10 0 0 0 2 10.5c0 1.61.386 3.13.99 4.496l3.415-2.29Z" fill="#6FAFB3"/>
+                                                <path d="M12 4.667c1.47 0 2.79.506 3.83 1.498l2.87-2.87C16.96 1.668 14.7 1 12 1A10 10 0 0 0 2.99 6.504l3.415 2.29C7.19 6.427 9.396 4.667 12 4.667Z" fill="#1E2A44"/>
+                                            </svg>
+                                        </span>
+                                        <span class="mm-auth-social-text">Google</span>
+                                    </a>
+                                    <a class="mm-auth-social-btn" data-mm-auth-social="facebook" href="<?php echo esc_url(add_query_arg('facebook_auth', '1', $home)); ?>">
+                                        <span class="mm-auth-social-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M13.5 21v-8.2h2.76l.41-3.2H13.5V7.56c0-.93.26-1.56 1.6-1.56h1.7V3.14c-.3-.04-1.34-.14-2.55-.14-2.53 0-4.26 1.55-4.26 4.4V9.6H7.5v3.2H10v8.2h3.5Z" fill="#1E2A44"/>
+                                            </svg>
+                                        </span>
+                                        <span class="mm-auth-social-text">Facebook</span>
+                                    </a>
+                                    <a class="mm-auth-social-btn" data-mm-auth-social="instagram" href="<?php echo esc_url(add_query_arg('instagram_auth', '1', $home)); ?>">
+                                        <span class="mm-auth-social-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9Z" fill="#1E2A44"/>
+                                                <path d="M12 7.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5Zm0 2A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z" fill="#6FAFB3"/>
+                                                <path d="M17.6 6.4a1 1 0 1 1-1-1 1 1 0 0 1 1 1Z" fill="#8FAEA3"/>
+                                            </svg>
+                                        </span>
+                                        <span class="mm-auth-social-text">Instagram</span>
+                                    </a>
+                                </div>
+                            </details>
                         </section>
 
                         <section class="mm-auth-panel" data-mm-auth-panel="register">
-                            <div class="mm-auth-section-title">Continue with</div>
-                            <div class="mm-auth-social">
-                                <a class="mm-auth-social-btn" data-mm-auth-social="google" href="<?php echo esc_url(add_query_arg('google_auth', '1', $home)); ?>">
-                                    <span class="mm-auth-social-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M21.805 12.23c0-.63-.057-1.232-.163-1.81H12v3.426h5.504a4.71 4.71 0 0 1-2.04 3.09v2.22h3.3c1.93-1.776 3.04-4.39 3.04-7.926Z" fill="#1E2A44"/>
-                                            <path d="M12 22c2.7 0 4.965-.896 6.62-2.424l-3.3-2.22c-.916.614-2.09.977-3.32.977-2.604 0-4.81-1.76-5.595-4.127H2.99v2.29A10 10 0 0 0 12 22Z" fill="#8FAEA3"/>
-                                            <path d="M6.405 12.206A5.995 5.995 0 0 1 6.09 10.5c0-.593.106-1.17.315-1.706V6.504H2.99A10 10 0 0 0 2 10.5c0 1.61.386 3.13.99 4.496l3.415-2.29Z" fill="#6FAFB3"/>
-                                            <path d="M12 4.667c1.47 0 2.79.506 3.83 1.498l2.87-2.87C16.96 1.668 14.7 1 12 1A10 10 0 0 0 2.99 6.504l3.415 2.29C7.19 6.427 9.396 4.667 12 4.667Z" fill="#1E2A44"/>
-                                        </svg>
-                                    </span>
-                                    <span class="mm-auth-social-text">Google</span>
-                                </a>
-                                <a class="mm-auth-social-btn" data-mm-auth-social="facebook" href="<?php echo esc_url(add_query_arg('facebook_auth', '1', $home)); ?>">
-                                    <span class="mm-auth-social-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M13.5 21v-8.2h2.76l.41-3.2H13.5V7.56c0-.93.26-1.56 1.6-1.56h1.7V3.14c-.3-.04-1.34-.14-2.55-.14-2.53 0-4.26 1.55-4.26 4.4V9.6H7.5v3.2H10v8.2h3.5Z" fill="#1E2A44"/>
-                                        </svg>
-                                    </span>
-                                    <span class="mm-auth-social-text">Facebook</span>
-                                </a>
-                                <a class="mm-auth-social-btn" data-mm-auth-social="instagram" href="<?php echo esc_url(add_query_arg('instagram_auth', '1', $home)); ?>">
-                                    <span class="mm-auth-social-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9Z" fill="#1E2A44"/>
-                                            <path d="M12 7.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5Zm0 2A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z" fill="#6FAFB3"/>
-                                            <path d="M17.6 6.4a1 1 0 1 1-1-1 1 1 0 0 1 1 1Z" fill="#8FAEA3"/>
-                                        </svg>
-                                    </span>
-                                    <span class="mm-auth-social-text">Instagram</span>
-                                </a>
-                            </div>
-
-                            <div class="mm-auth-divider"><span>or</span></div>
-
-                            <form class="mm-auth-form" method="post" action="<?php echo esc_url($adminPost); ?>">
+                            <form class="mm-auth-form" method="post" action="<?php echo esc_url($adminPost); ?>" novalidate data-mm-auth-form="register">
                                 <input type="hidden" name="action" value="match_me_register">
                                 <?php wp_nonce_field('match_me_register', 'match_me_register_nonce'); ?>
                                 <input type="hidden" name="redirect_to" value="" data-mm-auth-redirect>
-                                <div class="mm-auth-grid-2">
-                                    <label class="mm-auth-field">
-                                        <span>First name</span>
-                                        <input type="text" name="first_name" autocomplete="given-name">
-                                    </label>
-                                    <label class="mm-auth-field">
-                                        <span>Last name</span>
-                                        <input type="text" name="last_name" autocomplete="family-name">
-                                    </label>
-                                </div>
+                                <label class="mm-auth-field">
+                                    <span>Name (optional)</span>
+                                    <input type="text" name="name" autocomplete="name" data-mm-auth-field="register_name">
+                                    <small class="mm-auth-inline-error" data-mm-auth-error-for="register_name" aria-live="polite"></small>
+                                </label>
                                 <label class="mm-auth-field">
                                     <span>Email</span>
-                                    <input type="email" name="email" autocomplete="email" required>
+                                    <input type="email" name="email" autocomplete="email" inputmode="email" required data-mm-auth-field="register_email">
+                                    <small class="mm-auth-inline-error" data-mm-auth-error-for="register_email" aria-live="polite"></small>
                                 </label>
                                 <label class="mm-auth-field">
                                     <span>Password</span>
-                                    <input type="password" name="password" autocomplete="new-password" minlength="8" required>
+                                    <span class="mm-auth-password">
+                                        <input type="password" name="password" autocomplete="new-password" minlength="8" required data-mm-auth-field="register_password">
+                                        <button type="button" class="mm-auth-eye" data-mm-auth-toggle="register_password" aria-label="Show password" aria-pressed="false">Show</button>
+                                    </span>
                                     <small class="mm-auth-hint">Use at least 8 characters.</small>
+                                    <small class="mm-auth-inline-error" data-mm-auth-error-for="register_password" aria-live="polite"></small>
                                 </label>
-                                <button type="submit" class="mm-auth-submit">Create account</button>
+                                <label class="mm-auth-field">
+                                    <span>Confirm password</span>
+                                    <span class="mm-auth-password">
+                                        <input type="password" name="password_confirm" autocomplete="new-password" minlength="8" required data-mm-auth-field="register_password_confirm">
+                                        <button type="button" class="mm-auth-eye" data-mm-auth-toggle="register_password_confirm" aria-label="Show password" aria-pressed="false">Show</button>
+                                    </span>
+                                    <small class="mm-auth-inline-error" data-mm-auth-error-for="register_password_confirm" aria-live="polite"></small>
+                                </label>
+                                <button type="submit" class="mm-auth-submit" data-mm-auth-submit>Create account</button>
                                 <div class="mm-auth-fineprint">By continuing, you agree to our Terms and Privacy Policy.</div>
+                                <div class="mm-auth-switch-row">
+                                    <button type="button" class="mm-auth-switch" data-mm-auth-switch="login">Already have an account? Login</button>
+                                </div>
                             </form>
+
+                            <details class="mm-auth-social-details">
+                                <summary class="mm-auth-social-summary">Continue with</summary>
+                                <div class="mm-auth-social">
+                                    <a class="mm-auth-social-btn" data-mm-auth-social="google" href="<?php echo esc_url(add_query_arg('google_auth', '1', $home)); ?>">
+                                        <span class="mm-auth-social-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M21.805 12.23c0-.63-.057-1.232-.163-1.81H12v3.426h5.504a4.71 4.71 0 0 1-2.04 3.09v2.22h3.3c1.93-1.776 3.04-4.39 3.04-7.926Z" fill="#1E2A44"/>
+                                                <path d="M12 22c2.7 0 4.965-.896 6.62-2.424l-3.3-2.22c-.916.614-2.09.977-3.32.977-2.604 0-4.81-1.76-5.595-4.127H2.99v2.29A10 10 0 0 0 12 22Z" fill="#8FAEA3"/>
+                                                <path d="M6.405 12.206A5.995 5.995 0 0 1 6.09 10.5c0-.593.106-1.17.315-1.706V6.504H2.99A10 10 0 0 0 2 10.5c0 1.61.386 3.13.99 4.496l3.415-2.29Z" fill="#6FAFB3"/>
+                                                <path d="M12 4.667c1.47 0 2.79.506 3.83 1.498l2.87-2.87C16.96 1.668 14.7 1 12 1A10 10 0 0 0 2.99 6.504l3.415 2.29C7.19 6.427 9.396 4.667 12 4.667Z" fill="#1E2A44"/>
+                                            </svg>
+                                        </span>
+                                        <span class="mm-auth-social-text">Google</span>
+                                    </a>
+                                    <a class="mm-auth-social-btn" data-mm-auth-social="facebook" href="<?php echo esc_url(add_query_arg('facebook_auth', '1', $home)); ?>">
+                                        <span class="mm-auth-social-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M13.5 21v-8.2h2.76l.41-3.2H13.5V7.56c0-.93.26-1.56 1.6-1.56h1.7V3.14c-.3-.04-1.34-.14-2.55-.14-2.53 0-4.26 1.55-4.26 4.4V9.6H7.5v3.2H10v8.2h3.5Z" fill="#1E2A44"/>
+                                            </svg>
+                                        </span>
+                                        <span class="mm-auth-social-text">Facebook</span>
+                                    </a>
+                                    <a class="mm-auth-social-btn" data-mm-auth-social="instagram" href="<?php echo esc_url(add_query_arg('instagram_auth', '1', $home)); ?>">
+                                        <span class="mm-auth-social-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9Z" fill="#1E2A44"/>
+                                                <path d="M12 7.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5Zm0 2A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z" fill="#6FAFB3"/>
+                                                <path d="M17.6 6.4a1 1 0 1 1-1-1 1 1 0 0 1 1 1Z" fill="#8FAEA3"/>
+                                            </svg>
+                                        </span>
+                                        <span class="mm-auth-social-text">Instagram</span>
+                                    </a>
+                                </div>
+                            </details>
                         </section>
                     </div>
                 </div>
@@ -464,10 +478,20 @@ final class AuthMenu
 
         $email = isset($_POST['email']) ? sanitize_email((string) $_POST['email']) : '';
         $password = isset($_POST['password']) ? (string) $_POST['password'] : '';
+        $passwordConfirm = isset($_POST['password_confirm']) ? (string) $_POST['password_confirm'] : '';
+        $name = isset($_POST['name']) ? sanitize_text_field((string) $_POST['name']) : '';
+
+        // Backward-compat: some old forms may still send first/last.
         $firstName = isset($_POST['first_name']) ? sanitize_text_field((string) $_POST['first_name']) : '';
         $lastName = isset($_POST['last_name']) ? sanitize_text_field((string) $_POST['last_name']) : '';
         $redirectTo = isset($_POST['redirect_to']) ? (string) $_POST['redirect_to'] : '';
         $redirectTo = wp_validate_redirect($redirectTo, home_url('/'));
+
+        if ($firstName === '' && $lastName === '' && $name !== '') {
+            $parts = preg_split('/\s+/', trim($name)) ?: [];
+            $firstName = (string) ($parts[0] ?? '');
+            $lastName = (string) (count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : '');
+        }
 
         if (!is_email($email)) {
             wp_safe_redirect(add_query_arg(['register' => '1', 'error' => 'invalid_email', 'redirect_to' => $redirectTo], home_url('/')));
@@ -475,6 +499,10 @@ final class AuthMenu
         }
         if (strlen($password) < 8) {
             wp_safe_redirect(add_query_arg(['register' => '1', 'error' => 'weak_password', 'redirect_to' => $redirectTo], home_url('/')));
+            exit;
+        }
+        if ($passwordConfirm !== '' && $passwordConfirm !== $password) {
+            wp_safe_redirect(add_query_arg(['register' => '1', 'error' => 'password_mismatch', 'redirect_to' => $redirectTo], home_url('/')));
             exit;
         }
         if (email_exists($email)) {
