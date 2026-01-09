@@ -48,14 +48,14 @@
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.2;
-  text-align: center;
+  text-align: left;
 }
 
 .mmq-intro-content {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  align-items: center;
+  align-items: left;
 }
 
 .mmq-intro-image {
