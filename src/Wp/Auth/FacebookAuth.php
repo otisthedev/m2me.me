@@ -69,6 +69,8 @@ final class FacebookAuth
         }
 
         if (!isset($_GET['code'])) {
+            error_log('Facebook OAuth Callback Reached. Code: ' . $_GET['code'] . ', State: ' . ($_GET['state'] ?? 'none'));
+
             // First hop: generate state and store redirect_to transient.
             $state = wp_generate_uuid4();
             set_transient('match_me_oauth_state_' . $state, ['redirect_to' => $redirectTo], 10 * MINUTE_IN_SECONDS);
