@@ -74,7 +74,7 @@ final class FacebookAuth
             set_transient('match_me_oauth_state_' . $state, ['redirect_to' => $redirectTo], 10 * MINUTE_IN_SECONDS);
 
             $scope = 'email,public_profile';
-            $url = 'https://www.facebook.com/v19.0/dialog/oauth?' . http_build_query([
+            $url = 'https://www.facebook.com/v24.0/dialog/oauth?' . http_build_query([
                 'client_id' => $appId,
                 'redirect_uri' => $redirectUri,
                 'scope' => $scope,
