@@ -98,7 +98,7 @@ final class FacebookAuth
 
         $code = sanitize_text_field((string) $_GET['code']);
 
-        $tokenUrl = 'https://graph.facebook.com/v19.0/oauth/access_token?' . http_build_query([
+        $tokenUrl = 'https://graph.facebook.com/v24.0/oauth/access_token?' . http_build_query([
             'client_id' => $appId,
             'redirect_uri' => $redirectUri,
             'client_secret' => $appSecret,
