@@ -200,6 +200,7 @@ final class QuizShortcodes
             ?>
 
             <div class="mmq-intro">
+                <?php if(false) : ?>
                 <h1 class="mmq-intro-title">
                     <?= esc_html((string) ($quizData['meta']['title'] ?? 'Quiz')) ?>
                 </h1>
@@ -213,6 +214,7 @@ final class QuizShortcodes
                         <p><?= esc_html($desc) ?></p>
                     </div>
                 </div>
+                <?php endif; ?>
                 <div class="mmq-intro-actions">
                     <button type="button" class="mmq-start">Start Quiz</button>
                 </div>
