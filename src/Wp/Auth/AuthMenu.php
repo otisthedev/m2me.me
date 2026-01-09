@@ -309,7 +309,7 @@ final class AuthMenu
         <div id="mm-auth-modal" class="mm-auth-modal" aria-hidden="true" style="display:none;">
             <div class="mm-auth-overlay" data-mm-auth-close></div>
             <div class="mm-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="mm-auth-title">
-                <button type="button" class="mm-auth-close" data-mm-auth-close aria-label="Close">×</button>
+                <!-- <button type="button" class="mm-auth-close" data-mm-auth-close aria-label="Close">×</button> -->
 
                 <div class="mm-auth-header">
                     <div id="mm-auth-title" class="mm-auth-title">Welcome</div>

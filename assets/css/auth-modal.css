@@ -21,7 +21,7 @@
   max-width: 520px;
   margin: min(8vh, 64px) auto 0;
   background: #ffffff;
-  border-radius: 12px;
+  /* border-radius: 12px; */
   padding: 22px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(30, 42, 68, 0.10);
@@ -307,8 +307,6 @@
   min-width: 44px;
   height: 44px;
   border-radius: 10px;
-  border: 1px solid rgba(30, 42, 68, 0.10);
-  background: rgba(255, 255, 255, 0.85);
   color: var(--color-text, #2B2E34);
   font-weight: 800;
   font-size: 12px;
@@ -319,12 +317,7 @@
 }
 
 .mm-auth-eye:hover {
-  background: rgba(30, 42, 68, 0.06);
-}
-
-.mm-auth-eye:focus-visible {
-  outline: 2px solid rgba(111, 175, 179, 0.85);
-  outline-offset: 2px;
+  /* background: rgba(30, 42, 68, 0.06); */
 }
 
 .mm-auth-checkbox {
@@ -452,9 +445,10 @@
     width: 100%;
     max-width: none;
     margin: auto 0 0 0;
-    border-radius: 18px 18px 0 0;
+    /* border-radius: 18px 18px 0 0; */
     padding: 16px 14px calc(16px + env(safe-area-inset-bottom, 0px));
-    max-height: min(86svh, 760px);
+    max-height: 100vh;
+    min-height: 100vh;
   }
 
   .mm-auth-close {
