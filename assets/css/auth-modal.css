@@ -156,14 +156,14 @@
   justify-content: flex-start;
   min-height: 52px;
   border-radius: 12px;
-  border: 1px solid rgba(30, 42, 68, 0.14);
+  /* border: 1px solid rgba(30, 42, 68, 0.14); */
   background: #ffffff;
   color: var(--color-text, #2B2E34);
   text-decoration: none;
   font-weight: 700;
   gap: 10px;
   padding: 0 12px;
-  box-shadow: 0 10px 24px rgba(30, 42, 68, 0.08);
+  /* box-shadow: 0 10px 24px rgba(30, 42, 68, 0.08); */
   transition: transform var(--transition), background var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
@@ -355,12 +355,12 @@
 .mm-auth-submit {
   min-height: 52px;
   border-radius: 10px;
-  border: 1px solid rgba(30, 42, 68, 0.12);
+  /* border: 1px solid rgba(30, 42, 68, 0.12); */
   background: linear-gradient(135deg, rgba(131, 58, 180, 0.95) 0%, rgba(253, 29, 29, 0.92) 52%, rgba(252, 175, 69, 0.92) 100%);
   color: var(--color-bg, #F6F5F2);
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 12px 30px rgba(30, 42, 68, 0.18);
+  /* box-shadow: 0 12px 30px rgba(30, 42, 68, 0.18); */
   transition: transform var(--transition), background var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
