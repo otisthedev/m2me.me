@@ -55,10 +55,12 @@ jobs:
             **/API.md
             **/DESIGN_DOC.md
             **/TECHNICAL_SUMMARY.md
+            **/IMPROVEMENTS.md
             **/postman_collection.json
             **/.DS_Store
             **/.env
             **/.env.*
+            **/.env.example
             **/composer.json
             **/composer.lock
             **/package.json
@@ -68,4 +70,6 @@ jobs:
             **/phpunit.xml
             **/.phpunit.cache/**
             **/coverage/**
-            **/.htaccess.example
+            **/.htaccess
+            **/.editorconfig
+            **/*.md
