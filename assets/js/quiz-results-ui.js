@@ -180,9 +180,9 @@
         }
 
         // ADD: Social proof section (after share section)
-        if (result.quiz_slug) {
-            loadSocialProof(result.quiz_slug, container);
-        }
+        // if (result.quiz_slug) {
+        //     loadSocialProof(result.quiz_slug, container);
+        // }
     }
 
     /**
@@ -301,7 +301,7 @@
                 
                 <div class="dialog-actions">
                     <button type="button" class="btn-create-group">Create Group</button>
-                    <button type="button" class="btn-cancel">Cancel</button>
+                    // <button type="button" class="btn-cancel">Cancel</button>
                 </div>
             </div>
         `;
