@@ -136,7 +136,8 @@ final class Theme
         wp_enqueue_style('match-me-theme', get_stylesheet_uri(), [], $this->config->themeVersion());
         wp_enqueue_script('match-me-theme', get_template_directory_uri() . '/assets/js/theme.js', [], $this->config->themeVersion(), true);
 
-        $vars = [
+        // Use wp_localize_script for better CSP compatibility and security
+        wp_localize_script('match-me-theme', 'matchMeTheme', [
             'homeUrl' => home_url('/'),
             'themeUrl' => get_template_directory_uri(),
             'restUrl' => esc_url_raw(rest_url()),
@@ -146,8 +147,7 @@ final class Theme
                 'name' => is_user_logged_in() ? (string) (wp_get_current_user()->display_name ?: 'You') : '',
                 'avatarUrl' => is_user_logged_in() ? (string) get_avatar_url((int) get_current_user_id(), ['size' => 256]) : '',
             ],
-        ];
-        wp_add_inline_script('match-me-theme', 'window.matchMeTheme=' . wp_json_encode($vars) . ';', 'before');
+        ]);
     }
 
     public function registerCustomizer(\WP_Customize_Manager $wpCustomize): void

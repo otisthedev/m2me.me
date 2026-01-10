@@ -21,15 +21,12 @@ final class SaveQuizResultsController
     {
         check_ajax_referer('cq_quiz_nonce', 'security');
 
-        if (!session_id()) {
-            session_start();
-        }
-
         $userId = is_user_logged_in() ? (int) get_current_user_id() : 9999;
 
-        $quizId = isset($_POST['quiz_id']) ? (string) $_POST['quiz_id'] : '';
-        $scores = isset($_POST['scores']) ? (string) $_POST['scores'] : '';
-        $content = isset($_POST['content']) ? (string) $_POST['content'] : '';
+        // Sanitize all inputs
+        $quizId = isset($_POST['quiz_id']) ? sanitize_text_field((string) wp_unslash($_POST['quiz_id'])) : '';
+        $scores = isset($_POST['scores']) ? sanitize_textarea_field((string) wp_unslash($_POST['scores'])) : '';
+        $content = isset($_POST['content']) ? wp_kses_post((string) wp_unslash($_POST['content'])) : '';
 
         if ($quizId === '' || $scores === '') {
             wp_send_json_error('Missing required data');
@@ -38,7 +35,12 @@ final class SaveQuizResultsController
 
         try {
             $attemptId = $this->repo->insert($userId, $quizId, $scores, $content);
-            $_SESSION['temp_results'][] = $attemptId;
+
+            // Use WordPress transient instead of session to store temporary results
+            $transientKey = 'temp_results_' . ($userId !== 9999 ? $userId : wp_get_session_token());
+            $tempResults = get_transient($transientKey) ?: [];
+            $tempResults[] = $attemptId;
+            set_transient($transientKey, $tempResults, HOUR_IN_SECONDS);
 
             // Construct the result URL server-side
             $resultUrl = $this->buildResultUrl($quizId, $attemptId);
@@ -49,7 +51,8 @@ final class SaveQuizResultsController
                 'result_url' => $resultUrl,
             ]);
         } catch (\Throwable $e) {
-            wp_send_json_error($e->getMessage());
+            error_log('Quiz result save error: ' . $e->getMessage());
+            wp_send_json_error('An error occurred while saving your results. Please try again.');
         }
     }
 

@@ -25,18 +25,18 @@ final class ShareImage
 
     public function maybeRender(): void
     {
-        $flag = isset($_GET['mm_share_image']) ? (string) wp_unslash($_GET['mm_share_image']) : '';
+        $flag = isset($_GET['mm_share_image']) ? sanitize_text_field((string) wp_unslash($_GET['mm_share_image'])) : '';
         if ($flag === '') {
             return;
         }
 
-        $mode = isset($_GET['mode']) ? (string) wp_unslash($_GET['mode']) : 'result';
+        $mode = isset($_GET['mode']) ? sanitize_text_field((string) wp_unslash($_GET['mode'])) : 'result';
         $mode = ($mode === 'match') ? 'match' : 'result';
 
-        $size = isset($_GET['size']) ? (string) wp_unslash($_GET['size']) : 'og';
+        $size = isset($_GET['size']) ? sanitize_text_field((string) wp_unslash($_GET['size'])) : 'og';
         $size = ($size === 'story') ? 'story' : 'og';
 
-        $token = isset($_GET['token']) ? (string) wp_unslash($_GET['token']) : '';
+        $token = isset($_GET['token']) ? sanitize_text_field((string) wp_unslash($_GET['token'])) : '';
         $token = preg_replace('/[^A-Za-z0-9]/', '', $token);
         if ($token === '') {
             $this->sendSvg($this->errorSvg($size, 'Missing token'), $size);

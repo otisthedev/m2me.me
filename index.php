@@ -11,7 +11,7 @@ get_header();
 <main id="main" class="site-main">
     <?php if (is_home() || is_front_page()) : ?>
         <?php
-        $currentPath = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+        $currentPath = isset($_SERVER['REQUEST_URI']) ? esc_url_raw((string) wp_unslash($_SERVER['REQUEST_URI'])) : '/';
         $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
         $siteName = (string) get_bloginfo('name');
         $themeUri = (string) get_template_directory_uri();

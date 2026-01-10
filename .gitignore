@@ -1,5 +1,41 @@
 # Ignore local legal drafts / content working files
 MD/
 
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build outputs
+/dist/
+*.map
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Composer
+composer.lock
+
+# NPM
+package-lock.json
+yarn.lock
+
 
 

@@ -361,15 +361,15 @@ final class QuizApiController
                 (string) $quizVersion
             );
 
-            // Store anonymous result ID in session for later assignment
+            // Store anonymous result ID in transient for later assignment
             if ($userId === null) {
-                if (!session_id()) {
-                    session_start();
+                $transientKey = $this->getAnonymousUserKey();
+                $storedResults = get_transient($transientKey);
+                if (!is_array($storedResults)) {
+                    $storedResults = ['old' => [], 'new' => []];
                 }
-                if (!isset($_SESSION['match_me_temp_results'])) {
-                    $_SESSION['match_me_temp_results'] = [];
-                }
-                $_SESSION['match_me_temp_results'][] = $resultId;
+                $storedResults['new'][] = $resultId;
+                set_transient($transientKey, $storedResults, DAY_IN_SECONDS);
             }
 
             // Generate share URLs
@@ -1281,13 +1281,25 @@ final class QuizApiController
         $ipKeys = ['HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'];
         foreach ($ipKeys as $key) {
             if (!empty($_SERVER[$key])) {
-                $ip = sanitize_text_field((string) $_SERVER[$key]);
+                $ip = sanitize_text_field((string) wp_unslash($_SERVER[$key]));
                 if (filter_var($ip, FILTER_VALIDATE_IP)) {
                     return $ip;
                 }
             }
         }
         return '0.0.0.0';
+    }
+
+    /**
+     * Get transient key for anonymous user (session token or IP-based).
+     */
+    private function getAnonymousUserKey(): string
+    {
+        $sessionToken = wp_get_session_token();
+        if ($sessionToken !== '') {
+            return 'temp_results_' . md5($sessionToken);
+        }
+        return 'temp_results_' . md5($this->getClientIp());
     }
 
     /**

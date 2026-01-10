@@ -8,7 +8,7 @@ defined('ABSPATH') || exit;
 
 get_header();
 
-$redirectTo = (string) wp_unslash($_SERVER['REQUEST_URI'] ?? '/');
+$redirectTo = isset($_SERVER['REQUEST_URI']) ? esc_url_raw((string) wp_unslash($_SERVER['REQUEST_URI'])) : '/';
 $redirectTo = wp_validate_redirect(home_url($redirectTo), home_url('/'));
 ?>
 

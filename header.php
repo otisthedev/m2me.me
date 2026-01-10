@@ -44,7 +44,7 @@
             </a>
 
             <?php
-            $currentPath = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+            $currentPath = isset($_SERVER['REQUEST_URI']) ? esc_url_raw((string) wp_unslash($_SERVER['REQUEST_URI'])) : '/';
             $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
             ?>
 

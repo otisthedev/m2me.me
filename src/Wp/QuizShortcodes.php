@@ -5,6 +5,7 @@ namespace MatchMe\Wp;
 
 use MatchMe\Config\ThemeConfig;
 use MatchMe\Infrastructure\Db\QuizResultRepository;
+use MatchMe\Infrastructure\Db\ResultRepository;
 use MatchMe\Infrastructure\Quiz\QuizJsonRepository;
 
 final class QuizShortcodes
@@ -13,6 +14,7 @@ final class QuizShortcodes
         private ThemeConfig $config,
         private QuizResultRepository $results,
         private QuizJsonRepository $quizzes,
+        private ?ResultRepository $newResults = null,
     ) {
     }
 
@@ -177,10 +179,19 @@ final class QuizShortcodes
             return '<p>Quiz not found</p>';
         }
 
+        // Check if user has completed this quiz
+        $latestResult = null;
+        $userId = (int) get_current_user_id();
+        if ($userId > 0 && $this->newResults !== null) {
+            $latestResult = $this->newResults->latestByUserAndQuizSlug($userId, $quizId);
+        }
+
         $this->enqueueQuizRuntimeV2($quizData, [
             'nonce' => wp_create_nonce('wp_rest'),
             'isLoggedIn' => is_user_logged_in(),
             'requireLogin' => $this->config->requireLoginForResults(),
+            'hasCompletedQuiz' => $latestResult !== null,
+            'latestResultToken' => $latestResult !== null ? (string) ($latestResult['share_token'] ?? '') : '',
         ]);
 
         ob_start();
@@ -217,6 +228,11 @@ final class QuizShortcodes
                 <?php endif; ?>
                 <div class="mmq-intro-actions">
                     <button type="button" class="mmq-start">Start Quiz</button>
+                    <?php if ($latestResult !== null && isset($latestResult['share_token'])) : ?>
+                        <a href="<?= esc_url(home_url('/result/' . $latestResult['share_token'] . '/')) ?>" class="mmq-view-results">
+                            View Your Results
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
 

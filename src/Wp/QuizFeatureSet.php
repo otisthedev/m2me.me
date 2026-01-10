@@ -32,7 +32,15 @@ final class QuizFeatureSet
     {
         (new RsIdRewrite())->register();
         (new ShareTokenRewrite())->register();
-        (new QuizShortcodes($this->config, $this->results, $this->quizzes))->register();
+
+        // Get new repository (use injected or create new)
+        $newRepo = $this->newResultRepo;
+        if ($newRepo === null) {
+            global $wpdb;
+            $newRepo = new \MatchMe\Infrastructure\Db\ResultRepository($wpdb);
+        }
+
+        (new QuizShortcodes($this->config, $this->results, $this->quizzes, $newRepo))->register();
         (new QuizTitle($this->results))->register();
         (new ThemeTweaks())->register();
         (new QuizAdmin($this->config))->register();
@@ -41,12 +49,7 @@ final class QuizFeatureSet
         (new ShareMeta())->register();
         (new ShareImage())->register();
 
-        // Get new repository for TempResultsAssigner (use injected or create new)
-        $newRepo = $this->newResultRepo;
-        if ($newRepo === null) {
-            global $wpdb;
-            $newRepo = new \MatchMe\Infrastructure\Db\ResultRepository($wpdb);
-        }
+        // Use same $newRepo for TempResultsAssigner
         $assigner = new TempResultsAssigner($this->results, $newRepo);
         (new GoogleAuth($this->config, $assigner))->register();
         (new FacebookAuth($this->config, $assigner))->register();

@@ -14,7 +14,7 @@ use MatchMe\Wp\Container;
 
 get_header();
 
-$currentPath = (string) ($_SERVER['REQUEST_URI'] ?? '/matches/');
+$currentPath = isset($_SERVER['REQUEST_URI']) ? esc_url_raw((string) wp_unslash($_SERVER['REQUEST_URI'])) : '/matches/';
 $redirectTo = wp_validate_redirect(home_url($currentPath), home_url('/'));
 
 /**
