@@ -26,12 +26,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
       - name: Install NPM dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
       - name: Build assets
         run: npm run build
