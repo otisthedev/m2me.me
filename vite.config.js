@@ -27,7 +27,7 @@ export default defineConfig({
         'quiz-public-v2': resolve(__dirname, 'assets/js/quiz-public-v2.js'),
         'quiz-results-ui': resolve(__dirname, 'assets/js/quiz-results-ui.js'),
         'share-result-page': resolve(__dirname, 'assets/js/share-result-page.js'),
-        'main': resolve(__dirname, 'assets/css/style.css'),
+        'main': resolve(__dirname, 'style.css'),
       },
       output: {
         entryFileNames: 'js/[name].[hash].js',
