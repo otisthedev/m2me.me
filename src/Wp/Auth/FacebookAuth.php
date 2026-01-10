@@ -78,7 +78,7 @@ final class FacebookAuth
             set_transient('match_me_oauth_state_' . $state, ['redirect_to' => $redirectTo], 10 * MINUTE_IN_SECONDS);
 
             $scope = 'email,public_profile';
-            $url = 'https://www.facebook.com/v24.0/dialog/oauth?' . http_build_query([
+            $url = 'https://www.facebook.com/v18.0/dialog/oauth?' . http_build_query([
                 'client_id' => $appId,
                 'redirect_uri' => $redirectUri,
                 'scope' => $scope,
@@ -117,7 +117,7 @@ final class FacebookAuth
             $redirectTo = home_url('/');
         }
 
-        $tokenUrl = 'https://graph.facebook.com/v24.0/oauth/access_token?' . http_build_query([
+        $tokenUrl = 'https://graph.facebook.com/v18.0/oauth/access_token?' . http_build_query([
             'client_id' => $appId,
             'redirect_uri' => $redirectUri,
             'client_secret' => $appSecret,
@@ -225,7 +225,7 @@ final class FacebookAuth
             return;
         }
 
-        $inline = "window.fbAsyncInit=function(){FB.init({appId:'" . esc_js($appId) . "',xfbml:true,version:'v24.0'});FB.AppEvents&&FB.AppEvents.logPageView&&FB.AppEvents.logPageView();};(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(d.getElementById(id)){return;}js=d.createElement(s);js.id=id;js.src='https://connect.facebook.net/en_US/sdk.js';fjs.parentNode.insertBefore(js,fjs);}(document,'script','facebook-jssdk'));";
+        $inline = "window.fbAsyncInit=function(){FB.init({appId:'" . esc_js($appId) . "',xfbml:true,version:'v18.0'});FB.AppEvents&&FB.AppEvents.logPageView&&FB.AppEvents.logPageView();};(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(d.getElementById(id)){return;}js=d.createElement(s);js.id=id;js.src='https://connect.facebook.net/en_US/sdk.js';fjs.parentNode.insertBefore(js,fjs);}(document,'script','facebook-jssdk'));";
         wp_register_script('match-me-facebook-sdk', '', [], null, true);
         wp_enqueue_script('match-me-facebook-sdk');
         wp_add_inline_script('match-me-facebook-sdk', $inline);
