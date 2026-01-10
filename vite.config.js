@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import legacy from '@vitejs/plugin-legacy';
 import compression from 'vite-plugin-compression';
 import { resolve } from 'path';
+import autoprefixer from 'autoprefixer';
+import cssnano from 'cssnano';
 
 export default defineConfig({
   plugins: [
@@ -31,7 +33,7 @@ export default defineConfig({
         entryFileNames: 'js/[name].[hash].js',
         chunkFileNames: 'js/[name].[hash].js',
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name.endsWith('.css')) {
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
             return 'css/[name].[hash][extname]';
           }
           return 'assets/[name].[hash][extname]';
@@ -50,8 +52,8 @@ export default defineConfig({
   css: {
     postcss: {
       plugins: [
-        require('autoprefixer'),
-        require('cssnano')({
+        autoprefixer(),
+        cssnano({
           preset: ['default', {
             discardComments: {
               removeAll: true,
