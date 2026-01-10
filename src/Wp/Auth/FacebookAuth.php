@@ -61,6 +61,9 @@ final class FacebookAuth
 
         $redirectUri = home_url('/?facebook_auth=1');
 
+        // Debug: Log the redirect URI being used
+        error_log('Facebook OAuth - Redirect URI: ' . $redirectUri);
+
         if (isset($_GET['error'])) {
             $msg = isset($_GET['error_description']) ? sanitize_text_field((string) $_GET['error_description']) : sanitize_text_field((string) $_GET['error']);
             wp_die('Facebook Login Error: ' . esc_html($msg));
@@ -82,6 +85,10 @@ final class FacebookAuth
                 'response_type' => 'code',
                 'state' => $state,
             ]);
+
+            // Debug: Log the full OAuth URL
+            error_log('Facebook OAuth - Full URL: ' . $url);
+
             // Use wp_redirect for external OAuth provider URLs; wp_safe_redirect would reject
             // non-local hosts and fall back to wp-admin (which then redirects to wp-login).
             wp_redirect($url);
