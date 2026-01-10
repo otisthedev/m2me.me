@@ -77,7 +77,7 @@ final class FacebookAuth
             $scope = 'email,public_profile';
             $url = 'https://www.facebook.com/v24.0/dialog/oauth?' . http_build_query([
                 'client_id' => $appId,
-                'redirect_uri' => urlencode($redirectUri),
+                'redirect_uri' => $redirectUri,
                 'scope' => $scope,
                 'response_type' => 'code',
                 'state' => $state,
