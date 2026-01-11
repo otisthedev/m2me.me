@@ -352,7 +352,7 @@ SVG;
   <text x="72" y="138" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="50" font-weight="950" letter-spacing="-0.02em" fill="#F6F5F2">$quizTitle</text>
 
   <text x="72" y="210" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="30" font-weight="850" fill="rgba(246,245,242,0.95)">Result</text>
-  <text x="72" y="268" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="62" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$top — $pctText</text>
+  <text x="72" y="268" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="62" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">$top - $pctText</text>
 
   <g filter="url(#shadow)">
     <circle cx="600" cy="332" r="122" fill="rgba(246,245,242,0.16)" stroke="rgba(246,245,242,0.32)" stroke-width="2.5"/>

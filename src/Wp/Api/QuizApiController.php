@@ -983,7 +983,7 @@ final class QuizApiController
         $viewerAvatar = (string) ($viewer['viewer_avatar_url'] ?? '');
         $matchPct = (int) round(max(0.0, min(100.0, $matchScore)));
 
-        $subject = sprintf('%s compared with you — %d%% match', $viewerName, $matchPct);
+        $subject = sprintf('%s compared with you - %d%% match', $viewerName, $matchPct);
         if ($siteName !== '') {
             $subject .= ' • ' . $siteName;
         }
@@ -1911,7 +1911,7 @@ final class QuizApiController
         $stress = [];
         $stress[] = "Under stress";
         if ($profileType === 'decisive') {
-            $stress[] = "Under pressure, you may double down on what works: faster decisions, more direction, more structure. That can be effective—but it can also feel intense to others.";
+            $stress[] = "Under pressure, you may double down on what works: faster decisions, more direction, more structure. That can be effective-but it can also feel intense to others.";
         } elseif ($profileType === 'balanced') {
             $stress[] = "Under pressure, balanced profiles often start scanning for the “best” option. The upside is flexibility; the downside can be overthinking or delaying a clear decision.";
         } else {
@@ -2007,7 +2007,7 @@ final class QuizApiController
             $extra = [];
             $extra[] = "How to use this";
             $extra[] = "Treat your top traits as your default tools, not your identity. When something feels stuck, ask yourself: am I overusing my strongest tool, or avoiding a tool that would help right now?";
-            $extra[] = "A simple way to get value from these results is to notice patterns for one week: when do you feel most like {$primary}, and when does {$secondary} show up? The goal is awareness first—change comes after you can name what's happening.";
+            $extra[] = "A simple way to get value from these results is to notice patterns for one week: when do you feel most like {$primary}, and when does {$secondary} show up? The goal is awareness first-change comes after you can name what's happening.";
             $extra[] = "Practical prompts";
             $extra[] = "- What situations bring out the best of {$primary} in you?";
             $extra[] = "- Where does {$secondary} help you stay grounded, and where does it slow you down?";
@@ -2190,6 +2190,7 @@ final class QuizApiController
             $quizAspect = '';
             $currentQuizVersion = '';
             $cmpMinWords = 450;
+            $quizPostUrl = '';
             try {
                 $quizSlug = (string) ($resultA['quiz_slug'] ?? '');
                 if ($quizSlug !== '') {
@@ -2201,6 +2202,18 @@ final class QuizApiController
                     $cmpMinWordsCfg = $quizConfig['comparison_narrative']['min_words'] ?? null;
                     if (is_numeric($cmpMinWordsCfg)) {
                         $cmpMinWords = max(250, (int) $cmpMinWordsCfg);
+                    }
+
+                    // Find the WordPress post that uses this quiz
+                    $quizPost = $this->quizDbRepository->findBySlug($quizSlug);
+                    if ($quizPost !== null && isset($quizPost['post_id'])) {
+                        $postId = (int) $quizPost['post_id'];
+                        if ($postId > 0) {
+                            $permalink = get_permalink($postId);
+                            if (is_string($permalink) && $permalink !== '') {
+                                $quizPostUrl = $permalink;
+                            }
+                        }
                     }
                 }
             } catch (\Throwable) {
@@ -2261,6 +2274,8 @@ final class QuizApiController
                 'breakdown' => $breakdown,
                 'algorithm_used' => (string) ($comparison['algorithm_used'] ?? 'cosine'),
                 'quiz_title' => $quizTitle,
+                'quiz_slug' => (string) ($resultA['quiz_slug'] ?? ''),
+                'quiz_post_url' => $quizPostUrl,
                 'comparison_headline' => $comparisonHeadline,
                 'comparison_summary_short' => $storedShort,
                 'comparison_summary_long' => $storedLong,
@@ -2359,7 +2374,7 @@ final class QuizApiController
         if ($band === 'high') {
             $short = "{$you} and {$them} show high alignment ({$score}%). You likely share similar defaults in how you approach decisions and daily life.";
         } elseif ($band === 'medium') {
-            $short = "{$you} and {$them} show a mixed-but-promising match ({$score}%). You align in some areas and differ in others—often a complementary pairing when coordinated well.";
+            $short = "{$you} and {$them} show a mixed-but-promising match ({$score}%). You align in some areas and differ in others-often a complementary pairing when coordinated well.";
         } else {
             $short = "{$you} and {$them} have different defaults ({$score}%). This can be workable with clear communication and shared routines, but it may not feel effortless.";
         }
@@ -2367,13 +2382,13 @@ final class QuizApiController
         $lines = [];
         $lines[] = "Headline";
         if ($band === 'high') {
-            $lines[] = "{$you} and {$them} show high alignment in your defaults. This often feels smooth day-to-day—especially around pace, decisions, and follow-through.";
+            $lines[] = "{$you} and {$them} show high alignment in your defaults. This often feels smooth day-to-day-especially around pace, decisions, and follow-through.";
         } elseif ($band === 'medium') {
             $lines[] = "{$you} and {$them} share some strong overlap, with a few meaningful differences. This can feel exciting and growth-oriented when you coordinate well.";
         } else {
-            $lines[] = "{$you} and {$them} have different defaults. That doesn’t mean “bad”—but it usually means you’ll need clearer agreements so you don’t rely on mind-reading.";
+            $lines[] = "{$you} and {$them} have different defaults. That doesn’t mean “bad”-but it usually means you’ll need clearer agreements so you don’t rely on mind-reading.";
         }
-        $lines[] = "This {$quizTitle} comparison is based on trait similarity across your results. Similarity can feel comfortable; differences can be complementary—but they usually require clearer coordination.";
+        $lines[] = "This {$quizTitle} comparison is based on trait similarity across your results. Similarity can feel comfortable; differences can be complementary-but they usually require clearer coordination.";
         $lines[] = "Score: " . round($score) . "% (" . ($band === 'high' ? 'high alignment' : ($band === 'medium' ? 'mixed' : 'different styles')) . ").";
 
         $lines[] = "";
@@ -2443,13 +2458,13 @@ final class QuizApiController
         $lines[] = "- Do more: name expectations early (time, plans, tone) and confirm them out loud.";
         $lines[] = "- Do more: pick one weekly ritual that reduces ambiguity (10-minute planning check-in works well).";
         $lines[] = "- Do less: assume intent from tone; ask one clarifying question instead.";
-        $lines[] = "- Do less: re-litigate the past—focus on the next repeatable process.";
+        $lines[] = "- Do less: re-litigate the past-focus on the next repeatable process.";
 
         $lines[] = "";
         $lines[] = "Next steps";
         $lines[] = "- Choose one area to be “structured” and one to be “flexible,” so you stop fighting the same category repeatedly.";
         $lines[] = "- If a conflict repeats, ask: “Is this a values issue, or a process issue?”";
-        $lines[] = "- Use a bridge sentence before solutions: “I’m on your team—here’s what I’m noticing.”";
+        $lines[] = "- Use a bridge sentence before solutions: “I’m on your team-here’s what I’m noticing.”";
 
         $lines[] = "";
         $lines[] = "This is an informational snapshot, not professional advice.";
@@ -2463,7 +2478,7 @@ final class QuizApiController
         if ($wordCount < $minWords) {
             $pad = [];
             $pad[] = "How to interpret this";
-            $pad[] = "If your match is high, the main risk is moving fast and skipping emotional alignment. If your match is medium, the main task is coordination—agree on decision rules. If your match is low, the main skill is translation: build shared routines so you don’t rely on “mind-reading.”";
+            $pad[] = "If your match is high, the main risk is moving fast and skipping emotional alignment. If your match is medium, the main task is coordination-agree on decision rules. If your match is low, the main skill is translation: build shared routines so you don’t rely on “mind-reading.”";
             $long .= "\n\n" . implode("\n", $pad);
         }
 
@@ -2519,9 +2534,9 @@ final class QuizApiController
         if ($isHighDominance) {
             // Only use strong language if trait is actually high (>= 0.75)
             if ($topValue >= 0.75) {
-                $headline = "I'm {$topPct}% {$topLabel}—this explains a lot about how I {$this->getActionForTrait($topTrait, $aspect)}.";
+                $headline = "I'm {$topPct}% {$topLabel}-this explains a lot about how I {$this->getActionForTrait($topTrait, $aspect)}.";
             } else {
-                $headline = "I'm {$topPct}% {$topLabel}—this often shows up in how I {$this->getActionForTrait($topTrait, $aspect)}.";
+                $headline = "I'm {$topPct}% {$topLabel}-this often shows up in how I {$this->getActionForTrait($topTrait, $aspect)}.";
             }
         } elseif ($isBalanced) {
             // For balanced profiles, ensure both traits are meaningful (>= 0.40)
@@ -2531,7 +2546,7 @@ final class QuizApiController
                 $headline = "I lean toward {$topLabel} with some {$secondLabel} tendencies. See how we match?";
             }
         } elseif ($isUnexpected) {
-            $headline = "Turns out I'm {$topPct}% {$topLabel}. This surprised me—want to see how you compare?";
+            $headline = "Turns out I'm {$topPct}% {$topLabel}. This surprised me-want to see how you compare?";
         } else {
             // Ensure second trait is meaningful before mentioning it
             if ($secondValue >= 0.45) {
@@ -2660,11 +2675,11 @@ final class QuizApiController
         
         // Generate headline based on match score
         if ($matchScore >= 0.80) {
-            return "We're {$matchPct}% compatible—both strong {$topLabelA} types. This explains why we work so well together.";
+            return "We're {$matchPct}% compatible-both strong {$topLabelA} types. This explains why we work so well together.";
         } elseif ($matchScore >= 0.65) {
             return "We're {$matchPct}% compatible with complementary styles: {$topLabelA} meets {$topLabelB}. This explains our dynamic.";
         } elseif ($matchScore >= 0.50) {
-            return "We're {$matchPct}% compatible—different styles ({$topLabelA} vs {$topLabelB}) that can complement each other with understanding.";
+            return "We're {$matchPct}% compatible-different styles ({$topLabelA} vs {$topLabelB}) that can complement each other with understanding.";
         } else {
             return "We're {$matchPct}% compatible. Our different styles ({$topLabelA} vs {$topLabelB}) create interesting dynamics worth exploring.";
         }
@@ -2839,7 +2854,7 @@ final class QuizApiController
 
         // Generate quotable insight (shorter, punchier than headline)
         if ($topValue >= 0.75) {
-            return "I'm {$topPct}% {$topLabel}—this explains a lot.";
+            return "I'm {$topPct}% {$topLabel}-this explains a lot.";
         } elseif ($topValue >= 0.60) {
             return "My communication style is {$topPct}% {$topLabel}.";
         } else {

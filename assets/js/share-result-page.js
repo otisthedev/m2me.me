@@ -39,10 +39,15 @@
           return;
         }
 
-        const base = (window.matchMeTheme && window.matchMeTheme.homeUrl) ? String(window.matchMeTheme.homeUrl).replace(/\/+$/, '') : '';
-        const quizSlug = String(result.quiz_slug || '').trim();
-        const quizPath = quizSlug ? `/${encodeURIComponent(quizSlug)}/` : `/`;
-        const quizUrl = `${base}${quizPath}?compare_token=${encodeURIComponent(String(token))}`;
+        // Use quiz_post_url if available, otherwise fallback to constructing from quiz_slug
+        let quizUrl = String(result.quiz_post_url || '').trim();
+        if (!quizUrl) {
+          const base = (window.matchMeTheme && window.matchMeTheme.homeUrl) ? String(window.matchMeTheme.homeUrl).replace(/\/+$/, '') : '';
+          const quizSlug = String(result.quiz_slug || '').trim();
+          const quizPath = quizSlug ? `/${encodeURIComponent(quizSlug)}/` : `/`;
+          quizUrl = `${base}${quizPath}`;
+        }
+        quizUrl += `?compare_token=${encodeURIComponent(String(token))}`;
 
         root.innerHTML = `
           <div class="match-me-compare-section">

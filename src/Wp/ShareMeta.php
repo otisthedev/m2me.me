@@ -100,7 +100,7 @@ final class ShareMeta
         $image = $this->fallbackShareImage();
 
         if ($mode === 'match') {
-            // For match shares, we don't need perfect identity—use the "other" person's image if available.
+            // For match shares, we don't need perfect identity-use the "other" person's image if available.
             $cmpRepo = new \MatchMe\Infrastructure\Db\ComparisonRepository($wpdb);
             $cmp = $cmpRepo->findByShareToken($comparisonToken);
             if ($cmp === null) {
@@ -185,7 +185,7 @@ final class ShareMeta
             }
             $description = 'Take the quiz to compare your personality results with ' . $ownerName . ' and see how you match.';
         } elseif ($mode === 'match') {
-            $title = 'Comparison Result — ' . $quizTitle;
+            $title = 'Comparison Result - ' . $quizTitle;
             if (strlen($title) > 60) {
                 $title = 'Comparison Result';
             }

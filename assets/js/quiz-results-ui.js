@@ -761,12 +761,12 @@
 
             const t = line.trim();
 
-            // Drop pure separator lines like "---", "— — —", "--", etc.
-            if (/^[-–—]{2,}$/.test(t)) continue;
-            if (/^[-–—](\s+[-–—]){1,}$/.test(t)) continue;
+            // Drop pure separator lines like "---", "- - -", "--", etc.
+            if (/^[-–-]{2,}$/.test(t)) continue;
+            if (/^[-–-](\s+[-–-]){1,}$/.test(t)) continue;
 
             // Normalize common bullet prefixes into "- "
-            // e.g., "-- item", "- - item", "• item", "· item", "— item"
+            // e.g., "-- item", "- - item", "• item", "· item", "- item"
             if (/^(?:--+|\-\s*\-+)\s+/.test(t)) {
                 out.push('- ' + t.replace(/^(?:--+|\-\s*\-+)\s+/, ''));
                 continue;
@@ -775,8 +775,8 @@
                 out.push('- ' + t.replace(/^[•·]\s+/, ''));
                 continue;
             }
-            if (/^[–—]\s+/.test(t)) {
-                out.push('- ' + t.replace(/^[–—]\s+/, ''));
+            if (/^[–-]\s+/.test(t)) {
+                out.push('- ' + t.replace(/^[–-]\s+/, ''));
                 continue;
             }
 

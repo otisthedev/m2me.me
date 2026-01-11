@@ -25,7 +25,7 @@
   <text x="72" y="140" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="46" font-weight="900" letter-spacing="-0.02em" fill="#F6F5F2">Personality Type</text>
 
   <text x="72" y="206" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="28" font-weight="650" fill="rgba(246,245,242,0.92)">Result</text>
-  <text x="72" y="258" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="58" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">Leader — 82%</text>
+  <text x="72" y="258" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="58" font-weight="950" letter-spacing="-0.03em" fill="#F6F5F2">Leader - 82%</text>
 
   <g filter="url(#shadow)">
     <circle cx="600" cy="332" r="118" fill="rgba(246,245,242,0.14)" stroke="rgba(246,245,242,0.30)" stroke-width="2"/>
