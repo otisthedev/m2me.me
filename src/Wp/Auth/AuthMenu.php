@@ -42,6 +42,15 @@ final class AuthMenu
             return $items;
         }
 
+        // Check if this is the desktop or mobile menu by looking at the menu_id
+        $menuId = is_object($args) && isset($args->menu_id) ? (string) $args->menu_id : '';
+
+        // Only inject items into the desktop menu, not the mobile menu
+        // Mobile menu will get these items via the first injection
+        if ($menuId === 'primary-menu-mobile') {
+            return $items;
+        }
+
         $current = (string) wp_unslash($_SERVER['REQUEST_URI'] ?? '/');
         $currentUrl = home_url($current);
         $redirectTo = wp_validate_redirect($currentUrl, home_url('/'));
