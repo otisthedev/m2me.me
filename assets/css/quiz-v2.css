@@ -5,6 +5,18 @@
 
 /* Uses global theme palette vars from style.css */
 
+/* Hide WordPress post content when quiz is active */
+body.quiz-active .entry-header,
+body.quiz-active .entry-title,
+body.quiz-active .ast-single-post-header,
+body.quiz-active .post-thumbnail,
+body.quiz-active .ast-blog-featured-section,
+body.quiz-active header.entry-header,
+body.quiz-active .entry-content > *:not([data-match-me-quiz]),
+body.quiz-active article .entry-content > *:not([data-match-me-quiz]) {
+  display: none !important;
+}
+
 .mmq {
   position: relative;
   max-width: 600px;

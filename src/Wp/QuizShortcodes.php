@@ -227,7 +227,9 @@ final class QuizShortcodes
                 </div>
                 <?php endif; ?>
                 <div class="mmq-intro-actions">
-                    <button type="button" class="mmq-start">Start Quiz</button>
+                    <button type="button" class="mmq-start">
+                        <?= $latestResult !== null ? 'Retake Quiz' : 'Start Quiz' ?>
+                    </button>
                     <?php if ($latestResult !== null && isset($latestResult['share_token'])) : ?>
                         <a href="<?= esc_url(home_url('/result/' . $latestResult['share_token'] . '/')) ?>" class="mmq-view-results">
                             View Your Results
@@ -345,21 +347,33 @@ final class QuizShortcodes
             return '<p>Please log in to view your attempts.</p>';
         }
 
-        $attempts = $this->results->latestAttemptsByUserGroupedByQuiz($userId);
-        if ($attempts === []) {
-            return '<p>No attempts found.</p>';
-        }
+        $completedQuizzes = [];
 
-        $quizAttempts = [];
-        foreach ($attempts as $row) {
-            $quizAttempts[$row['quiz_id']] = $row['latest_attempt'];
+        // Use new repository if available, fallback to legacy
+        if ($this->newResults !== null) {
+            $newAttempts = $this->newResults->latestByUserGroupedByQuizSlug($userId);
+            if (empty($newAttempts)) {
+                return '<p>No attempts found.</p>';
+            }
+            foreach ($newAttempts as $row) {
+                $completedQuizzes[$row['quiz_slug']] = $row['share_token'];
+            }
+        } else {
+            // Fallback to legacy repository
+            $attempts = $this->results->latestAttemptsByUserGroupedByQuiz($userId);
+            if ($attempts === []) {
+                return '<p>No attempts found.</p>';
+            }
+            foreach ($attempts as $row) {
+                $completedQuizzes[$row['quiz_id']] = $row['latest_attempt'];
+            }
         }
 
         $query = new \WP_Query([
             'posts_per_page' => -1,
             'orderby' => 'title',
             'order' => 'ASC',
-            'post_name__in' => array_keys($quizAttempts),
+            'post_name__in' => array_keys($completedQuizzes),
             'post_type' => 'any',
         ]);
 
@@ -369,8 +383,17 @@ final class QuizShortcodes
                 $query->the_post();
                 $postId = get_the_ID();
                 $slug = (string) get_post_field('post_name', $postId);
-                $attemptId = $quizAttempts[$slug] ?? null;
-                $url = $attemptId ? esc_url(get_permalink($postId) . $attemptId) : esc_url(get_permalink($postId));
+                $shareToken = $completedQuizzes[$slug] ?? null;
+
+                // For new system, link to result page; for legacy, append attempt ID
+                if ($shareToken && $this->newResults !== null) {
+                    $url = esc_url(home_url('/result/' . $shareToken . '/'));
+                } elseif ($shareToken) {
+                    // Legacy system
+                    $url = esc_url(get_permalink($postId) . $shareToken);
+                } else {
+                    $url = esc_url(get_permalink($postId));
+                }
 
                 $out .= '<article class="post-' . esc_attr((string) $postId) . ' post type-post status-publish format-standard has-post-thumbnail hentry category-quizzes ast-grid-common-col ast-full-width ast-article-post remove-featured-img-padding" itemtype="https://schema.org/CreativeWork" itemscope="itemscope">';
                 $out .= '<div class="ast-post-format- blog-layout-4 ast-article-inner"><div class="post-content ast-grid-common-col">';
@@ -397,10 +420,17 @@ final class QuizShortcodes
     public function renderPostTitlesArchive(): string
     {
         $userId = (int) get_current_user_id();
-        $quizAttempts = [];
-        if ($userId > 0) {
+        $completedQuizzes = [];
+
+        // Use new repository if available, fallback to legacy
+        if ($userId > 0 && $this->newResults !== null) {
+            foreach ($this->newResults->latestByUserGroupedByQuizSlug($userId) as $row) {
+                $completedQuizzes[$row['quiz_slug']] = $row['share_token'];
+            }
+        } elseif ($userId > 0) {
+            // Fallback to legacy repository
             foreach ($this->results->latestAttemptsByUserGroupedByQuiz($userId) as $row) {
-                $quizAttempts[$row['quiz_id']] = $row['latest_attempt'];
+                $completedQuizzes[$row['quiz_id']] = $row['latest_attempt'];
             }
         }
 
@@ -423,9 +453,17 @@ final class QuizShortcodes
             $date = get_the_date('F j, Y');
             $thumb = get_the_post_thumbnail_url($postId, 'full');
             $slug = (string) get_post_field('post_name', $postId);
-            $attemptId = $quizAttempts[$slug] ?? null;
-            if ($attemptId) {
-                $link = esc_url(get_permalink($postId) . $attemptId);
+
+            // Check if user has completed this quiz (using slug for new system)
+            $hasCompleted = isset($completedQuizzes[$slug]);
+            $shareToken = $completedQuizzes[$slug] ?? null;
+
+            // For new system, link to result page; for legacy, append attempt ID
+            if ($hasCompleted && $shareToken && $this->newResults !== null) {
+                $link = esc_url(home_url('/result/' . $shareToken . '/'));
+            } elseif ($hasCompleted && $shareToken) {
+                // Legacy system
+                $link = esc_url(get_permalink($postId) . $shareToken);
             } else {
                 $link = esc_url($link);
             }
@@ -442,7 +480,7 @@ final class QuizShortcodes
             $out .= '<h2 class="entry-title ast-blog-single-element" itemprop="headline"><a href="' . esc_url($link) . '" rel="bookmark">' . esc_html((string) $title) . '</a></h2>';
             // Intentionally omit entry meta for minimalist design.
             $out .= '<div class="ast-excerpt-container ast-blog-single-element">';
-            $out .= $attemptId ? '<a class="start-quiz" href="' . esc_url($link) . '">View Result</a>' : '<a class="start-quiz" href="' . esc_url($link) . '">View</a>';
+            $out .= $hasCompleted ? '<a class="start-quiz" href="' . esc_url($link) . '">View Result</a>' : '<a class="start-quiz" href="' . esc_url($link) . '">View</a>';
             $out .= '</div>';
             // Intentionally omit "Read More" for minimalist design.
             $out .= '<div class="entry-content clear" itemprop="text"></div>';

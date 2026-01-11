@@ -74,6 +74,10 @@
     hasStarted = true;
     if (intro) intro.style.display = 'none';
     if (els.screen) els.screen.style.display = 'block';
+
+    // Add body class to trigger CSS rules that hide WordPress post content
+    document.body.classList.add('quiz-active');
+
     // Clean up the auto-start flag so refreshing doesn't keep forcing behavior.
     updateUrlFlag('mm_start_quiz', null);
     render();
