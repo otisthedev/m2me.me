@@ -36,6 +36,21 @@ final class QuizShortcodes
     {
         $quizId = isset($atts['id']) ? (string) $atts['id'] : '';
         $quizId = sanitize_file_name($quizId);
+
+        // If no quiz ID provided but we have a compare_token, try to get quiz from comparison
+        if ($quizId === '' && isset($_GET['compare_token'])) {
+            $compareToken = sanitize_text_field($_GET['compare_token']);
+            try {
+                // Get quiz_slug from comparison token via API
+                $comparison = $this->comparisons->findByShareToken($compareToken);
+                if ($comparison && isset($comparison['quiz_slug'])) {
+                    $quizId = sanitize_file_name($comparison['quiz_slug']);
+                }
+            } catch (\Throwable) {
+                // Fall through to normal error handling
+            }
+        }
+
         if ($quizId === '') {
             return '<p>Quiz not found</p>';
         }
@@ -169,6 +184,21 @@ final class QuizShortcodes
     {
         $quizId = isset($atts['id']) ? (string) $atts['id'] : '';
         $quizId = sanitize_file_name($quizId);
+
+        // If no quiz ID provided but we have a compare_token, try to get quiz from comparison
+        if ($quizId === '' && isset($_GET['compare_token'])) {
+            $compareToken = sanitize_text_field($_GET['compare_token']);
+            try {
+                // Get quiz_slug from comparison token via API
+                $comparison = $this->comparisons->findByShareToken($compareToken);
+                if ($comparison && isset($comparison['quiz_slug'])) {
+                    $quizId = sanitize_file_name($comparison['quiz_slug']);
+                }
+            } catch (\Throwable) {
+                // Fall through to normal error handling
+            }
+        }
+
         if ($quizId === '') {
             return '<p>Quiz not found</p>';
         }

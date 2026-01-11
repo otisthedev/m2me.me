@@ -62,7 +62,9 @@ final class FacebookAuth
         $redirectUri = home_url('/?facebook_auth=1');
 
         // Debug: Log the redirect URI being used
-        error_log('Facebook OAuth - Redirect URI: ' . $redirectUri);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Facebook OAuth - Redirect URI: ' . $redirectUri);
+        }
 
         if (isset($_GET['error'])) {
             $msg = isset($_GET['error_description']) ? sanitize_text_field((string) $_GET['error_description']) : sanitize_text_field((string) $_GET['error']);
@@ -87,7 +89,9 @@ final class FacebookAuth
             ]);
 
             // Debug: Log the full OAuth URL
-            error_log('Facebook OAuth - Full URL: ' . $url);
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Facebook OAuth - Full URL: ' . $url);
+            }
 
             // Use wp_redirect for external OAuth provider URLs; wp_safe_redirect would reject
             // non-local hosts and fall back to wp-admin (which then redirects to wp-login).
@@ -126,7 +130,9 @@ final class FacebookAuth
 
         $tokenResponse = wp_remote_get($tokenUrl);
         if (is_wp_error($tokenResponse)) {
-            error_log('Facebook token exchange error: ' . $tokenResponse->get_error_message());
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Facebook token exchange error: ' . $tokenResponse->get_error_message());
+            }
             wp_die('Error during Facebook token exchange. Check server logs.');
         }
 
@@ -143,7 +149,9 @@ final class FacebookAuth
 
         $userInfoResponse = wp_remote_get($userInfoUrl);
         if (is_wp_error($userInfoResponse)) {
-            error_log('Facebook user info error: ' . $userInfoResponse->get_error_message());
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Facebook user info error: ' . $userInfoResponse->get_error_message());
+            }
             wp_die('Error retrieving user information from Facebook.');
         }
 
@@ -201,7 +209,9 @@ final class FacebookAuth
             ]);
 
             if (is_wp_error($userId)) {
-                error_log('WordPress user creation error: ' . $userId->get_error_message());
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('WordPress user creation error: ' . $userId->get_error_message());
+                }
                 wp_die('Error creating WordPress user account.');
             }
 
@@ -314,7 +324,9 @@ final class FacebookAuth
             $this->sendDeletionResponse($fbUserId);
         } catch (\Throwable $e) {
             // Log error but still return success to Facebook (we'll handle deletion manually)
-            error_log('Facebook deletion callback error: ' . $e->getMessage());
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Facebook deletion callback error: ' . $e->getMessage());
+            }
             $this->sendDeletionResponse($fbUserId);
         }
     }
