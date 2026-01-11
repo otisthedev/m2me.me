@@ -673,22 +673,28 @@
             return '<p>No trait data available.</p>';
         }
 
-        return traits.map(([trait, value]) => {
-            const percentage = Math.round(value * 100);
-            // Use trait label from API if available, otherwise format the trait ID
-            const label = traitLabels[trait] || trait.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            return `
-                <div class="trait-item">
-                    <div class="trait-label">
-                        <span>${escapeHtml(label)}</span>
-                        <span class="trait-value">${percentage}%</span>
+        return traits
+            .filter(([trait, value]) => {
+                // Filter out traits with 0%
+                const percentage = Math.round(value * 100);
+                return percentage > 0;
+            })
+            .map(([trait, value]) => {
+                const percentage = Math.round(value * 100);
+                // Use trait label from API if available, otherwise format the trait ID
+                const label = traitLabels[trait] || trait.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                return `
+                    <div class="trait-item">
+                        <div class="trait-label">
+                            <span>${escapeHtml(label)}</span>
+                            <span class="trait-value">${percentage}%</span>
+                        </div>
+                        <div class="trait-bar">
+                            <div class="trait-bar-fill" style="width: ${percentage}%"></div>
+                        </div>
                     </div>
-                    <div class="trait-bar">
-                        <div class="trait-bar-fill" style="width: ${percentage}%"></div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+                `;
+            }).join('');
     }
 
     /**
